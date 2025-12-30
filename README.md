@@ -1,49 +1,61 @@
 # Family Finance App (Quan Ly Chi Tieu Family)
 
-A React Native mobile application for managing family finances with role-based access control (Owner, Partner, Child).
-Built with **Expo**, **React Native**, and **Firebase Firestore**.
+A comprehensive React Native mobile application for managing family finances with role-based access control. Designed for families to track spending, analyze trends, and manage budgets collaboratively.
 
-## Features
+Built with **Expo** (SDK 52), **React Native**, and **Firebase Firestore**.
 
-### 🔐 Authentication & Roles
-- **Google / Email Auth** (via Firebase).
-- **Auto-Initialization**: New accounts automatically get a default family structure (Dad, Mom, Kid).
-- **Role-Based Access**:
-    - **Owner/Partner**: Can view the full "Account Dashboard" (Family Totals).
-    - **Child**: Can only view their own "Profile Dashboard".
+## ✨ Key Features
 
-### 💰 Budgeting
-- **Monthly Budgets**: Set limits for each family member for specific months.
-- **Real-time Tracking**: "Spent" amounts update immediately after adding a transaction.
-- **Status Indicators**:
-    - 🟢 Healthy (< 70%)
-    - 🟡 Caution (70-99%)
-    - 🔴 Over Budget (>= 100%)
+### 🔐 Authentication & Family Roles
+- **Secure Login**: Google / Email Authentication via Firebase.
+- **Auto-Initialization**: New accounts automatically generate a default family structure.
+- **Role-Based Access Control (RBAC)**:
+    - **Owner (Dad)**: Full access to all family data, settings, and category management.
+    - **Partner (Mom)**: View access to family dashboards and analytics.
+    - **Child**: Restricted access to only their own personal transactions and limits.
 
-### 📊 Dashboards
-- **Profile Dashboard**: View personal spending, recent transactions, and budget health for the selected month.
-- **Account Dashboard**: View aggregate family spending, total limit, and "Budget vs Actual" for all members.
-- **Date Filtering**: Navigate between months (e.g., "January 2025") to view historic data.
+### 💰 Transaction Management
+- **Add/Edit Transactions**: log expenses and income with ease.
+- **Smart Filtering**:
+    - **Search**: Find transactions instantly by searching notes (3+ characters).
+    - **Category Filter**: Multi-select dropdown to filter specific categories.
+    - **Date Picker**: Filter transactions by specific months.
+- **Contextual Emojis**: Categories display simplified, consistent emojis across the app.
 
-### ⚙️ Settings
-- **Manage Profiles**: Rename profiles (e.g., "Dad" -> "John") and update monthly limits.
-- **Logout**: Securely sign out.
+### 📊 Powerful Analytics
+- **My Overview (Personal Dashboard)**:
+    - **Net Cashflow**: Instant view of Income - Expense.
+    - **Health Status**: Visual indicators (Healthy 🟢, Caution 🟡, Over Budget 🔴).
+    - **Spending by Category**: Breakdown of expenses with percentage and specific category icons.
+- **Detailed Analysis (Family/Owner)**:
+    - **Monthly Trends**: Line charts visualizing spending over time.
+    - **Income vs Expense**: Bar charts comparing inflow vs outflow.
+    - **Category Breakdown**: Detailed visualization of where the money goes.
 
-## Tech Stack
-- **Framework**: React Native (Expo SDK 52)
-- **Backend**: Firebase Firestore (Data), Firebase Auth
-- **Navigation**: React Navigation (Native Stack)
-- **UI Components**: `react-native-safe-area-context`, `expo-linear-gradient`, Custom Modals.
+### 🛠️ Customization
+- **Manage Categories**:
+    - Add, Edit, Delete custom categories.
+    - Toggle between **Expense** and **Income** types.
+    - Assign unique icons to categories.
+- **Profile Management**: Update names and monthly spending limits.
 
-## Setup Instructions
+## 📱 Tech Stack
+- **Frontend**: React Native, Expo, React Navigation 7.
+- **Backend Service**: Firebase (Firestore Database, Authentication).
+- **UI/UX**: `react-native-safe-area-context`, `expo-linear-gradient`, `react-native-gifted-charts`, `vector-icons`.
+- **State Management**: React Context API (`AuthContext`) + DeviceEventEmitter for real-time refresh.
 
-1.  **Install Dependencies**
+## 🚀 Setup Instructions
+
+1.  **Clone & Install**
     ```bash
+    git clone <repo-url>
+    cd mobile
     npm install
     ```
 
-2.  **Environment Variables**
-    Create a `.env` file in the root directory with your Firebase config:
+2.  **Configuration (.env)**
+    Create a `.env` file in the root directory (do not commit this file):
     ```env
     EXPO_PUBLIC_FIREBASE_API_KEY=your_api_key
     EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
@@ -57,12 +69,16 @@ Built with **Expo**, **React Native**, and **Firebase Firestore**.
     ```bash
     npx expo start --clear
     ```
-    - Press `w` for Web.
-    - Press `a` for Android Emulator.
-    - Press `i` for iOS Simulator.
+    - Press `a` for Android (Emulator/Device).
+    - Press `i` for iOS (Simulator).
 
-## Project Structure
-- `src/components`: Reusable UI components (MonthPicker, BudgetProgressBar).
-- `src/screens`: Main application screens (Home, Dashboards, Settings).
-- `src/services`: Business logic and Backend integrations (dataService, firestoreRepository).
-- `src/navigation`: Navigation configuration (AppStack).
+## 📂 Project Structure
+- `src/screens`:
+    - `AccountDashboard`: Main overview of financial health.
+    - `TransactionListScreen`: List, Search, and Filter transactions.
+    - `AnalyzeScreen`: Charts and deep dive analytics.
+    - `ManageCategoriesScreen`: Custom category configuration.
+- `src/services`:
+    - `firestoreRepository.js`: Central data access layer for Firebase.
+    - `dataService.js`: Business logic aggregation.
+- `src/components`: Reusable UI widgets (Charts, Pickers, Dropdowns).
