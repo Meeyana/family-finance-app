@@ -1,20 +1,24 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { updateProfile } from '../services/firestoreRepository';
+import { updateProfile, addProfile, deleteProfile } from '../services/firestoreRepository';
 import { auth } from '../services/firebase';
 import { useAuth } from '../components/context/AuthContext';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 export default function EditProfileScreen({ route, navigation }) {
-    const { profile } = route.params;
-    const { refreshProfiles } = useAuth(); // To update context after save
+    const { profile, isNew } = route.params;
+    const { refreshProfiles } = useAuth();
 
-    const [name, setName] = useState(profile.name);
-    const [limit, setLimit] = useState(String(profile.limit || 0));
+    const [name, setName] = useState(profile?.name || '');
+    const [limit, setLimit] = useState(String(profile?.limit || 0));
+    const [role, setRole] = useState(profile?.role || 'Child');
     const [loading, setLoading] = useState(false);
 
+    const isOwner = profile?.role === 'Owner';
+
     const handleSave = async () => {
-        if (!name.trim()) {
+        if (isNew && !name.trim()) {
             Alert.alert("Error", "Name cannot be empty");
             return;
         }
@@ -27,21 +31,56 @@ export default function EditProfileScreen({ route, navigation }) {
 
         setLoading(true);
         try {
-            await updateProfile(auth.currentUser.uid, profile.id, {
-                name: name.trim(),
-                limit: numLimit
-            });
+            if (isNew) {
+                await addProfile(auth.currentUser.uid, {
+                    name: name.trim(),
+                    limit: numLimit,
+                    role: role
+                });
+            } else {
+                await updateProfile(auth.currentUser.uid, profile.id, {
+                    limit: numLimit,
+                    role: role
+                });
+            }
 
-            await refreshProfiles(); // Update global state
+            await refreshProfiles();
 
-            Alert.alert("Success", "Profile updated!", [
+            Alert.alert("Success", isNew ? "Profile created!" : "Profile updated!", [
                 { text: "OK", onPress: () => navigation.goBack() }
             ]);
         } catch (error) {
-            Alert.alert("Error", "Failed to update profile");
+            console.error(error);
+            Alert.alert("Error", "Failed to save profile");
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleDelete = () => {
+        Alert.alert(
+            "Delete Profile",
+            "Warning: This will permanently delete this profile and ALL associated transaction history. This cannot be undone.",
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Delete",
+                    style: "destructive",
+                    onPress: async () => {
+                        setLoading(true);
+                        try {
+                            await deleteProfile(auth.currentUser.uid, profile.id);
+                            await refreshProfiles();
+                            navigation.goBack();
+                        } catch (e) {
+                            console.error(e);
+                            Alert.alert("Error", "Failed to delete");
+                            setLoading(false);
+                        }
+                    }
+                }
+            ]
+        );
     };
 
     return (
@@ -51,19 +90,27 @@ export default function EditProfileScreen({ route, navigation }) {
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                         <Text style={styles.backText}>Cancel</Text>
                     </TouchableOpacity>
-                    <Text style={styles.title}>Edit Profile</Text>
+                    <Text style={styles.title}>{isNew ? 'New Profile' : 'Edit Profile'}</Text>
                     <TouchableOpacity onPress={handleSave} disabled={loading}>
                         {loading ? <ActivityIndicator color="#007AFF" /> : <Text style={styles.saveText}>Save</Text>}
                     </TouchableOpacity>
                 </View>
 
-                <View style={styles.form}>
+                <ScrollView contentContainerStyle={styles.form}>
                     <Text style={styles.label}>Profile Name</Text>
-                    <TextInput
-                        style={styles.input}
-                        value={name}
-                        onChangeText={setName}
-                    />
+                    {isNew ? (
+                        <TextInput
+                            style={styles.input}
+                            value={name}
+                            onChangeText={setName}
+                            placeholder="Enter Name"
+                        />
+                    ) : (
+                        <View style={styles.disabledInput}>
+                            <Text style={{ fontSize: 16, color: '#666' }}>{name}</Text>
+                            <Text style={{ fontSize: 12, color: '#999' }}>(Managed by user)</Text>
+                        </View>
+                    )}
 
                     <Text style={styles.label}>Monthly Limit (VND)</Text>
                     <TextInput
@@ -73,10 +120,32 @@ export default function EditProfileScreen({ route, navigation }) {
                         keyboardType="numeric"
                     />
 
-                    <Text style={styles.hint}>
-                        Role: {profile.role} (Cannot be changed)
-                    </Text>
-                </View>
+                    <Text style={styles.label}>Role</Text>
+                    {isOwner ? (
+                        <View style={styles.disabledInput}>
+                            <Text style={styles.disabledText}>Owner (Cannot change)</Text>
+                            <MaterialCommunityIcons name="lock" size={16} color="#999" />
+                        </View>
+                    ) : (
+                        <View style={styles.roleContainer}>
+                            {['Partner', 'Child'].map(r => (
+                                <TouchableOpacity
+                                    key={r}
+                                    style={[styles.roleButton, role === r && styles.roleButtonActive]}
+                                    onPress={() => setRole(r)}
+                                >
+                                    <Text style={[styles.roleText, role === r && styles.roleTextActive]}>{r}</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    )}
+
+                    {!isNew && !isOwner && (
+                        <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
+                            <Text style={styles.deleteText}>Delete Profile</Text>
+                        </TouchableOpacity>
+                    )}
+                </ScrollView>
             </KeyboardAvoidingView>
         </SafeAreaView>
     );
@@ -106,5 +175,43 @@ const styles = StyleSheet.create({
         padding: 12,
         fontSize: 16,
     },
-    hint: { marginTop: 20, fontSize: 13, color: '#999', fontStyle: 'italic' },
+    roleContainer: { flexDirection: 'row', marginBottom: 20 },
+    roleButton: {
+        flex: 1,
+        padding: 12,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#ddd',
+        alignItems: 'center',
+        marginHorizontal: 4,
+        backgroundColor: 'white'
+    },
+    roleButtonActive: { backgroundColor: '#007AFF', borderColor: '#007AFF' },
+    roleText: { color: '#333' },
+    roleTextActive: { color: 'white', fontWeight: 'bold' },
+    disabledInput: {
+        backgroundColor: '#f0f0f0',
+        padding: 12,
+        borderRadius: 8,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#ddd'
+    },
+    disabledText: { color: '#999' },
+    deleteButton: {
+        marginTop: 40,
+        backgroundColor: '#fee2e2',
+        padding: 16,
+        borderRadius: 8,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#fecaca'
+    },
+    deleteText: {
+        color: '#dc2626',
+        fontWeight: 'bold',
+        fontSize: 16
+    }
 });

@@ -18,12 +18,6 @@ export default function ManageProfilesScreen({ navigation }) {
                 <Text style={styles.name}>{item.name}</Text>
                 <Text style={styles.role}>{item.role}</Text>
             </View>
-            <View style={styles.limitContainer}>
-                <Text style={styles.limitLabel}>Limit</Text>
-                <Text style={styles.limitValue}>
-                    {(item.limit || 0).toLocaleString()} ð
-                </Text>
-            </View>
             <Text style={styles.arrow}>></Text>
         </TouchableOpacity>
     );
@@ -35,7 +29,9 @@ export default function ManageProfilesScreen({ navigation }) {
                     <Text style={styles.backText}>Back</Text>
                 </TouchableOpacity>
                 <Text style={styles.title}>Manage Profiles</Text>
-                <View style={{ width: 50 }} />
+                <TouchableOpacity onPress={() => navigation.navigate('EditProfile', { isNew: true, profile: {} })} >
+                    <Text style={{ fontSize: 30, color: '#007AFF', fontWeight: '300' }}>+</Text>
+                </TouchableOpacity>
             </View>
 
             <FlatList

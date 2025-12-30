@@ -1,51 +1,45 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { auth } from '../services/firebase';
-import { signOut } from 'firebase/auth';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useAuth } from '../components/context/AuthContext';
 
 export default function SettingsScreen({ navigation }) {
-
-    const handleLogout = async () => {
-        try {
-            await signOut(auth);
-            // AuthContext will auto-redirect to Login
-        } catch (error) {
-            Alert.alert("Error", "Failed to logout");
-        }
-    };
+    const { profile } = useAuth(); // Get current profile for role check
 
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <Text style={styles.backText}>← Back</Text>
+                    <MaterialCommunityIcons name="arrow-left" size={24} color="#007AFF" />
                 </TouchableOpacity>
                 <Text style={styles.title}>Settings</Text>
-                <View style={{ width: 50 }} />
+                <View style={{ width: 24 }} />
             </View>
+
 
             <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Family Management</Text>
 
-                <TouchableOpacity
-                    style={styles.menuItem}
-                    onPress={() => navigation.navigate('ManageProfiles')}
-                >
-                    <Text style={styles.menuText}>Manage Profiles</Text>
-                    <Text style={styles.arrow}>></Text>
-                </TouchableOpacity>
-            </View>
+                {profile?.role === 'Owner' && (
+                    <TouchableOpacity
+                        style={styles.menuItem}
+                        onPress={() => navigation.navigate('ManageProfiles')}
+                    >
+                        <Text style={styles.menuText}>Manage Profiles</Text>
+                        <MaterialCommunityIcons name="chevron-right" size={24} color="#ccc" />
+                    </TouchableOpacity>
+                )}
 
-            <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Account</Text>
-
-                <TouchableOpacity
-                    style={[styles.menuItem, styles.logoutButton]}
-                    onPress={handleLogout}
-                >
-                    <Text style={[styles.menuText, styles.logoutText]}>Log Out</Text>
-                </TouchableOpacity>
+                {profile?.role === 'Owner' && (
+                    <TouchableOpacity
+                        style={styles.menuItem}
+                        onPress={() => navigation.navigate('ManageCategories')}
+                    >
+                        <Text style={styles.menuText}>Manage Categories</Text>
+                        <MaterialCommunityIcons name="chevron-right" size={24} color="#ccc" />
+                    </TouchableOpacity>
+                )}
             </View>
         </SafeAreaView>
     );

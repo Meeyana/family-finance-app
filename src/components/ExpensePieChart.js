@@ -1,50 +1,69 @@
-// Purpose: Display spending distribution by category
-// Used by: AccountDashboard
-
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { PieChart } from 'react-native-gifted-charts';
+import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { VictoryPie } from 'victory-native';
 
 const COLORS = ['#007AFF', '#FF9500', '#FF2D55', '#5856D6', '#4CD964', '#FFCC00'];
 
 export default function ExpensePieChart({ data }) {
-    // Transform transaction data into chart data
+    // Transform transaction data
     const categoryTotals = {};
+    let totalExpenseFiltered = 0;
+
     data.transactions.forEach(t => {
-        if (!categoryTotals[t.category]) categoryTotals[t.category] = 0;
-        categoryTotals[t.category] += t.amount;
+        if ((t.type || 'expense') === 'expense') {
+            if (!categoryTotals[t.category]) categoryTotals[t.category] = 0;
+            categoryTotals[t.category] += t.amount;
+            totalExpenseFiltered += t.amount;
+        }
     });
 
-    const chartData = Object.keys(categoryTotals).map((cat, index) => ({
-        value: categoryTotals[cat],
-        color: COLORS[index % COLORS.length],
-        text: `${Math.round((categoryTotals[cat] / data.totalSpent) * 100)}%`,
-        category: cat
-    }));
+    const chartData = Object.keys(categoryTotals).map((cat, index) => {
+        const value = categoryTotals[cat];
+        const percentage = Math.round((value / totalExpenseFiltered) * 100);
+        return {
+            x: cat,
+            y: value,
+            label: percentage > 4 ? `${percentage}%` : '',
+            percentage: percentage,
+            color: COLORS[index % COLORS.length]
+        };
+    });
 
     if (chartData.length === 0) {
         return <Text style={styles.noData}>No data to display</Text>;
     }
 
+    const screenWidth = Dimensions.get('window').width;
+
     return (
         <View style={styles.container}>
-            <PieChart
-                data={chartData}
-                donut
-                showText
-                textColor="white"
-                radius={120}
-                innerRadius={60}
-                textSize={12}
-                focusOnPress
-            />
+            <View pointerEvents="none">
+                <VictoryPie
+                    data={chartData}
+                    colorScale={chartData.map(d => d.color)}
+                    innerRadius={60}
+                    radius={120}
+                    labelRadius={90}
+                    labels={({ datum }) => datum.percentage > 4 ? `${datum.x}\n${datum.percentage}%` : ''}
+                    style={{
+                        labels: { fill: "white", fontSize: 11, fontWeight: "bold", textAlign: "center" },
+                        data: { stroke: "#fff", strokeWidth: 2 }
+                    }}
+                    padAngle={2}
+                    height={260}
+                    width={screenWidth - 64}
+                />
+            </View>
+
             <View style={styles.legend}>
-                {chartData.map((item, index) => (
-                    <View key={index} style={styles.legendItem}>
-                        <View style={[styles.dot, { backgroundColor: item.color }]} />
-                        <Text style={styles.legendText}>{item.category}</Text>
-                    </View>
-                ))}
+                {chartData
+                    .filter(item => item.percentage > 4)
+                    .map((item, index) => (
+                        <View key={index} style={styles.legendItem}>
+                            <View style={[styles.dot, { backgroundColor: item.color }]} />
+                            <Text style={styles.legendText}>{item.x}</Text>
+                        </View>
+                    ))}
             </View>
         </View>
     );
@@ -53,7 +72,7 @@ export default function ExpensePieChart({ data }) {
 const styles = StyleSheet.create({
     container: {
         alignItems: 'center',
-        padding: 20,
+        padding: 10,
         backgroundColor: 'white',
         borderRadius: 16,
         margin: 16,
@@ -72,8 +91,9 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         flexWrap: 'wrap',
         justifyContent: 'center',
-        marginTop: 20,
+        marginTop: 0,
         gap: 12,
+        paddingBottom: 10
     },
     legendItem: {
         flexDirection: 'row',

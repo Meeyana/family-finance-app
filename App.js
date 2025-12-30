@@ -1,8 +1,17 @@
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
+import { Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import RootNavigator from './src/navigation/RootNavigator';
 import { AuthProvider } from './src/components/context/AuthContext';
+
+if (Platform.OS === 'web') {
+  const originalConsoleError = console.error;
+  console.error = (...args) => {
+    if (typeof args[0] === 'string' && args[0].includes('accessibilityHint')) return;
+    originalConsoleError(...args);
+  };
+}
 
 export default function App() {
   return (

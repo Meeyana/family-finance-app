@@ -46,14 +46,36 @@ export const getAccountData = async (userRole, selectedMonth = new Date()) => {
     });
 
     let totalSpent = 0;
+    let totalIncome = 0;
+
     transactions.forEach(t => {
-        totalSpent += t.amount || 0;
-        if (profilesDict[t.profileId]) {
-            profilesDict[t.profileId].spent += t.amount || 0;
+        const amount = t.amount || 0;
+
+        if (t.type === 'income') {
+            totalIncome += amount;
+        } else {
+            // Expense Logic
+            totalSpent += amount;
+            if (profilesDict[t.profileId]) {
+                profilesDict[t.profileId].spent += amount;
+            }
         }
     });
 
+    const netCashflow = totalIncome - totalSpent;
     const totalLimit = settings?.totalLimit || 0;
+
+    // --- Analytics ---
+    const now = new Date();
+    const isCurrentMonth = selectedMonth.getMonth() === now.getMonth() && selectedMonth.getFullYear() === now.getFullYear();
+    const daysInMonth = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 0).getDate();
+
+    let daysPassed = daysInMonth;
+    if (isCurrentMonth) daysPassed = Math.max(1, now.getDate());
+    else if (selectedMonth > now) daysPassed = 0;
+
+    const burnRate = daysPassed > 0 ? totalSpent / daysPassed : 0;
+    const projectedSpend = isCurrentMonth ? burnRate * daysInMonth : totalSpent;
 
     // Calculate Financial Status
     let financialStatus = '🟢 Healthy';
@@ -65,10 +87,14 @@ export const getAccountData = async (userRole, selectedMonth = new Date()) => {
 
     return {
         totalSpent,
+        totalIncome,
+        netCashflow,
         totalLimit,
         financialStatus,
+        burnRate,
+        projectedSpend,
         budgets: { profiles: profilesDict },
-        transactions // For Chart
+        transactions
     };
 };
 
@@ -90,7 +116,17 @@ export const getProfileData = async (profileId, selectedMonth = new Date()) => {
     if (!profile) throw new Error("Profile not found");
 
     // Dynamic Calc
-    const monthlySpent = allTransactions.reduce((sum, t) => sum + (t.amount || 0), 0);
+    let monthlySpent = 0;
+    let monthlyIncome = 0;
+
+    allTransactions.forEach(t => {
+        const amount = t.amount || 0;
+        if (t.type === 'income') {
+            monthlyIncome += amount;
+        } else {
+            monthlySpent += amount;
+        }
+    });
 
     // Calculate Status
     let statusIndicator = '🟢 Healthy';
@@ -101,11 +137,11 @@ export const getProfileData = async (profileId, selectedMonth = new Date()) => {
     }
 
     return {
-        statusIndicator,
-        budget: {
-            limit: profile.limit,
-            spent: monthlySpent
-        },
-        transactions: allTransactions.slice(0, 50) // More for history
+        financialStatus: statusIndicator,
+        totalLimit: profile.limit,
+        totalSpent: monthlySpent,
+        totalIncome: monthlyIncome,
+        netCashflow: monthlyIncome - monthlySpent,
+        transactions: allTransactions
     };
 };
