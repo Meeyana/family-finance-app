@@ -44,11 +44,5 @@
     "victory": "^37.3.6",
     "victory-native": "^36.9.2"
   },
-  "private": true,
-  "devDependencies": {
-    "babel-preset-expo": "^54.0.9",
-    "react-native-dotenv": "^3.4.11",
-    "react-native-gesture-handler": "^2.30.0",
-    "react-native-reanimated": "^4.2.1"
-  }
+  "private": true
 }
