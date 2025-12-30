@@ -5,13 +5,14 @@
 import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, FlatList, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { auth } from '../services/firebase';
 import { signOut } from 'firebase/auth';
 import { useAuth } from '../components/context/AuthContext';
 import { canViewAccountDashboard } from '../services/permissionService';
 
 export default function HomeScreen({ navigation }) {
-    const { userProfiles } = useAuth();
+    const { userProfiles, selectProfile } = useAuth();
 
     // Check if any available profile has Owner/Partner role to show the dashboard button
     const showAccountDashboard = useMemo(() => {
@@ -19,13 +20,8 @@ export default function HomeScreen({ navigation }) {
     }, [userProfiles]);
 
     const handleProfileSelect = (profile) => {
-        console.log(`👤 Navigation: Home -> ProfileDashboard [${profile.name}]`);
-        navigation.navigate('ProfileDashboard', { profile });
-    };
-
-    const traverseToAccountDashboard = () => {
-        console.log(`📊 Navigation: Home -> AccountDashboard`);
-        navigation.navigate('AccountDashboard');
+        console.log(`👤 Navigation: Selecting profile [${profile.name}]`);
+        selectProfile(profile);
     };
 
     const handleLogout = async () => {
@@ -56,7 +52,7 @@ export default function HomeScreen({ navigation }) {
             <View style={styles.header}>
                 <Text style={styles.title}>Who is spending?</Text>
                 <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-                    <Text style={styles.logoutText}>Logout</Text>
+                    <MaterialCommunityIcons name="logout" size={24} color="#dc2626" />
                 </TouchableOpacity>
             </View>
 
@@ -68,17 +64,6 @@ export default function HomeScreen({ navigation }) {
                 numColumns={2}
                 columnWrapperStyle={styles.row}
             />
-
-            {showAccountDashboard && (
-                <View style={styles.footer}>
-                    <TouchableOpacity
-                        style={styles.accountButton}
-                        onPress={traverseToAccountDashboard}
-                    >
-                        <Text style={styles.accountButtonText}>View Family Account Dashboard</Text>
-                    </TouchableOpacity>
-                </View>
-            )}
         </SafeAreaView>
     );
 }
