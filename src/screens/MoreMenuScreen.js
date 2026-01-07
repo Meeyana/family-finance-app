@@ -7,7 +7,7 @@ import { signOut } from 'firebase/auth';
 import { auth } from '../services/firebase';
 
 export default function MoreMenuScreen({ navigation }) {
-    const { profile, switchProfile } = useAuth();
+    const { profile, switchProfile, pendingRequestCount } = useAuth();
 
     const handleLogout = async () => {
         if (Platform.OS === 'web') {
@@ -85,6 +85,15 @@ export default function MoreMenuScreen({ navigation }) {
                 {/* Family Section */}
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Family</Text>
+                    {profile?.role !== 'Child' && (
+                        <MenuOption
+                            icon="hand-coin-outline"
+                            label="Money Requests"
+                            onPress={() => navigation.navigate('RequestList')}
+                            color="#34C759"
+                            subtext={pendingRequestCount > 0 ? `${pendingRequestCount} Pending` : "Approvals & History"}
+                        />
+                    )}
                     <MenuOption
                         icon="account-switch-outline"
                         label="Switch User"

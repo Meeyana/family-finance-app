@@ -17,6 +17,9 @@ import SettingsScreen from '../screens/SettingsScreen';
 import ManageProfilesScreen from '../screens/ManageProfilesScreen'; // Import
 import EditProfileScreen from '../screens/EditProfileScreen';
 import AnalyzeScreen from '../screens/AnalyzeScreen';
+import MoneyRequestScreen from '../screens/MoneyRequestScreen';
+import RequestListScreen from '../screens/RequestListScreen';
+import GrantMoneyScreen from '../screens/GrantMoneyScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -121,6 +124,14 @@ function ChildTabs() {
     return (
         <Tab.Navigator screenOptions={commonTabOptions}>
             <Tab.Screen
+                name="Dashboard"
+                component={AccountDashboard}
+                options={{
+                    tabBarIcon: ({ color, size }) => <Ionicons name="stats-chart" size={size} color={color} />,
+                    title: 'Overview'
+                }}
+            />
+            <Tab.Screen
                 name="Transactions"
                 component={TransactionListScreen}
                 options={{
@@ -145,6 +156,15 @@ function ChildTabs() {
                         <CustomTabBarButton {...props} />
                     ),
                     tabBarLabel: () => null // Hide label
+                }}
+            />
+            {/* Child sees Requests directly */}
+            <Tab.Screen
+                name="Requests"
+                component={RequestListScreen}
+                options={{
+                    tabBarIcon: ({ color, size }) => <Ionicons name="hand-right" size={size} color={color} />,
+                    title: 'Requests'
                 }}
             />
             <Tab.Screen
@@ -220,6 +240,9 @@ export default function AppStack() {
                         }}
                     />
                     <Stack.Screen name="Analyze" component={AnalyzeScreen} options={{ headerShown: false }} />
+                    <Stack.Screen name="MoneyRequest" component={MoneyRequestScreen} options={{ headerShown: false }} />
+                    <Stack.Screen name="RequestList" component={RequestListScreen} options={{ headerShown: false }} />
+                    <Stack.Screen name="GrantMoney" component={GrantMoneyScreen} options={{ headerShown: false }} />
                 </>
             )}
         </Stack.Navigator>

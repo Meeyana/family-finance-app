@@ -3,7 +3,7 @@
 // Access: Owner/Partner Only
 
 import React, { useEffect, useState, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert, DeviceEventEmitter } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getAccountData } from '../services/dataService';
 import { useAuth } from '../components/context/AuthContext';
@@ -30,6 +30,10 @@ export default function AnalyzeScreen({ navigation }) {
 
     useEffect(() => {
         loadData();
+        const subscription = DeviceEventEmitter.addListener('refresh_profile_dashboard', loadData);
+        return () => {
+            subscription.remove();
+        };
     }, [selectedDate]);
 
     const loadData = async () => {

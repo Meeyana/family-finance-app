@@ -69,9 +69,17 @@ export default function TransactionListScreen({ navigation }) {
     };
 
     const renderItem = ({ item }) => {
+        const isTransfer = item.type === 'transfer';
         const isExpense = (item.type || 'expense') === 'expense';
-        const color = isExpense ? '#FF3B30' : '#4CD964';
-        const sign = isExpense ? '-' : '+';
+
+        let color = isExpense ? '#FF3B30' : '#4CD964';
+        let sign = isExpense ? '-' : '+';
+
+        if (isTransfer) {
+            color = '#007AFF'; // Blue for neutral transfers
+            sign = ''; // No sign for neutral
+        }
+
         const date = new Date(item.date).toLocaleDateString('vi-VN');
 
         // Lookup Icon dynamically for consistency

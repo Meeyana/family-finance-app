@@ -47,16 +47,45 @@ export const getAccountData = async (userRole, selectedMonth = new Date()) => {
 
     let totalSpent = 0;
     let totalIncome = 0;
+    let totalGiven = 0;
+    let totalReceived = 0;
 
     transactions.forEach(t => {
         const amount = t.amount || 0;
 
-        if (t.type === 'income') {
-            totalIncome += amount;
+        // GLOBAL SNAPSHOT: Exclude internal transfers to avoid double counting
+        // We check isTransfer flag, specific category names, OR the note signature
+        const isInternalTransfer = t.isTransfer
+            || t.category === 'Granted'
+            || t.category === 'Present'
+            || (t.note && t.note.includes('(Granted)'))
+            || t.type === 'transfer'; // Explicitly check new type
+
+        if (isInternalTransfer) {
+            // Distinguish Direction based on Note keywords from processTransfer
+            const isGiven = (t.note && t.note.includes('Transfer to')) || t.category === 'Transfer Out' || t.categoryIcon === '💸';
+            const isReceived = (t.note && t.note.includes('Received from')) || t.category === 'Allowance' || t.categoryIcon === '💰';
+
+            if (isGiven) {
+                totalGiven += amount;
+            } else if (isReceived) {
+                totalReceived += amount;
+            } else {
+                // Fallback
+                if (t.type === 'expense') totalGiven += amount;
+                else if (t.type === 'income') totalReceived += amount;
+                else totalGiven += amount;
+            }
         } else {
-            // Expense Logic
-            totalSpent += amount;
-            if (profilesDict[t.profileId]) {
+            // NOT a transfer (Normal Income/Expense)
+            if (t.type === 'income') {
+                totalIncome += amount;
+            } else {
+                totalSpent += amount;
+            }
+
+            // INDIVIDUAL BUDGETS: Only track real expenses
+            if (t.type !== 'income' && profilesDict[t.profileId]) {
                 profilesDict[t.profileId].spent += amount;
             }
         }
@@ -88,6 +117,8 @@ export const getAccountData = async (userRole, selectedMonth = new Date()) => {
     return {
         totalSpent,
         totalIncome,
+        totalGiven,     // Family Volume Given
+        totalReceived,  // Family Volume Received (should be same)
         netCashflow,
         totalLimit,
         financialStatus,
@@ -118,13 +149,40 @@ export const getProfileData = async (profileId, selectedMonth = new Date()) => {
     // Dynamic Calc
     let monthlySpent = 0;
     let monthlyIncome = 0;
+    let totalGiven = 0;
+    let totalReceived = 0;
 
     allTransactions.forEach(t => {
         const amount = t.amount || 0;
-        if (t.type === 'income') {
-            monthlyIncome += amount;
+
+        // GLOBAL SNAPSHOT: Exclude internal transfers to avoid double counting
+        const isInternalTransfer = t.isTransfer
+            || t.category === 'Granted'
+            || t.category === 'Present'
+            || (t.note && t.note.includes('(Granted)'))
+            || t.type === 'transfer';
+
+        if (isInternalTransfer) {
+            // Distinguish Direction based on Note keywords from processTransfer
+            const isGiven = (t.note && t.note.includes('Transfer to')) || t.category === 'Transfer Out' || t.categoryIcon === '💸';
+            const isReceived = (t.note && t.note.includes('Received from')) || t.category === 'Allowance' || t.categoryIcon === '💰';
+
+            if (isGiven) {
+                totalGiven += amount;
+            } else if (isReceived) {
+                totalReceived += amount;
+            } else {
+                // Fallback for older data
+                if (t.type === 'expense') totalGiven += amount;
+                else if (t.type === 'income') totalReceived += amount;
+                else totalGiven += amount;
+            }
         } else {
-            monthlySpent += amount;
+            if (t.type === 'income') {
+                monthlyIncome += amount;
+            } else {
+                monthlySpent += amount;
+            }
         }
     });
 
@@ -141,6 +199,8 @@ export const getProfileData = async (profileId, selectedMonth = new Date()) => {
         totalLimit: profile.limit,
         totalSpent: monthlySpent,
         totalIncome: monthlyIncome,
+        totalGiven,     // Presents I GAVE
+        totalReceived,  // Presents I RECEIVED
         netCashflow: monthlyIncome - monthlySpent,
         transactions: allTransactions
     };

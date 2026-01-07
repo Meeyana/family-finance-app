@@ -15,7 +15,7 @@
 // ------------------------------------------------------------------
 
 import { db } from './firebase';
-import { doc, getDoc, setDoc, collection, getDocs, addDoc, updateDoc, increment, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, getDocs, addDoc, updateDoc, increment, deleteDoc, writeBatch } from 'firebase/firestore';
 
 const APP_ID = 'quan-ly-chi-tieu-family';
 
@@ -161,17 +161,69 @@ export const updateTransaction = async (uid, transactionId, oldData, newData) =>
 export const deleteTransaction = async (uid, transactionId, oldData) => {
     const familyRef = getFamilyRef(uid);
     const transactionRef = doc(familyRef, 'transactions', transactionId);
-    const profileRef = doc(familyRef, 'profiles', oldData.profileId);
-
-    // 1. Delete Transaction
-    await deleteDoc(transactionRef);
-
-    // 2. Refund Profile Spent/Earned
-    if (oldData.type === 'income') {
-        await updateDoc(profileRef, { earned: increment(-oldData.amount) });
-    } else {
-        await updateDoc(profileRef, { spent: increment(-oldData.amount) });
+    // Safeguard: Ensure profileId exists
+    if (!oldData.profileId) {
+        console.warn('⚠️ DeleteTransaction: Missing profileId, only deleting transaction doc.');
+        batch.delete(transactionRef);
+        await batch.commit();
+        return true;
     }
+
+    const profileRef = doc(familyRef, 'profiles', oldData.profileId);
+    const batch = writeBatch(db);
+
+    // 1. Delete Main Transaction
+    batch.delete(transactionRef);
+
+    // 2. Refund Main Profile
+    // If type is 'transfer', we do NOTHING to the balance (since we didn't touch it on creation)
+    if (oldData.type !== 'transfer') {
+        const refundAmount = Number(oldData.amount) || 0;
+        if (oldData.type === 'income') {
+            batch.update(profileRef, { earned: increment(-refundAmount) });
+        } else {
+            batch.update(profileRef, { spent: increment(-refundAmount) });
+        }
+    }
+
+    // 3. Handle Linked Transaction (if any)
+    if (oldData.linkedTransferId) {
+        console.log(`🔗 Deleting linked transaction: ${oldData.linkedTransferId}`);
+        const linkedTxRef = doc(familyRef, 'transactions', oldData.linkedTransferId);
+        try {
+            const linkedTxSnap = await getDoc(linkedTxRef);
+            if (linkedTxSnap.exists()) {
+                const linkedData = linkedTxSnap.data();
+                if (linkedData.profileId) {
+                    const linkedProfileRef = doc(familyRef, 'profiles', linkedData.profileId);
+                    const linkedRefund = Number(linkedData.amount) || 0;
+
+                    // Delete Linked Tx
+                    batch.delete(linkedTxRef);
+
+                    // Refund Linked Profile
+                    // Only refund if it was NOT a neutral transfer
+                    if (linkedData.type !== 'transfer') {
+                        if (linkedData.type === 'income') {
+                            batch.update(linkedProfileRef, { earned: increment(-linkedRefund) });
+                        } else {
+                            batch.update(linkedProfileRef, { spent: increment(-linkedRefund) });
+                        }
+                    }
+                }
+            }
+        } catch (linkErr) {
+            console.warn('⚠️ Failed to fetch linked transaction, skipping link cleanup', linkErr);
+        }
+    } else if (oldData.isTransfer) {
+        // Fallback: If this is a transfer but linkedTransferId is on the OTHER side (bi-directional check might be needed if not standardized)
+        // For now, our processTransfer links the Income back to Expense.
+        // If we strictly follow processTransfer, the Income has linkedTransferId.
+        // The Expense (Sender) might not have it unless we update line 380ish to match.
+        // Let's verify processTransfer again.
+    }
+
+    await batch.commit();
     return true;
 };
 
@@ -353,3 +405,154 @@ export const deleteProfile = async (uid, profileId) => {
     return true;
 };
 
+
+// ------------------------------------------------------------------
+// Money Requests & Transfers (Period 1)
+// ------------------------------------------------------------------
+
+/**
+ * Process a transfer (Approve Request or Grant Money)
+ * Atomic operation: Deduct from Sender -> Add to Receiver -> Update Request (optional)
+ * 
+ * @param {string} uid - User ID
+ * @param {string} fromProfileId - Sender Profile ID (Admin)
+ * @param {string} toProfileId - Receiver Profile ID (Child/Partner)
+ * @param {number} amount - Amount to transfer
+ * @param {object} categoryData - { id, name, icon } for the transaction record
+ * @param {string} reason - Description/Note
+ * @param {string} linkedRequestId - Optional: ID of the request being approved
+ */
+export const processTransfer = async (uid, fromProfileId, toProfileId, amount, categoryData, reason, linkedRequestId = null) => {
+    console.log(`💸 Repo: Processing transfer ${amount} from ${fromProfileId} to ${toProfileId}`);
+    const familyRef = getFamilyRef(uid);
+    const batch = writeBatch(db);
+
+    const timestamp = new Date().toISOString();
+    const dateOnly = timestamp.split('T')[0]; // Matches app convention (YYYY-MM-DD)
+
+    // 1. Create Expense for Sender (Transfer Out)
+    // We create a reference first so we can link it
+    // 1. Create References First (for bidirectional linking)
+    const expenseRef = doc(collection(familyRef, 'transactions'));
+    const incomeRef = doc(collection(familyRef, 'transactions'));
+
+    // 2. Set Expense Side (Sender) -> Now just 'transfer'
+    batch.set(expenseRef, {
+        profileId: fromProfileId,
+        amount: Number(amount),
+        type: 'transfer', // Changed from 'expense'
+        category: categoryData.name || 'Transfer Out',
+        categoryId: categoryData.id || 'transfer_out',
+        categoryIcon: categoryData.icon || '💸',
+        date: dateOnly,
+        note: `(Granted) Transfer to ${toProfileId}: ${reason}`,
+        isTransfer: true,
+        linkedTransferId: incomeRef.id,
+        createdAt: timestamp
+    });
+
+    // 3. Set Income Side (Receiver) -> Now just 'transfer'
+    batch.set(incomeRef, {
+        profileId: toProfileId,
+        amount: Number(amount),
+        type: 'transfer', // Changed from 'income'
+        category: categoryData.name || 'Allowance',
+        categoryId: categoryData.id || 'allowance',
+        categoryIcon: categoryData.icon || '💰',
+        date: dateOnly,
+        note: `(Granted) Received from ${fromProfileId}: ${reason}`,
+        isTransfer: true,
+        linkedTransferId: expenseRef.id,
+        createdAt: timestamp
+    });
+
+    // 4. Update Profiles
+    // USER REQUEST: Do NOT update 'spent' or 'earned' for internal transfers.
+    // Confirmed: "Just a trade money for user?" -> Neutral operation.
+    // We skip the profileRef increments here.
+
+    // 5. Update Request Status (if linked)
+    if (linkedRequestId) {
+        console.log(`🔗 Repo: Linking to Request ${linkedRequestId}`);
+        const requestRef = doc(familyRef, 'requests', linkedRequestId);
+        batch.update(requestRef, {
+            status: 'APPROVED',
+            approvedBy: fromProfileId,
+            updatedAt: timestamp
+        });
+    }
+
+    await batch.commit();
+    console.log('✅ Transfer processed successfully');
+    return { expenseId: expenseRef.id, incomeId: incomeRef.id };
+};
+
+/**
+ * Create a new Money Request
+ */
+export const addRequest = async (uid, requestData) => {
+    console.log(`🙏 Repo: Adding request for ${requestData.amount} by ${requestData.createdByProfileId}`);
+    const familyRef = getFamilyRef(uid);
+    const requestsCol = collection(familyRef, 'requests');
+
+    const docRef = await addDoc(requestsCol, {
+        ...requestData,
+        status: 'PENDING',
+        createdAt: new Date().toISOString()
+    });
+    return docRef.id;
+};
+
+/**
+ * Get Requests with optional filtering
+ */
+export const getRequests = async (uid, profileId = null, role = null) => {
+    const familyRef = getFamilyRef(uid);
+    const requestsCol = collection(familyRef, 'requests');
+    const profilesCol = collection(familyRef, 'profiles');
+
+    const [reqSnapshot, profSnapshot] = await Promise.all([
+        getDocs(requestsCol),
+        getDocs(profilesCol)
+    ]);
+
+    const profilesMap = {};
+    profSnapshot.docs.forEach(d => {
+        profilesMap[d.id] = d.data().name;
+    });
+
+    let requests = reqSnapshot.docs.map(d => {
+        const data = d.data();
+        return {
+            id: d.id,
+            ...data,
+            approvedByName: data.approvedBy ? (profilesMap[data.approvedBy] || 'Admin') : null
+        };
+    });
+
+    const isAdmin = role === 'Owner' || role === 'Partner';
+
+    if (!isAdmin && profileId) {
+        // Non-admins see only their own
+        requests = requests.filter(r => r.createdByProfileId === profileId);
+    }
+    // Admins see all
+
+    return requests.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+};
+
+/**
+ * Reject a Request
+ */
+export const rejectRequest = async (uid, requestId, reason) => {
+    console.log(`❌ Repo: Rejecting request ${requestId}`);
+    const familyRef = getFamilyRef(uid);
+    const requestRef = doc(familyRef, 'requests', requestId);
+
+    await updateDoc(requestRef, {
+        status: 'REJECTED',
+        rejectionReason: reason || null,
+        rejectedAt: new Date().toISOString()
+    });
+    return true;
+};

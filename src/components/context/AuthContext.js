@@ -4,7 +4,9 @@
 
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '../../services/firebase';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { auth, db } from '../../services/firebase';
+import { doc } from 'firebase/firestore';
 import { initializeFamily, getFamilyProfiles, initializeCategories } from '../../services/firestoreRepository';
 
 const AuthContext = createContext();
@@ -14,6 +16,35 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
     const [userProfiles, setUserProfiles] = useState([]);
     const [profile, setProfile] = useState(null);
+    const [pendingRequestCount, setPendingRequestCount] = useState(0);
+
+    // Listen for Pending Requests (Real-time)
+    useEffect(() => {
+        if (!user || !profile) {
+            setPendingRequestCount(0);
+            return;
+        }
+
+        // Only Admins care about ALL pending requests
+        // Users care about THEIR pending requests (optional, but let's just count for Admin for now)
+        const isAdmin = profile.role === 'Owner' || profile.role === 'Partner';
+
+        if (isAdmin) {
+            const familyRef = doc(db, 'artifacts', 'quan-ly-chi-tieu-family', 'users', user.uid);
+            const requestsCol = collection(familyRef, 'requests');
+            const q = query(requestsCol, where('status', '==', 'PENDING'));
+
+            const unsubscribe = onSnapshot(q, (snapshot) => {
+                setPendingRequestCount(snapshot.size);
+            }, (error) => {
+                console.log("Error listening to requests:", error);
+            });
+
+            return () => unsubscribe();
+        } else {
+            setPendingRequestCount(0);
+        }
+    }, [user, profile]);
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (u) => {
@@ -75,7 +106,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, userProfiles, profile, selectProfile, switchProfile, loading, refreshProfiles }}>
+        <AuthContext.Provider value={{ user, userProfiles, profile, selectProfile, switchProfile, loading, refreshProfiles, pendingRequestCount }}>
             {children}
         </AuthContext.Provider>
     );

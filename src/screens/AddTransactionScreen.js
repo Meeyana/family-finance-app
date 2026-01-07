@@ -160,6 +160,7 @@ export default function AddTransactionScreen({ route, navigation }) {
                         navigation.goBack();
                     } catch (err) {
                         console.error(err);
+                        Alert.alert('Delete Failed', err.message);
                     }
                 }
             }

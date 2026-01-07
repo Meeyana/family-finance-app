@@ -4,7 +4,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert, DeviceEventEmitter } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { getProfileData } from '../services/dataService';
+import { getProfileData } from '../services/dataService'; // Revert to ProfileData (Individual)
 import { getFamilyCategories } from '../services/firestoreRepository';
 import { auth } from '../services/firebase';
 import { useAuth } from '../components/context/AuthContext';
@@ -36,6 +36,7 @@ export default function AccountDashboard({ navigation }) {
             setLoading(true);
             if (!profile?.id) return;
 
+            // Use getProfileData for Individual View (Specific to User)
             const result = await getProfileData(profile.id, selectedDate);
             setData(result);
         } catch (err) {
@@ -51,22 +52,53 @@ export default function AccountDashboard({ navigation }) {
         if (!data) return null;
 
         const filteredTxs = data.transactions || [];
-        const income = filteredTxs.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
 
-        const expenseTxs = filteredTxs.filter(t => (t.type || 'expense') === 'expense');
+        // Define exclusion filter: Transfers OR "Grant" categories OR Note signature
+        const isInternalTransfer = (t) => t.isTransfer
+            || t.type === 'transfer'
+            || t.category === 'Granted'
+            || t.category === 'Present'
+            || (t.note && t.note.includes('(Granted)'));
+
+        const income = filteredTxs
+            .filter(t => t.type === 'income' && !isInternalTransfer(t))
+            .reduce((acc, t) => acc + t.amount, 0);
+
+        const expenseTxs = filteredTxs
+            .filter(t => (t.type || 'expense') === 'expense' && !isInternalTransfer(t));
         const expense = expenseTxs.reduce((acc, t) => acc + t.amount, 0);
+
+        // Calculate Presents (Given vs Received)
+        let given = 0;
+        let received = 0;
+
+        filteredTxs.filter(isInternalTransfer).forEach(t => {
+            const isGiven = (t.note && t.note.includes('Transfer to')) || t.category === 'Transfer Out' || t.categoryIcon === '💸';
+            const isReceived = (t.note && t.note.includes('Received from')) || t.category === 'Allowance' || t.categoryIcon === '💰';
+
+            if (isGiven) given += t.amount;
+            else if (isReceived) received += t.amount;
+            else {
+                // Fallback based on context
+                // Since we are finding t in profile's specific list, 
+                // type='transfer' is ambiguous without note.
+                // But typically: 
+                given += t.amount;
+            }
+        });
 
         // Calculate Category Breakdown
         const categoryMap = {};
         expenseTxs.forEach(t => {
-            const catName = t.category || 'Uncategorized';
+            let catName = t.category || 'Uncategorized';
+            if (catName === 'Granted') catName = 'Present';
             if (!categoryMap[catName]) categoryMap[catName] = 0;
             categoryMap[catName] += t.amount;
         });
 
         const categoryBreakdown = Object.keys(categoryMap).map(catName => {
             const catObj = categories.find(c => c.name === catName);
-            const emoji = catObj?.icon || '🏷️'; // Default fallback
+            const emoji = catObj?.icon || (catName === 'Present' ? '🎁' : '🏷️');
 
             return {
                 name: catName,
@@ -82,8 +114,11 @@ export default function AccountDashboard({ navigation }) {
             categoryBreakdown,
             totalIncome: income,
             totalSpent: expense,
+            totalGiven: given,
+            totalReceived: received,
             totalLimit: data.totalLimit || 0,
             netCashflow: income - expense,
+            remain: (income + received) - (expense + given), // New Metric
             projectedSpend: (expense / Math.max(new Date().getDate(), 1)) * 30
         };
     }, [data, categories]); // Added categories to dependency
@@ -103,6 +138,10 @@ export default function AccountDashboard({ navigation }) {
             </SafeAreaView>
         );
     }
+
+    // Determine Logic for Present Card
+    const showGiven = (viewData?.totalGiven || 0) > 0;
+    const showReceived = (viewData?.totalReceived || 0) > 0;
 
     return (
         <SafeAreaView style={styles.container}>
@@ -155,7 +194,7 @@ export default function AccountDashboard({ navigation }) {
                         </View>
                     </View>
 
-                    {/* Row 2: Budget & Forecast */}
+                    {/* Row 2: Budget & Presents */}
                     <View style={styles.gridRow}>
                         <View style={[styles.card, styles.gridCard]}>
                             <View style={[styles.iconCircle, { backgroundColor: 'rgba(0, 122, 255, 0.1)' }]}>
@@ -171,6 +210,19 @@ export default function AccountDashboard({ navigation }) {
                         </View>
 
                         <View style={[styles.card, styles.gridCard]}>
+                            <View style={[styles.iconCircle, { backgroundColor: 'rgba(255, 149, 0, 0.1)' }]}>
+                                <MaterialCommunityIcons name="gift" size={24} color="#FF9500" />
+                            </View>
+                            <Text style={styles.gridLabel}>Presents Given</Text>
+                            <Text style={[styles.gridValue, { color: '#FF9500' }]}>
+                                {viewData?.totalGiven?.toLocaleString()} ₫
+                            </Text>
+                        </View>
+                    </View>
+
+                    {/* Row 3: Forecast & Allowance Received */}
+                    <View style={styles.gridRow}>
+                        <View style={[styles.card, styles.gridCard]}>
                             <View style={[styles.iconCircle, { backgroundColor: 'rgba(251, 191, 36, 0.1)' }]}>
                                 <MaterialCommunityIcons name="crystal-ball" size={24} color="#fbbf24" />
                             </View>
@@ -179,7 +231,32 @@ export default function AccountDashboard({ navigation }) {
                                 {Math.round(viewData?.projectedSpend || 0).toLocaleString()}
                             </Text>
                         </View>
+
+                        <View style={[styles.card, styles.gridCard]}>
+                            <View style={[styles.iconCircle, { backgroundColor: 'rgba(52, 199, 89, 0.1)' }]}>
+                                <MaterialCommunityIcons name="gift-open" size={24} color="#34c759" />
+                            </View>
+                            <Text style={styles.gridLabel}>Allowance Recv.</Text>
+                            <Text style={[styles.gridValue, { color: '#34c759' }]}>
+                                +{viewData?.totalReceived?.toLocaleString()} ₫
+                            </Text>
+                        </View>
                     </View>
+
+                    {/* Row 4: Remain (Parents Only) */}
+                    {profile?.role !== 'Child' && (
+                        <View style={styles.gridRow}>
+                            <View style={[styles.card, styles.gridCard, { flex: 1 }]}>
+                                <View style={[styles.iconCircle, { backgroundColor: viewData?.remain >= 0 ? 'rgba(52, 199, 89, 0.1)' : 'rgba(255, 59, 48, 0.1)' }]}>
+                                    <MaterialCommunityIcons name="scale-balance" size={24} color={viewData?.remain >= 0 ? "#34c759" : "#ff3b30"} />
+                                </View>
+                                <Text style={styles.gridLabel}>Remain (Real)</Text>
+                                <Text style={[styles.gridValue, { color: viewData?.remain >= 0 ? '#34c759' : '#ff3b30' }]}>
+                                    {viewData?.remain > 0 ? '+' : ''}{viewData?.remain?.toLocaleString()} ₫
+                                </Text>
+                            </View>
+                        </View>
+                    )}
                 </View>
 
                 {/* Category Breakdown */}
@@ -201,8 +278,25 @@ export default function AccountDashboard({ navigation }) {
                         <Text style={styles.emptyText}>No expenses this month</Text>
                     )}
                 </View>
+
+                {/* DEBUG SECTION: REMOVE BEFORE PRODUCTION */}
+                <View style={{ padding: 16, backgroundColor: '#ffeebb', margin: 16, borderRadius: 8 }}>
+                    <Text style={{ fontWeight: 'bold', marginBottom: 8 }}>🐞 DEBUG: Income Source (Total: {viewData?.totalIncome?.toLocaleString()})</Text>
+                    {viewData?.transactions
+                        ?.filter(t => t.type === 'income' && !(
+                            t.isTransfer || t.category === 'Granted' || t.category === 'Present' || (t.note && t.note.includes('(Granted)'))
+                        ))
+                        .map((t, index) => (
+                            <Text key={index} style={{ fontSize: 12, marginBottom: 4 }}>
+                                {t.date}: {t.amount?.toLocaleString()} - {t.category} ({t.profileId})
+                            </Text>
+                        ))
+                    }
+                    {(!viewData?.transactions || viewData.transactions.length === 0) && <Text>No transactions loaded</Text>}
+                </View>
+
             </ScrollView>
-        </SafeAreaView>
+        </SafeAreaView >
     );
 }
 
