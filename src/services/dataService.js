@@ -42,7 +42,7 @@ export const getAccountData = async (userRole, selectedMonth = new Date()) => {
 
     const profilesDict = {};
     profiles.forEach(p => {
-        profilesDict[p.id] = { ...p, spent: 0 }; // Reset spent for calculation
+        profilesDict[p.id] = { ...p, spent: 0, income: 0, financialStatus: '🟢 Healthy' }; // Reset spent for calculation
     });
 
     let totalSpent = 0;
@@ -80,13 +80,10 @@ export const getAccountData = async (userRole, selectedMonth = new Date()) => {
             // NOT a transfer (Normal Income/Expense)
             if (t.type === 'income') {
                 totalIncome += amount;
+                if (profilesDict[t.profileId]) profilesDict[t.profileId].income += amount;
             } else {
                 totalSpent += amount;
-            }
-
-            // INDIVIDUAL BUDGETS: Only track real expenses
-            if (t.type !== 'income' && profilesDict[t.profileId]) {
-                profilesDict[t.profileId].spent += amount;
+                if (profilesDict[t.profileId]) profilesDict[t.profileId].spent += amount;
             }
         }
     });
@@ -113,6 +110,24 @@ export const getAccountData = async (userRole, selectedMonth = new Date()) => {
         if (ratio >= 1.0) financialStatus = '🔴 Critical';
         else if (ratio >= 0.8) financialStatus = '🟡 Warning';
     }
+
+    // Downgrade if Deficit
+    if (financialStatus !== '🔴 Critical' && netCashflow < 0) {
+        financialStatus = '🟠 Deficit';
+    }
+
+    // Calculate Financial Status for each profile
+    Object.values(profilesDict).forEach(p => {
+        if (p.limit > 0) {
+            const ratio = p.spent / p.limit;
+            if (ratio >= 1.0) p.financialStatus = '🔴 Over';
+            else if (ratio >= 0.8) p.financialStatus = '🟡 Caution';
+        }
+        // Deficit Check
+        if (p.financialStatus !== '🔴 Over' && (p.income - p.spent) < 0) {
+            p.financialStatus = '🟠 Deficit';
+        }
+    });
 
     return {
         totalSpent,
@@ -192,6 +207,11 @@ export const getProfileData = async (profileId, selectedMonth = new Date()) => {
         const ratio = monthlySpent / profile.limit;
         if (ratio >= 1.0) statusIndicator = '🔴 Over Budget';
         else if (ratio >= 0.7) statusIndicator = '🟡 Caution';
+    }
+
+    // Downgrade if Deficit
+    if (statusIndicator !== '🔴 Over Budget' && (monthlyIncome - monthlySpent) < 0) {
+        statusIndicator = '🟠 Deficit';
     }
 
     return {

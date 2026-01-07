@@ -7,7 +7,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../../services/firebase';
 import { doc } from 'firebase/firestore';
-import { initializeFamily, getFamilyProfiles, initializeCategories } from '../../services/firestoreRepository';
+import { initializeFamily, getFamilyProfiles, initializeCategories, checkAndProcessRecurring } from '../../services/firestoreRepository';
 
 const AuthContext = createContext();
 
@@ -17,6 +17,16 @@ export const AuthProvider = ({ children }) => {
     const [userProfiles, setUserProfiles] = useState([]);
     const [profile, setProfile] = useState(null);
     const [pendingRequestCount, setPendingRequestCount] = useState(0);
+
+    // Initial Processing
+    useEffect(() => {
+        const process = async () => {
+            if (user) {
+                await checkAndProcessRecurring(user.uid);
+            }
+        };
+        process();
+    }, [user]); // Run when user logs in
 
     // Listen for Pending Requests (Real-time)
     useEffect(() => {

@@ -50,8 +50,11 @@ export default function ManageCategoriesScreen({ navigation }) {
 
     const loadCategories = async () => {
         try {
+            console.log(`🔍 ManageCategories: Loading for ${profile?.name} (${profile?.role})`);
             if (auth.currentUser && profile) {
                 const cats = await getFamilyCategories(auth.currentUser.uid, profile.id, profile.role);
+                console.log(`✅ ManageCategories: Loaded ${cats.length} categories.`);
+                cats.forEach(c => console.log(`   - ${c.name} (${c.type}) [Owner: ${c.ownerId}]`));
                 setCategories(cats);
             }
         } catch (error) {
@@ -315,7 +318,7 @@ export default function ManageCategoriesScreen({ navigation }) {
                         }
 
                         const isMine = item.ownerId === profile.id;
-                        const canEdit = isSystem ? profile.role === 'Owner' : isMine;
+                        const canEdit = profile.role === 'Owner' || isMine;
 
                         return (
                             <View style={styles.row}>

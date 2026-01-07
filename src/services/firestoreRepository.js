@@ -15,7 +15,7 @@
 // ------------------------------------------------------------------
 
 import { db } from './firebase';
-import { doc, getDoc, setDoc, collection, getDocs, addDoc, updateDoc, increment, deleteDoc, writeBatch } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, getDocs, addDoc, updateDoc, increment, deleteDoc, writeBatch, query, orderBy, where } from 'firebase/firestore';
 
 const APP_ID = 'quan-ly-chi-tieu-family';
 
@@ -264,11 +264,17 @@ export const getFamilyCategories = async (uid, profileId = null, role = null) =>
 
     const snapshot = await getDocs(categoriesCol);
     const categories = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    console.log(`📦 Repo: Fetched ${categories.length} total categories from Firestore.`);
 
     if (profileId) {
         return categories.filter(c => {
             // Owner sees EVERYTHING to manage
-            if (role && role.trim().toLowerCase() === 'owner') return true;
+            const isOwner = role && role.trim().toLowerCase() === 'owner';
+            if (isOwner) {
+                // Console log to verify Owner check passes
+                // console.log(`   👑 Owner Access: ${c.name}`); 
+                return true;
+            }
 
             const isMine = c.ownerId === profileId;
 
@@ -555,4 +561,124 @@ export const rejectRequest = async (uid, requestId, reason) => {
         rejectedAt: new Date().toISOString()
     });
     return true;
+};
+
+// ------------------------------------------------------------------
+// Recurring Transactions (Phase 5)
+// ------------------------------------------------------------------
+
+/**
+ * Add a new recurring transaction
+ */
+export const addRecurring = async (uid, recurringData) => {
+    const familyRef = getFamilyRef(uid);
+    const recurringCol = collection(familyRef, 'recurring_transactions');
+
+    // Ensure nextDueDate is set (default to startDate if not provided)
+    const data = {
+        ...recurringData,
+        nextDueDate: recurringData.nextDueDate || recurringData.startDate,
+        isActive: true,
+        createdAt: new Date().toISOString()
+    };
+
+    const docRef = await addDoc(recurringCol, data);
+    return { id: docRef.id, ...data };
+};
+
+/**
+ * Get all recurring transactions for the family (or specific profile)
+ */
+export const getRecurring = async (uid, profileId = null) => {
+    const familyRef = getFamilyRef(uid);
+    const recurringCol = collection(familyRef, 'recurring_transactions');
+    const q = query(recurringCol, orderBy('nextDueDate', 'asc')); // Process oldest first
+
+    const snapshot = await getDocs(q);
+    let items = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    if (profileId) {
+        items = items.filter(i => i.profileId === profileId);
+    }
+    return items;
+};
+
+/**
+ * Delete (or deactivate) a recurring transaction
+ */
+export const deleteRecurring = async (uid, id) => {
+    const familyRef = getFamilyRef(uid);
+    await deleteDoc(doc(familyRef, 'recurring_transactions', id));
+};
+
+/**
+ * Core Logic: Check and auto-generate transactions
+ * Should be called on App Start / Dashboard Load
+ */
+export const checkAndProcessRecurring = async (uid) => {
+    console.log("🔄 Process: Checking Recurring Transactions...");
+    const familyRef = getFamilyRef(uid);
+    const recurringCol = collection(familyRef, 'recurring_transactions');
+    const transactionsCol = collection(familyRef, 'transactions');
+
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+
+    // Get all active items where nextDueDate <= Today
+    const q = query(recurringCol, where('isActive', '==', true));
+    const snapshot = await getDocs(q);
+
+    const batch = writeBatch(db);
+    let processedCount = 0;
+
+    snapshot.docs.forEach(docSnap => {
+        const item = docSnap.data();
+
+        // Check if due
+        if (item.nextDueDate <= today) {
+            console.log(`✅ Generating Transaction for ${item.name} (Due: ${item.nextDueDate})`);
+
+            // 1. Create Real Transaction
+            const newTxRef = doc(transactionsCol);
+            batch.set(newTxRef, {
+                amount: Number(item.amount),
+                category: item.category,
+                categoryIcon: item.categoryData?.icon || '📅', // Default icon
+                categoryId: item.categoryData?.id || 'recurring',
+                date: item.nextDueDate, // Use the scheduled date, not today's actual date
+                note: `(Auto) ${item.name}`,
+                profileId: item.profileId,
+                type: item.type,
+                createdAt: new Date().toISOString(),
+                isRecurring: true,
+                recurringId: docSnap.id
+            });
+
+            // 2. Calculate Next Due Date
+            let nextDate = new Date(item.nextDueDate);
+            switch (item.frequency) {
+                case 'WEEKLY': nextDate.setDate(nextDate.getDate() + 7); break;
+                case 'MONTHLY': nextDate.setMonth(nextDate.getMonth() + 1); break;
+                case 'YEARLY': nextDate.setFullYear(nextDate.getFullYear() + 1); break;
+                default: nextDate.setMonth(nextDate.getMonth() + 1); // Default Monthly
+            }
+
+            const nextDateStr = nextDate.toISOString().split('T')[0];
+
+            // 3. Update Recurring Doc
+            batch.update(docSnap.ref, {
+                nextDueDate: nextDateStr,
+                lastProcessed: new Date().toISOString()
+            });
+
+            processedCount++;
+        }
+    });
+
+    if (processedCount > 0) {
+        await batch.commit();
+        console.log(`🚀 Generated ${processedCount} recurring transactions.`);
+    } else {
+        console.log("✅ No recurring transactions due.");
+    }
+    return processedCount;
 };

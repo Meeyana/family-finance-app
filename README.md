@@ -39,6 +39,22 @@ Built with **Expo** (SDK 52), **React Native**, and **Firebase Firestore**.
     - Assign unique icons to categories.
 - **Profile Management**: Update names and monthly spending limits.
 
+### 🔄 Recurring Transactions (New)
+- **Automated subscriptions**: Manage Netflix, Rent, Salaries, etc.
+- **Flexible Duration**:
+    - **Forever**: Billing runs indefinitely.
+    - **Fixed**: Set a specific number of months or years (e.g., 12-month installment).
+- **Auto-Processing**: Transactions are generated automatically when the app is opened.
+
+### 🩺 Financial Health Logic (New)
+- **Deficit Detection**: Smart logic detects if **Expenses > Income**.
+- **Visual Status**:
+    - **🟢 Healthy**: Under budget and positive cashflow.
+    - **🟡 Caution**: Approaching budget limit.
+    - **🟠 Deficit**: Spend > Income (Cashflow Negative).
+    - **🔴 Critical/Over**: Exceeded budget limit.
+- **Profile-Level Insight**: Immediate health status shown on the "Who is spending?" screen.
+
 ## 📱 Tech Stack
 - **Frontend**: React Native, Expo, React Navigation 7.
 - **Backend Service**: Firebase (Firestore Database, Authentication).

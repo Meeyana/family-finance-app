@@ -20,6 +20,7 @@ import AnalyzeScreen from '../screens/AnalyzeScreen';
 import MoneyRequestScreen from '../screens/MoneyRequestScreen';
 import RequestListScreen from '../screens/RequestListScreen';
 import GrantMoneyScreen from '../screens/GrantMoneyScreen';
+import RecurringScreen from '../screens/RecurringScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -243,6 +244,7 @@ export default function AppStack() {
                     <Stack.Screen name="MoneyRequest" component={MoneyRequestScreen} options={{ headerShown: false }} />
                     <Stack.Screen name="RequestList" component={RequestListScreen} options={{ headerShown: false }} />
                     <Stack.Screen name="GrantMoney" component={GrantMoneyScreen} options={{ headerShown: false }} />
+                    <Stack.Screen name="Recurring" component={RecurringScreen} options={{ headerShown: false }} />
                 </>
             )}
         </Stack.Navigator>

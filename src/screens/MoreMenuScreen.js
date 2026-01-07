@@ -95,6 +95,13 @@ export default function MoreMenuScreen({ navigation }) {
                         />
                     )}
                     <MenuOption
+                        icon="calendar-sync-outline"
+                        label="Recurring Transactions"
+                        onPress={() => navigation.navigate('Recurring')}
+                        color="#00BCD4"
+                        subtext="Subscriptions & Bills"
+                    />
+                    <MenuOption
                         icon="account-switch-outline"
                         label="Switch User"
                         onPress={handleSwitchUser}

@@ -2,8 +2,8 @@
 // Connected Flow: GLOBAL_FLOW (Select_Profile)
 // Navigation: AppStack (Initial Route) -> ProfileDashboard | AccountDashboard
 
-import React, { useMemo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, FlatList, Alert } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, FlatList, Alert, DeviceEventEmitter } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { auth } from '../services/firebase';
@@ -18,6 +18,26 @@ export default function HomeScreen({ navigation }) {
     const showAccountDashboard = useMemo(() => {
         return userProfiles.some(p => canViewAccountDashboard(p.role));
     }, [userProfiles]);
+
+    const [profileStats, setProfileStats] = useState({});
+
+    // Fetch stats for "Who is spending?"
+    React.useEffect(() => {
+        const loadStats = async () => {
+            // Accessing as Owner to get global view
+            try {
+                const { getAccountData } = require('../services/dataService');
+                const data = await getAccountData('Owner');
+                setProfileStats(data.budgets.profiles);
+            } catch (e) {
+                console.log("No stats available", e);
+            }
+        };
+        loadStats();
+
+        const sub = DeviceEventEmitter.addListener('refresh_profile_dashboard', loadStats);
+        return () => sub.remove();
+    }, []);
 
     const handleProfileSelect = (profile) => {
         console.log(`👤 Navigation: Selecting profile [${profile.name}]`);
@@ -34,18 +54,24 @@ export default function HomeScreen({ navigation }) {
         }
     };
 
-    const renderProfileItem = ({ item }) => (
-        <TouchableOpacity
-            style={styles.profileCard}
-            onPress={() => handleProfileSelect(item)}
-        >
-            <View style={styles.avatarPlaceholder}>
-                <Text style={{ fontSize: 24 }}>{item.avatar || '👤'}</Text>
-            </View>
-            <Text style={styles.profileName}>{item.name}</Text>
-            <Text style={styles.profileRole}>{item.role}</Text>
-        </TouchableOpacity>
-    );
+    const renderProfileItem = ({ item }) => {
+        const stats = profileStats[item.id];
+        const status = stats?.financialStatus || '';
+
+        return (
+            <TouchableOpacity
+                style={styles.profileCard}
+                onPress={() => handleProfileSelect(item)}
+            >
+                <View style={styles.avatarPlaceholder}>
+                    <Text style={{ fontSize: 24 }}>{item.avatar || '👤'}</Text>
+                </View>
+                <Text style={styles.profileName}>{item.name}</Text>
+                <Text style={styles.profileRole}>{item.role}</Text>
+                {status ? <Text style={styles.statusText}>{status}</Text> : null}
+            </TouchableOpacity>
+        );
+    };
 
     return (
         <SafeAreaView style={styles.container}>
@@ -135,6 +161,12 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: '#666',
         textAlign: 'center',
+    },
+    statusText: {
+        fontSize: 12,
+        fontWeight: 'bold',
+        marginTop: 4,
+        color: '#333',
     },
     footer: {
         padding: 24,
