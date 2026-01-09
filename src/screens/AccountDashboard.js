@@ -19,6 +19,24 @@ export default function AccountDashboard({ navigation }) {
     const [error, setError] = useState('');
     const [selectedDate, setSelectedDate] = useState(new Date());
 
+    const getGreeting = () => {
+        const hour = new Date().getHours();
+        if (hour < 12) return 'Good Morning';
+        if (hour < 18) return 'Good Afternoon';
+        return 'Good Evening';
+    };
+
+    const getRandomMessage = useMemo(() => {
+        const messages = [
+            "How are you today?",
+            "Tracking expenses makes you richer!",
+            "Have a wonderful day!",
+            "Keep your finances healthy!",
+            "Every penny counts!"
+        ];
+        return messages[Math.floor(Math.random() * messages.length)];
+    }, []); // Memoize to prevent changing on every render
+
     useEffect(() => {
         loadData();
         if (auth.currentUser && profile) {
@@ -37,8 +55,17 @@ export default function AccountDashboard({ navigation }) {
             if (!profile?.id) return;
 
             // Use getProfileData for Individual View (Specific to User)
-            const result = await getProfileData(profile.id, selectedDate);
-            setData(result);
+            // Calculate Previous Month
+            const prevMonthDate = new Date(selectedDate);
+            prevMonthDate.setMonth(prevMonthDate.getMonth() - 1);
+
+            // Fetch Current & Previous In Parallel
+            const [currentResult, prevResult] = await Promise.all([
+                getProfileData(profile.id, selectedDate),
+                getProfileData(profile.id, prevMonthDate)
+            ]);
+
+            setData({ current: currentResult, prev: prevResult });
         } catch (err) {
             console.error(err);
             setError(err.message);
@@ -47,79 +74,92 @@ export default function AccountDashboard({ navigation }) {
         }
     };
 
-    // MEMOIZED VIEW DATA (My Personal Snapshot)
+    // MEMOIZED VIEW DATA (My Personal Snapshot + Comparison)
     const viewData = useMemo(() => {
-        if (!data) return null;
+        if (!data || !data.current) return null;
 
-        const filteredTxs = data.transactions || [];
+        const { current, prev } = data;
 
-        // Define exclusion filter: Transfers OR "Grant" categories OR Note signature
-        const isInternalTransfer = (t) => t.isTransfer
-            || t.type === 'transfer'
-            || t.category === 'Granted'
-            || t.category === 'Present'
-            || (t.note && t.note.includes('(Granted)'));
+        const processDataset = (dataset) => {
+            if (!dataset) return { income: 0, expense: 0, given: 0, received: 0, net: 0, categoryMap: {}, txs: [] };
 
-        const income = filteredTxs
-            .filter(t => t.type === 'income' && !isInternalTransfer(t))
-            .reduce((acc, t) => acc + t.amount, 0);
+            const filteredTxs = dataset.transactions || [];
 
-        const expenseTxs = filteredTxs
-            .filter(t => (t.type || 'expense') === 'expense' && !isInternalTransfer(t));
-        const expense = expenseTxs.reduce((acc, t) => acc + t.amount, 0);
+            // Define exclusion filter
+            const isInternalTransfer = (t) => t.isTransfer
+                || t.type === 'transfer'
+                || t.category === 'Granted'
+                || t.category === 'Present'
+                || (t.note && t.note.includes('(Granted)'));
 
-        // Calculate Presents (Given vs Received)
-        let given = 0;
-        let received = 0;
+            const income = filteredTxs
+                .filter(t => t.type === 'income' && !isInternalTransfer(t))
+                .reduce((acc, t) => acc + t.amount, 0);
 
-        filteredTxs.filter(isInternalTransfer).forEach(t => {
-            const isGiven = (t.note && t.note.includes('Transfer to')) || t.category === 'Transfer Out' || t.categoryIcon === '💸';
-            const isReceived = (t.note && t.note.includes('Received from')) || t.category === 'Allowance' || t.categoryIcon === '💰';
+            const expenseTxs = filteredTxs
+                .filter(t => (t.type || 'expense') === 'expense' && !isInternalTransfer(t));
+            const expense = expenseTxs.reduce((acc, t) => acc + t.amount, 0);
 
-            if (isGiven) given += t.amount;
-            else if (isReceived) received += t.amount;
-            else {
-                // Fallback based on context
-                // Since we are finding t in profile's specific list, 
-                // type='transfer' is ambiguous without note.
-                // But typically: 
-                given += t.amount;
-            }
-        });
+            // Calculate Presents
+            let given = 0;
+            let received = 0;
+            filteredTxs.filter(isInternalTransfer).forEach(t => {
+                const isGiven = (t.note && t.note.includes('Transfer to')) || t.category === 'Transfer Out' || t.categoryIcon === '💸';
+                const isReceived = (t.note && t.note.includes('Received from')) || t.category === 'Allowance' || t.categoryIcon === '💰';
 
-        // Calculate Category Breakdown
-        const categoryMap = {};
-        expenseTxs.forEach(t => {
-            let catName = t.category || 'Uncategorized';
-            if (catName === 'Granted') catName = 'Present';
-            if (!categoryMap[catName]) categoryMap[catName] = 0;
-            categoryMap[catName] += t.amount;
-        });
+                if (isGiven) given += t.amount;
+                else if (isReceived) received += t.amount;
+                else given += t.amount;
+            });
 
-        const categoryBreakdown = Object.keys(categoryMap).map(catName => {
+            // Category Breakdown (Only needed for Current really, but consistent)
+            const categoryMap = {};
+            expenseTxs.forEach(t => {
+                let catName = t.category || 'Uncategorized';
+                if (catName === 'Granted') catName = 'Present';
+                if (!categoryMap[catName]) categoryMap[catName] = 0;
+                categoryMap[catName] += t.amount;
+            });
+
+            return {
+                income, expense, given, received, net: income - expense,
+                categoryMap, txs: filteredTxs, expenseTxs
+            };
+        };
+
+        const currentStats = processDataset(current);
+        const prevStats = processDataset(prev);
+
+        // Process Category Breakdown for Display (Current)
+        const categoryBreakdown = Object.keys(currentStats.categoryMap).map(catName => {
             const catObj = categories.find(c => c.name === catName);
             const emoji = catObj?.icon || (catName === 'Present' ? '🎁' : '🏷️');
 
             return {
                 name: catName,
                 emoji,
-                amount: categoryMap[catName],
-                percent: expense > 0 ? (categoryMap[catName] / expense) * 100 : 0
+                amount: currentStats.categoryMap[catName],
+                percent: currentStats.expense > 0 ? (currentStats.categoryMap[catName] / currentStats.expense) * 100 : 0
             };
         }).sort((a, b) => b.amount - a.amount);
 
         return {
-            ...data,
-            transactions: filteredTxs,
+            ...current,
+            transactions: currentStats.txs,
             categoryBreakdown,
-            totalIncome: income,
-            totalSpent: expense,
-            totalGiven: given,
-            totalReceived: received,
-            netCashflow: income - expense,
-            projectedSpend: (expense / Math.max(new Date().getDate(), 1)) * 30
+            totalIncome: currentStats.income,
+            totalSpent: currentStats.expense,
+            totalGiven: currentStats.given,
+            totalReceived: currentStats.received,
+            netCashflow: currentStats.net,
+            projectedSpend: (currentStats.expense / Math.max(new Date().getDate(), 1)) * 30,
+
+            // DIFFS
+            incomeDiff: currentStats.income - prevStats.income,
+            expenseDiff: currentStats.expense - prevStats.expense,
+            netDiff: currentStats.net - prevStats.net
         };
-    }, [data, categories]); // Added categories to dependency
+    }, [data, categories]);
 
     if (loading) {
         return (
@@ -141,12 +181,15 @@ export default function AccountDashboard({ navigation }) {
     const showGiven = (viewData?.totalGiven || 0) > 0;
     const showReceived = (viewData?.totalReceived || 0) > 0;
 
+
+
     return (
         <SafeAreaView style={styles.container}>
             <ScrollView>
                 <View style={styles.header}>
-                    <Text style={styles.title}>My Overview</Text>
-                    <View style={{ marginTop: 4 }}>
+                    <Text style={styles.title}>Hello, {profile?.name || 'User'} 👋</Text>
+                    <Text style={styles.subtitle}>{getGreeting()}, {getRandomMessage}</Text>
+                    <View style={{ marginTop: 8 }}>
                         <MonthPicker date={selectedDate} onMonthChange={setSelectedDate} />
                     </View>
                 </View>
@@ -160,6 +203,9 @@ export default function AccountDashboard({ navigation }) {
                         <Text style={styles.heroLabel}>Net Cashflow</Text>
                         <Text style={[styles.heroValue, { color: viewData?.netCashflow >= 0 ? '#34c759' : '#ff3b30' }]}>
                             {viewData?.netCashflow > 0 ? '+' : ''}{viewData?.netCashflow?.toLocaleString()} ₫
+                        </Text>
+                        <Text style={[styles.diffText, { color: viewData?.netDiff >= 0 ? '#34c759' : '#ff3b30', fontSize: 13, marginTop: 4 }]}>
+                            {viewData?.netDiff >= 0 ? '▲ Better' : '▼ Worse'} {Math.abs(viewData?.netDiff || 0).toLocaleString()}
                         </Text>
                     </View>
                     <View style={[styles.healthBadge, { backgroundColor: viewData?.netCashflow >= 0 ? 'rgba(52, 199, 89, 0.1)' : 'rgba(255, 59, 48, 0.1)' }]}>
@@ -181,6 +227,9 @@ export default function AccountDashboard({ navigation }) {
                             <Text style={[styles.gridValue, { color: '#34c759' }]}>
                                 +{viewData?.totalIncome?.toLocaleString()}
                             </Text>
+                            <Text style={[styles.diffText, { color: viewData?.incomeDiff >= 0 ? '#34c759' : '#ff3b30', fontSize: 11 }]}>
+                                {viewData?.incomeDiff >= 0 ? '▲' : '▼'} {Math.abs(viewData?.incomeDiff || 0).toLocaleString()}
+                            </Text>
                         </View>
                         <View style={[styles.card, styles.gridCard]}>
                             <View style={[styles.iconCircle, { backgroundColor: 'rgba(255, 59, 48, 0.1)' }]}>
@@ -189,6 +238,9 @@ export default function AccountDashboard({ navigation }) {
                             <Text style={styles.gridLabel}>Expense</Text>
                             <Text style={[styles.gridValue, { color: '#ff3b30' }]}>
                                 -{viewData?.totalSpent?.toLocaleString()}
+                            </Text>
+                            <Text style={[styles.diffText, { color: viewData?.expenseDiff <= 0 ? '#34c759' : '#ff3b30', fontSize: 11 }]}>
+                                {viewData?.expenseDiff > 0 ? '▲' : '▼'} {Math.abs(viewData?.expenseDiff || 0).toLocaleString()}
                             </Text>
                         </View>
                     </View>
@@ -307,6 +359,12 @@ const styles = StyleSheet.create({
         fontSize: 20,
         fontWeight: 'bold',
         color: '#1a1a1a',
+    },
+    subtitle: {
+        fontSize: 14,
+        color: '#666',
+        marginTop: 4,
+        fontWeight: '500'
     },
     card: {
         backgroundColor: 'white',
@@ -452,4 +510,8 @@ const styles = StyleSheet.create({
         color: '#999',
         padding: 10
     },
+    diffText: {
+        fontWeight: '600',
+        marginTop: 4
+    }
 });

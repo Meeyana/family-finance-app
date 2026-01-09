@@ -28,7 +28,7 @@ export default function HomeScreen({ navigation }) {
             // Accessing as Owner to get global view
             try {
                 const { getAccountData } = require('../services/dataService');
-                const data = await getAccountData('Owner');
+                const data = await getAccountData('Owner', new Date());
                 setProfileStats(data.budgets.profiles);
             } catch (e) {
                 console.log("No stats available", e);

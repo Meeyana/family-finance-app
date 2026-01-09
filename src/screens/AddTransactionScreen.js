@@ -84,7 +84,7 @@ export default function AddTransactionScreen({ route, navigation }) {
             return;
         }
 
-        const numAmount = parseFloat(amount);
+        const numAmount = Math.round(parseFloat(amount));
         setLoading(true);
 
         try {

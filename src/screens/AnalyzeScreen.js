@@ -16,13 +16,20 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import IncomeExpenseBarChart from '../components/IncomeExpenseBarChart';
 import MonthlyTrendLineChart from '../components/MonthlyTrendLineChart';
+import CustomDateFilterModal from '../components/CustomDateFilterModal';
 
 export default function AnalyzeScreen({ navigation }) {
     const { userProfiles } = useAuth();
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-    const [selectedDate, setSelectedDate] = useState(new Date());
+
+    // Date State
+    const [selectedDate, setSelectedDate] = useState(new Date()); // For display reference
+    const [startDate, setStartDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+    const [endDate, setEndDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0));
+    const [filterMode, setFilterMode] = useState('month'); // 'month' | 'year'
+    const [showDateFilter, setShowDateFilter] = useState(false);
 
     // Filters (Multi-Select)
     const [selectedCategories, setSelectedCategories] = useState([]);
@@ -34,13 +41,40 @@ export default function AnalyzeScreen({ navigation }) {
         return () => {
             subscription.remove();
         };
-    }, [selectedDate]);
+    }, [selectedDate, startDate, endDate]); // Added startDate, endDate to dependencies
 
     const loadData = async () => {
         try {
             setLoading(true);
-            const result = await getAccountData('Owner', selectedDate);
-            setData(result);
+
+            // Calculate Previous Range
+            let prevStart, prevEnd;
+            if (filterMode === 'year') {
+                prevStart = new Date(startDate);
+                prevStart.setFullYear(prevStart.getFullYear() - 1);
+                prevEnd = new Date(endDate);
+                prevEnd.setFullYear(prevEnd.getFullYear() - 1);
+            } else {
+                // Month Mode
+                prevStart = new Date(startDate);
+                prevStart.setMonth(prevStart.getMonth() - 1);
+                // Handle Month End logic
+                prevEnd = new Date(prevStart.getFullYear(), prevStart.getMonth() + 1, 0);
+            }
+
+            // Fetch Both Comparisons in Parallel
+            const [currentResult, prevResult] = await Promise.all([
+                getAccountData('Owner', {
+                    startDate: startDate.toISOString().split('T')[0],
+                    endDate: endDate.toISOString().split('T')[0]
+                }),
+                getAccountData('Owner', {
+                    startDate: prevStart.toISOString().split('T')[0],
+                    endDate: prevEnd.toISOString().split('T')[0]
+                })
+            ]);
+
+            setData({ current: currentResult, prev: prevResult });
         } catch (err) {
             console.error(err);
             setError(err.message);
@@ -52,47 +86,73 @@ export default function AnalyzeScreen({ navigation }) {
         }
     };
 
-    // MEMOIZED VIEW DATA (2-Layer Multi-Select Filter)
+    // MEMOIZED VIEW DATA (2-Layer Multi-Select Filter + Comparison)
     const viewData = useMemo(() => {
-        if (!data) return null;
+        if (!data || !data.current) return null;
 
-        let filteredTxs = data.transactions;
+        const { current, prev } = data;
 
-        // Layer 1: Profile Filter (Multi-Select)
-        if (selectedProfileIds.length > 0) {
-            filteredTxs = filteredTxs.filter(t => selectedProfileIds.includes(t.profileId));
-        }
+        // --- Helper to process a dataset ---
+        const processDataset = (dataset) => {
+            if (!dataset) return { income: 0, expense: 0, net: 0, txs: [] };
+            let filteredTxs = dataset.transactions || [];
 
-        // Layer 2: Category Filter (Multi-Select)
-        if (selectedCategories.length > 0) {
-            filteredTxs = filteredTxs.filter(t => selectedCategories.includes(t.category));
-        }
+            // Layer 1: Profile Filter
+            if (selectedProfileIds.length > 0) {
+                filteredTxs = filteredTxs.filter(t => selectedProfileIds.includes(t.profileId));
+            }
 
-        // Recalculate Totals
-        const income = filteredTxs.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
-        const expense = filteredTxs.filter(t => (t.type || 'expense') === 'expense').reduce((acc, t) => acc + t.amount, 0);
+            // Layer 2: Category Filter
+            if (selectedCategories.length > 0) {
+                filteredTxs = filteredTxs.filter(t => selectedCategories.includes(t.category));
+            }
 
-        // Limit Logic: Sum limits of selected profiles OR Global
+            // Exclusion Filter (Internal Transfers)
+            const isInternalTransfer = (t) => t.isTransfer
+                || t.type === 'transfer'
+                || t.category === 'Granted'
+                || t.category === 'Present'
+                || (t.note && t.note.includes('(Granted)'));
+
+            const income = Math.round(filteredTxs.filter(t => t.type === 'income' && !isInternalTransfer(t)).reduce((acc, t) => acc + t.amount, 0));
+            const expense = Math.round(filteredTxs.filter(t => (t.type || 'expense') === 'expense' && !isInternalTransfer(t)).reduce((acc, t) => acc + t.amount, 0));
+
+            return {
+                income,
+                expense,
+                net: income - expense,
+                txs: filteredTxs
+            };
+        };
+
+        const currentStats = processDataset(current);
+        const prevStats = processDataset(prev);
+
+        // Limit Logic (Current Only)
         let limit = 0;
         if (selectedProfileIds.length > 0) {
             selectedProfileIds.forEach(pid => {
-                if (data.budgets?.profiles?.[pid]) {
-                    limit += data.budgets.profiles[pid].limit;
+                if (current.budgets?.profiles?.[pid]) {
+                    limit += current.budgets.profiles[pid].limit;
                 }
             });
         } else {
-            // Default to Global Family Limit
-            limit = data.totalLimit;
+            limit = current.totalLimit;
         }
 
         return {
-            ...data,
-            transactions: filteredTxs,
-            totalIncome: income,
-            totalSpent: expense,
+            ...current, // Default to current structure for downstream
+            transactions: currentStats.txs,
+            totalIncome: currentStats.income,
+            totalSpent: currentStats.expense,
+            netCashflow: currentStats.net,
             totalLimit: limit,
-            netCashflow: income - expense,
-            projectedSpend: (expense / Math.max(new Date().getDate(), 1)) * 30
+            projectedSpend: (currentStats.expense / Math.max(new Date().getDate(), 1)) * 30,
+
+            // Diffs
+            incomeDiff: currentStats.income - prevStats.income,
+            expenseDiff: currentStats.expense - prevStats.expense,
+            netDiff: currentStats.net - prevStats.net
         };
     }, [data, selectedProfileIds, selectedCategories]);
 
@@ -113,7 +173,8 @@ export default function AnalyzeScreen({ navigation }) {
     }
 
     // Prepare Options for Dropdowns
-    const allCategories = data ? [...new Set(data.transactions
+    // Prepare Options for Dropdowns
+    const allCategories = (data && data.current) ? [...new Set(data.current.transactions
         .filter(t => (t.type || 'expense') === 'expense')
         .map(t => t.category))] : [];
 
@@ -124,11 +185,30 @@ export default function AnalyzeScreen({ navigation }) {
         <SafeAreaView style={styles.container}>
             <ScrollView>
                 <View style={styles.header}>
-                    <Text style={styles.title}>Detailed Analysis</Text>
-                    <View style={{ marginTop: 4 }}>
-                        <MonthPicker date={selectedDate} onMonthChange={setSelectedDate} />
-                    </View>
+                    <Text style={styles.title}>Family Financial Overview</Text>
+                    <TouchableOpacity onPress={() => setShowDateFilter(true)} style={styles.dateSelector}>
+                        <Text style={styles.dateSelectorText}>
+                            {filterMode === 'year'
+                                ? `Year ${startDate.getFullYear()}`
+                                : `Month ${startDate.getMonth() + 1}, ${startDate.getFullYear()}`
+                            }
+                        </Text>
+                        <MaterialCommunityIcons name="chevron-down" size={20} color="#007AFF" />
+                    </TouchableOpacity>
                 </View>
+
+                <CustomDateFilterModal
+                    visible={showDateFilter}
+                    onClose={() => setShowDateFilter(false)}
+                    initialDate={startDate}
+                    initialMode={filterMode}
+                    onApply={(start, end, mode) => {
+                        setStartDate(start);
+                        setEndDate(end);
+                        setFilterMode(mode);
+                        setShowDateFilter(false);
+                    }}
+                />
 
                 {/* Filters Row */}
                 <View style={styles.filterRow}>
@@ -159,10 +239,16 @@ export default function AnalyzeScreen({ navigation }) {
                         <View>
                             <Text style={styles.statLabel}>Income</Text>
                             <Text style={styles.incomeText}>+{viewData?.totalIncome?.toLocaleString()} đ</Text>
+                            <Text style={[styles.diffText, { color: viewData?.incomeDiff >= 0 ? '#34c759' : '#ff3b30' }]}>
+                                {viewData?.incomeDiff >= 0 ? '▲' : '▼'} {Math.abs(viewData?.incomeDiff || 0).toLocaleString()}
+                            </Text>
                         </View>
-                        <View>
+                        <View style={{ alignItems: 'flex-end' }}>
                             <Text style={styles.statLabel}>Expenses</Text>
                             <Text style={styles.expenseText}>-{viewData?.totalSpent?.toLocaleString()} đ</Text>
+                            <Text style={[styles.diffText, { color: viewData?.expenseDiff <= 0 ? '#34c759' : '#ff3b30' }]}>
+                                {viewData?.expenseDiff > 0 ? '▲' : '▼'} {Math.abs(viewData?.expenseDiff || 0).toLocaleString()}
+                            </Text>
                         </View>
                     </View>
 
@@ -170,30 +256,17 @@ export default function AnalyzeScreen({ navigation }) {
 
                     <View style={styles.netRow}>
                         <Text style={styles.statLabel}>Net Cashflow</Text>
-                        <Text style={[styles.netText, { color: viewData?.netCashflow >= 0 ? '#34c759' : '#ff3b30' }]}>
-                            {viewData?.netCashflow > 0 ? '+' : ''}{viewData?.netCashflow?.toLocaleString()} đ
-                        </Text>
+                        <View style={{ alignItems: 'flex-end' }}>
+                            <Text style={[styles.netText, { color: viewData?.netCashflow >= 0 ? '#34c759' : '#ff3b30' }]}>
+                                {viewData?.netCashflow > 0 ? '+' : ''}{viewData?.netCashflow?.toLocaleString()} đ
+                            </Text>
+                            <Text style={[styles.diffText, { color: viewData?.netDiff >= 0 ? '#34c759' : '#ff3b30', fontSize: 14 }]}>
+                                {viewData?.netDiff >= 0 ? '▲ Better' : '▼ Worse'} {Math.abs(viewData?.netDiff || 0).toLocaleString()}
+                            </Text>
+                        </View>
                     </View>
 
-                    <View style={{ height: 20 }} />
 
-                    <Text style={styles.cardLabel}>Budget Usage</Text>
-                    <View style={styles.limitBar}>
-                        <View
-                            style={[
-                                styles.limitFill,
-                                { width: `${Math.min((viewData?.totalSpent / viewData?.totalLimit) * 100, 100)}%` }
-                            ]}
-                        />
-                    </View>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                        <Text style={styles.limitText}>
-                            Spent: {viewData?.totalSpent?.toLocaleString()}
-                        </Text>
-                        <Text style={styles.limitText}>
-                            Limit: {viewData?.totalLimit?.toLocaleString()}
-                        </Text>
-                    </View>
 
                     {/* Analytics Section */}
                     <View style={{ marginTop: 20, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#444' }}>
@@ -229,11 +302,14 @@ export default function AnalyzeScreen({ navigation }) {
                         </>
                     )}
 
-                    <Text style={styles.sectionTitle}>Monthly Trend</Text>
+                    <View style={styles.sectionTitleRow}>
+                        <Text style={styles.sectionTitle}>Monthly Trend</Text>
+                    </View>
                     {viewData && (
                         <MonthlyTrendLineChart
                             data={viewData.transactions}
-                            currentMonth={selectedDate}
+                            startDate={startDate} // Pass Range Bounds
+                            endDate={endDate}
                             filterCategory={selectedCategories.length === 1 ? selectedCategories[0] : null}
                         />
                     )}
@@ -248,10 +324,10 @@ export default function AnalyzeScreen({ navigation }) {
 
                 <View style={[styles.section, { paddingTop: 0 }]}>
                     <Text style={styles.sectionTitle}>Budget vs Actual (By Profile)</Text>
-                    {data && Object.keys(data.budgets.profiles)
+                    {data && data.current && data.current.budgets && Object.keys(data.current.budgets.profiles)
                         .filter(pid => selectedProfileIds.length === 0 || selectedProfileIds.includes(pid))
                         .map(pid => {
-                            const pBudget = data.budgets.profiles[pid];
+                            const pBudget = data.current.budgets.profiles[pid];
                             const pName = userProfiles.find(p => p.id === pid)?.name || `Profile ${pid}`;
 
                             return (
@@ -308,6 +384,21 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.05,
         shadowRadius: 8,
         elevation: 2,
+    },
+    dateSelector: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 4,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        backgroundColor: '#f0f9ff',
+        borderRadius: 20
+    },
+    dateSelectorText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#007AFF',
+        marginRight: 4
     },
     section: {
         padding: 16,
@@ -400,5 +491,10 @@ const styles = StyleSheet.create({
         paddingHorizontal: 8,
         paddingVertical: 4,
         borderRadius: 8,
+    },
+    diffText: {
+        fontSize: 12,
+        fontWeight: '600',
+        marginTop: 2
     },
 });

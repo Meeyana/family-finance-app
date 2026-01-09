@@ -16,33 +16,12 @@ const getMonthRange = (date) => {
 };
 
 /**
- * Flow 3: Get Global Account Data (Owner/Partner Only)
+ * Helper: Process Transactions for Dashboard
  */
-export const getAccountData = async (userRole, selectedMonth = new Date()) => {
-    // 1. Check Permission
-    if (!canViewAccountDashboard(userRole)) {
-        throw new Error("ACCESS_DENIED: Account Dashboard is restricted to Owner/Partner.");
-    }
-
-    const uid = auth.currentUser?.uid;
-    if (!uid) throw new Error("No User Logged In");
-
-    const { startDate, endDate } = getMonthRange(selectedMonth);
-
-    // 2. Fetch Data Parallel
-    const [settings, profiles, transactions] = await Promise.all([
-        getFamilySettings(uid),
-        getFamilyProfiles(uid),
-        getTransactions(uid, null, startDate, endDate) // Filtered by Month
-    ]);
-
-    // 3. Aggregate Data (Dynamic Sum for Month)
-    // We cannot use profile.spent directly as that is All-Time.
-    // We must sum the fetched transactions.
-
+const processTransactionsForDashboard = (transactions, settings, profiles) => {
     const profilesDict = {};
     profiles.forEach(p => {
-        profilesDict[p.id] = { ...p, spent: 0, income: 0, financialStatus: '🟢 Healthy' }; // Reset spent for calculation
+        profilesDict[p.id] = { ...p, spent: 0, income: 0, financialStatus: '🟢 Healthy' };
     });
 
     let totalSpent = 0;
@@ -52,32 +31,24 @@ export const getAccountData = async (userRole, selectedMonth = new Date()) => {
 
     transactions.forEach(t => {
         const amount = t.amount || 0;
-
-        // GLOBAL SNAPSHOT: Exclude internal transfers to avoid double counting
-        // We check isTransfer flag, specific category names, OR the note signature
         const isInternalTransfer = t.isTransfer
             || t.category === 'Granted'
             || t.category === 'Present'
             || (t.note && t.note.includes('(Granted)'))
-            || t.type === 'transfer'; // Explicitly check new type
+            || t.type === 'transfer';
 
         if (isInternalTransfer) {
-            // Distinguish Direction based on Note keywords from processTransfer
             const isGiven = (t.note && t.note.includes('Transfer to')) || t.category === 'Transfer Out' || t.categoryIcon === '💸';
             const isReceived = (t.note && t.note.includes('Received from')) || t.category === 'Allowance' || t.categoryIcon === '💰';
 
-            if (isGiven) {
-                totalGiven += amount;
-            } else if (isReceived) {
-                totalReceived += amount;
-            } else {
-                // Fallback
+            if (isGiven) totalGiven += amount;
+            else if (isReceived) totalReceived += amount;
+            else {
                 if (t.type === 'expense') totalGiven += amount;
                 else if (t.type === 'income') totalReceived += amount;
                 else totalGiven += amount;
             }
         } else {
-            // NOT a transfer (Normal Income/Expense)
             if (t.type === 'income') {
                 totalIncome += amount;
                 if (profilesDict[t.profileId]) profilesDict[t.profileId].income += amount;
@@ -89,52 +60,104 @@ export const getAccountData = async (userRole, selectedMonth = new Date()) => {
     });
 
     const netCashflow = totalIncome - totalSpent;
-    const totalLimit = settings?.totalLimit || 0;
+
+    return {
+        totalSpent: Math.round(totalSpent),
+        totalIncome: Math.round(totalIncome),
+        netCashflow: Math.round(netCashflow),
+        totalGiven: Math.round(totalGiven),
+        totalReceived: Math.round(totalReceived),
+        profilesDict
+    };
+};
+
+/**
+ * Flow 3: Get Global Account Data (Owner/Partner Only)
+ * Supports Single Month OR Custom Range
+ */
+export const getAccountData = async (userRole, dateOrRange) => {
+    if (!canViewAccountDashboard(userRole)) {
+        throw new Error("ACCESS_DENIED");
+    }
+
+    const uid = auth.currentUser?.uid;
+    if (!uid) throw new Error("No User Logged In");
+
+    let startDate, endDate;
+    let isRange = false;
+
+    // Detect if input is Date (Standard Month) or Object (Range)
+    if (dateOrRange instanceof Date) {
+        const range = getMonthRange(dateOrRange);
+        startDate = range.startDate;
+        endDate = range.endDate;
+    } else {
+        startDate = dateOrRange.startDate;
+        endDate = dateOrRange.endDate;
+        isRange = true;
+    }
+
+    // 2. Fetch Data Parallel
+    const [settings, profiles, transactions] = await Promise.all([
+        getFamilySettings(uid),
+        getFamilyProfiles(uid),
+        getTransactions(uid, null, startDate, endDate)
+    ]);
+
+    // 3. Aggregate Data
+    const { totalSpent, totalIncome, netCashflow, totalGiven, totalReceived, profilesDict } = processTransactionsForDashboard(transactions, settings, profiles);
 
     // --- Analytics ---
     const now = new Date();
-    const isCurrentMonth = selectedMonth.getMonth() === now.getMonth() && selectedMonth.getFullYear() === now.getFullYear();
-    const daysInMonth = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 0).getDate();
+    // Simplified Burn Rate logic for ranges: just average per day in range
+    const startObj = new Date(startDate);
+    const endObj = new Date(endDate);
+    const msPerDay = 1000 * 60 * 60 * 24;
+    const totalDays = Math.ceil((endObj - startObj) / msPerDay) + 1;
 
-    let daysPassed = daysInMonth;
-    if (isCurrentMonth) daysPassed = Math.max(1, now.getDate());
-    else if (selectedMonth > now) daysPassed = 0;
+    // For current month, we only count days passed. For ranges, we count total days (historical)
+    // or days passed if range includes today?
+    // Let's keep it simple: Burn Rate = Total / Total Days in Range
+    const burnRate = totalDays > 0 ? totalSpent / totalDays : 0;
 
-    const burnRate = daysPassed > 0 ? totalSpent / daysPassed : 0;
-    const projectedSpend = isCurrentMonth ? burnRate * daysInMonth : totalSpent;
-
-    // Calculate Financial Status
-    let financialStatus = '🟢 Healthy';
-
-    // Simple logic without limit: Warn if cashflow negative
-    if (netCashflow < 0) {
-        financialStatus = '🟠 Deficit';
-    }
+    // Projected only meaningful for CURRENT SINGLE MONTH usually.
+    // If range, projected = totalSpent (historical).
+    const projectedSpend = totalSpent;
 
     // Calculate Financial Status for each profile
     Object.values(profilesDict).forEach(p => {
         if (p.limit > 0) {
-            const ratio = p.spent / p.limit;
+            // If Range, Scale Limit? Profile Limit is Monthly.
+            // If viewing 1 Year, Limit should be *12?
+            // Complex. For MVP, if Range > 35 days, maybe hide limit status or scale it?
+            // Let's scale limit by months
+            const monthsInRange = Math.max(1, totalDays / 30);
+            const scaledLimit = p.limit * monthsInRange;
+
+            const ratio = p.spent / scaledLimit;
             if (ratio >= 1.0) p.financialStatus = '🔴 Over';
             else if (ratio >= 0.8) p.financialStatus = '🟡 Caution';
         }
-        // Deficit Check
         if (p.financialStatus !== '🔴 Over' && (p.income - p.spent) < 0) {
             p.financialStatus = '🟠 Deficit';
         }
     });
 
+    let overallStatus = '🟢 Healthy';
+    if (netCashflow < 0) overallStatus = '🟠 Deficit';
+
     return {
         totalSpent,
         totalIncome,
-        totalGiven,     // Family Volume Given
-        totalReceived,  // Family Volume Received (should be same)
+        totalGiven,
+        totalReceived,
         netCashflow,
-        financialStatus,
+        financialStatus: overallStatus,
         burnRate,
         projectedSpend,
         budgets: { profiles: profilesDict },
-        transactions
+        transactions,
+        totalLimit: (settings?.totalLimit || 0) * (totalDays / 30) // Scale global limit too
     };
 };
 
@@ -211,11 +234,11 @@ export const getProfileData = async (profileId, selectedMonth = new Date()) => {
     return {
         financialStatus: statusIndicator,
         totalLimit: profile.limit,
-        totalSpent: monthlySpent,
-        totalIncome: monthlyIncome,
-        totalGiven,     // Presents I GAVE
-        totalReceived,  // Presents I RECEIVED
-        netCashflow: monthlyIncome - monthlySpent,
+        totalSpent: Math.round(monthlySpent),
+        totalIncome: Math.round(monthlyIncome),
+        totalGiven: Math.round(totalGiven),     // Presents I GAVE
+        totalReceived: Math.round(totalReceived),  // Presents I RECEIVED
+        netCashflow: Math.round(monthlyIncome - monthlySpent),
         transactions: allTransactions
     };
 };

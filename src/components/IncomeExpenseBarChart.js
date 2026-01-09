@@ -12,7 +12,7 @@ export default function IncomeExpenseBarChart({ income, expense }) {
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Income vs Expense</Text>
+
             <View pointerEvents="none" style={{ marginLeft: -20 }}>
                 <VictoryChart
                     domainPadding={{ x: 80 }}
