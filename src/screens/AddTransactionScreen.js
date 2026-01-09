@@ -2,7 +2,7 @@
 // Connected Flow: PROFILE_SPENDING_FLOW (Add_Expense)
 
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, DeviceEventEmitter } from 'react-native';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, DeviceEventEmitter, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -168,155 +168,157 @@ export default function AddTransactionScreen({ route, navigation }) {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
-            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-                <View style={styles.header}>
-                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                        <MaterialCommunityIcons name="close" size={28} color="#666" />
-                    </TouchableOpacity>
-                    <Text style={styles.title}>{isEditing ? 'Edit Transaction' : 'New Transaction'}</Text>
-                    {isEditing ? (
-                        <TouchableOpacity onPress={handleDelete}>
-                            <MaterialCommunityIcons name="delete" size={24} color="red" />
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <SafeAreaView style={styles.container}>
+                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+                    <View style={styles.header}>
+                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                            <MaterialCommunityIcons name="close" size={28} color="#666" />
                         </TouchableOpacity>
-                    ) : (
-                        <View style={{ width: 28 }} />
-                    )}
-                </View>
-
-                <ScrollView style={styles.form}>
-                    {/* Type Toggle */}
-                    <View style={styles.toggleContainer}>
-                        <TouchableOpacity
-                            style={[styles.toggleButton, type === 'expense' && { backgroundColor: '#ff3b30' }]}
-                            onPress={() => setType('expense')}
-                        >
-                            <Text style={[styles.toggleText, type === 'expense' && styles.toggleTextSelected]}>💸 Expense</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            style={[styles.toggleButton, type === 'income' && { backgroundColor: '#34c759' }]}
-                            onPress={() => setType('income')}
-                        >
-                            <Text style={[styles.toggleText, type === 'income' && styles.toggleTextSelected]}>💰 Income</Text>
-                        </TouchableOpacity>
+                        <Text style={styles.title}>{isEditing ? 'Edit Transaction' : 'New Transaction'}</Text>
+                        {isEditing ? (
+                            <TouchableOpacity onPress={handleDelete}>
+                                <MaterialCommunityIcons name="delete" size={24} color="red" />
+                            </TouchableOpacity>
+                        ) : (
+                            <View style={{ width: 28 }} />
+                        )}
                     </View>
 
-                    <Text style={styles.label}>Amount (VND)</Text>
-                    <TextInput
-                        style={[styles.inputLarge, { color: themeColor }]}
-                        placeholder="0"
-                        placeholderTextColor="#ccc"
-                        keyboardType="numeric"
-                        value={amount}
-                        onChangeText={setAmount}
-                    />
-
-                    {/* ... Date Picker ... */}
-                    <Text style={styles.label}>Date</Text>
-                    {Platform.OS === 'ios' ? (
-                        <View style={{ alignSelf: 'flex-start' }}>
-                            <DateTimePicker
-                                testID="dateTimePicker"
-                                value={new Date(date)}
-                                mode="date"
-                                display="compact"
-                                onChange={onDateChange}
-                            />
-                        </View>
-                    ) : Platform.OS === 'android' ? (
-                        <>
+                    <ScrollView style={styles.form} keyboardShouldPersistTaps="handled">
+                        {/* Type Toggle */}
+                        <View style={styles.toggleContainer}>
                             <TouchableOpacity
-                                style={styles.dateButton}
-                                onPress={() => setShowDatePicker(true)}
+                                style={[styles.toggleButton, type === 'expense' && { backgroundColor: '#ff3b30' }]}
+                                onPress={() => setType('expense')}
                             >
-                                <Text style={styles.dateText}>{date}</Text>
+                                <Text style={[styles.toggleText, type === 'expense' && styles.toggleTextSelected]}>💸 Expense</Text>
                             </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.toggleButton, type === 'income' && { backgroundColor: '#34c759' }]}
+                                onPress={() => setType('income')}
+                            >
+                                <Text style={[styles.toggleText, type === 'income' && styles.toggleTextSelected]}>💰 Income</Text>
+                            </TouchableOpacity>
+                        </View>
 
-                            {showDatePicker && (
+                        <Text style={styles.label}>Amount (VND)</Text>
+                        <TextInput
+                            style={[styles.inputLarge, { color: themeColor }]}
+                            placeholder="0"
+                            placeholderTextColor="#ccc"
+                            keyboardType="numeric"
+                            value={amount}
+                            onChangeText={setAmount}
+                        />
+
+                        {/* ... Date Picker ... */}
+                        <Text style={styles.label}>Date</Text>
+                        {Platform.OS === 'ios' ? (
+                            <View style={{ alignSelf: 'flex-start' }}>
                                 <DateTimePicker
                                     testID="dateTimePicker"
                                     value={new Date(date)}
                                     mode="date"
-                                    is24Hour={true}
-                                    display="default"
+                                    display="compact"
                                     onChange={onDateChange}
                                 />
-                            )}
-                        </>
-                    ) : (
+                            </View>
+                        ) : Platform.OS === 'android' ? (
+                            <>
+                                <TouchableOpacity
+                                    style={styles.dateButton}
+                                    onPress={() => setShowDatePicker(true)}
+                                >
+                                    <Text style={styles.dateText}>{date}</Text>
+                                </TouchableOpacity>
+
+                                {showDatePicker && (
+                                    <DateTimePicker
+                                        testID="dateTimePicker"
+                                        value={new Date(date)}
+                                        mode="date"
+                                        is24Hour={true}
+                                        display="default"
+                                        onChange={onDateChange}
+                                    />
+                                )}
+                            </>
+                        ) : (
+                            <TextInput
+                                style={styles.input}
+                                placeholder="YYYY-MM-DD"
+                                value={date}
+                                onChangeText={setDate}
+                            />
+                        )}
+
+                        <Text style={styles.label}>Category</Text>
+                        <View style={styles.categoryContainer}>
+                            {filteredCategories.map((cat) => (
+                                <TouchableOpacity
+                                    key={cat.id}
+                                    style={[
+                                        styles.categoryButton,
+                                        category === cat.name && { backgroundColor: type === 'income' ? '#e8f5e9' : '#ffebee', borderColor: themeColor }
+                                    ]}
+                                    onPress={() => setCategory(cat.name)}
+                                >
+                                    <Text style={[
+                                        styles.categoryText,
+                                        category === cat.name && { color: themeColor, fontWeight: 'bold' }
+                                    ]}>
+                                        {cat.icon} {cat.name}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+
+                        <Text style={styles.label}>Note (Optional)</Text>
                         <TextInput
                             style={styles.input}
-                            placeholder="YYYY-MM-DD"
-                            value={date}
-                            onChangeText={setDate}
+                            placeholder="What is this for?"
+                            value={note}
+                            onChangeText={setNote}
                         />
-                    )}
 
-                    <Text style={styles.label}>Category</Text>
-                    <View style={styles.categoryContainer}>
-                        {filteredCategories.map((cat) => (
-                            <TouchableOpacity
-                                key={cat.id}
-                                style={[
-                                    styles.categoryButton,
-                                    category === cat.name && { backgroundColor: type === 'income' ? '#e8f5e9' : '#ffebee', borderColor: themeColor }
-                                ]}
-                                onPress={() => setCategory(cat.name)}
-                            >
-                                <Text style={[
-                                    styles.categoryText,
-                                    category === cat.name && { color: themeColor, fontWeight: 'bold' }
-                                ]}>
-                                    {cat.icon} {cat.name}
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
+                        <TouchableOpacity
+                            style={[styles.saveButton, { backgroundColor: themeColor }]}
+                            onPress={handleSave}
+                            disabled={loading}
+                        >
+                            {loading ? <ActivityIndicator color="white" /> : <Text style={styles.saveText}>{isEditing ? 'Update' : 'Save'} {type === 'income' ? 'Income' : 'Expense'}</Text>}
+                        </TouchableOpacity>
 
-                    <Text style={styles.label}>Note (Optional)</Text>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="What is this for?"
-                        value={note}
-                        onChangeText={setNote}
-                    />
+                        <View style={{ height: 40 }} />
+                    </ScrollView>
 
-                    <TouchableOpacity
-                        style={[styles.saveButton, { backgroundColor: themeColor }]}
-                        onPress={handleSave}
-                        disabled={loading}
-                    >
-                        {loading ? <ActivityIndicator color="white" /> : <Text style={styles.saveText}>{isEditing ? 'Update' : 'Save'} {type === 'income' ? 'Income' : 'Expense'}</Text>}
-                    </TouchableOpacity>
-
-                    <View style={{ height: 40 }} />
-                </ScrollView>
-
-                {/* Custom Confirmation Modal/Overlay */}
-                {confirmation && (
-                    <View style={styles.overlay}>
-                        <View style={styles.modal}>
-                            <Text style={styles.modalTitle}>{confirmation.title}</Text>
-                            <Text style={styles.modalMessage}>{confirmation.message}</Text>
-                            <View style={styles.modalButtons}>
-                                <TouchableOpacity
-                                    style={[styles.modalButton, styles.cancelButton]}
-                                    onPress={() => setConfirmation(null)}
-                                >
-                                    <Text style={styles.cancelButtonText}>Cancel</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    style={[styles.modalButton, styles.confirmButton]}
-                                    onPress={confirmation.onConfirm}
-                                >
-                                    <Text style={styles.confirmButtonText}>Yes, Save</Text>
-                                </TouchableOpacity>
+                    {/* Custom Confirmation Modal/Overlay */}
+                    {confirmation && (
+                        <View style={styles.overlay}>
+                            <View style={styles.modal}>
+                                <Text style={styles.modalTitle}>{confirmation.title}</Text>
+                                <Text style={styles.modalMessage}>{confirmation.message}</Text>
+                                <View style={styles.modalButtons}>
+                                    <TouchableOpacity
+                                        style={[styles.modalButton, styles.cancelButton]}
+                                        onPress={() => setConfirmation(null)}
+                                    >
+                                        <Text style={styles.cancelButtonText}>Cancel</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={[styles.modalButton, styles.confirmButton]}
+                                        onPress={confirmation.onConfirm}
+                                    >
+                                        <Text style={styles.confirmButtonText}>Yes, Save</Text>
+                                    </TouchableOpacity>
+                                </View>
                             </View>
                         </View>
-                    </View>
-                )}
-            </KeyboardAvoidingView>
-        </SafeAreaView>
+                    )}
+                </KeyboardAvoidingView>
+            </SafeAreaView>
+        </TouchableWithoutFeedback>
     );
 }
 

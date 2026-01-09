@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ActivityIndicator, FlatList, DeviceEventEmitter } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ActivityIndicator, FlatList, DeviceEventEmitter, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../components/context/AuthContext';
@@ -69,82 +69,84 @@ export default function GrantMoneyScreen({ navigation }) {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <Ionicons name="arrow-back" size={24} color="#1a1a1a" />
-                </TouchableOpacity>
-                <Text style={styles.title}>Grant Pocket Money</Text>
-                <View style={{ width: 24 }} />
-            </View>
-
-            <View style={styles.content}>
-
-                {/* Receiver Selector */}
-                <Text style={styles.label}>To Who?</Text>
-                <View style={styles.receiversRow}>
-                    {receivers.map(p => (
-                        <TouchableOpacity
-                            key={p.id}
-                            style={[
-                                styles.receiverChip,
-                                selectedReceiver?.id === p.id && styles.receiverChipSelected
-                            ]}
-                            onPress={() => setSelectedReceiver(p)}
-                        >
-                            <View style={styles.avatar}>
-                                <Text style={styles.avatarText}>{p.name[0]}</Text>
-                            </View>
-                            <Text style={[
-                                styles.receiverName,
-                                selectedReceiver?.id === p.id && styles.receiverNameSelected
-                            ]}>
-                                {p.name}
-                            </Text>
-                        </TouchableOpacity>
-                    ))}
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <SafeAreaView style={styles.container}>
+                <View style={styles.header}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                        <Ionicons name="arrow-back" size={24} color="#1a1a1a" />
+                    </TouchableOpacity>
+                    <Text style={styles.title}>Grant Pocket Money</Text>
+                    <View style={{ width: 24 }} />
                 </View>
 
+                <View style={styles.content}>
 
-                <View style={styles.inputContainer}>
-                    <Text style={styles.label}>Amount</Text>
-                    <View style={styles.amountWrapper}>
-                        <Text style={styles.currency}>₫</Text>
+                    {/* Receiver Selector */}
+                    <Text style={styles.label}>To Who?</Text>
+                    <View style={styles.receiversRow}>
+                        {receivers.map(p => (
+                            <TouchableOpacity
+                                key={p.id}
+                                style={[
+                                    styles.receiverChip,
+                                    selectedReceiver?.id === p.id && styles.receiverChipSelected
+                                ]}
+                                onPress={() => setSelectedReceiver(p)}
+                            >
+                                <View style={styles.avatar}>
+                                    <Text style={styles.avatarText}>{p.name[0]}</Text>
+                                </View>
+                                <Text style={[
+                                    styles.receiverName,
+                                    selectedReceiver?.id === p.id && styles.receiverNameSelected
+                                ]}>
+                                    {p.name}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+
+
+                    <View style={styles.inputContainer}>
+                        <Text style={styles.label}>Amount</Text>
+                        <View style={styles.amountWrapper}>
+                            <Text style={styles.currency}>₫</Text>
+                            <TextInput
+                                style={styles.amountInput}
+                                value={amount}
+                                onChangeText={setAmount}
+                                placeholder="0"
+                                keyboardType="numeric"
+                            />
+                        </View>
+                    </View>
+
+                    {/* Reason */}
+                    <View style={styles.inputContainer}>
+                        <Text style={styles.label}>Reason/Message</Text>
                         <TextInput
-                            style={styles.amountInput}
-                            value={amount}
-                            onChangeText={setAmount}
-                            placeholder="0"
-                            keyboardType="numeric"
+                            style={styles.reasonInput}
+                            value={reason}
+                            onChangeText={setReason}
+                            placeholder="Enjoy!"
+                            multiline
                         />
                     </View>
-                </View>
 
-                {/* Reason */}
-                <View style={styles.inputContainer}>
-                    <Text style={styles.label}>Reason/Message</Text>
-                    <TextInput
-                        style={styles.reasonInput}
-                        value={reason}
-                        onChangeText={setReason}
-                        placeholder="Enjoy!"
-                        multiline
-                    />
+                    <TouchableOpacity
+                        style={[styles.submitButton, loading && styles.disabledButton]}
+                        onPress={handleGrant}
+                        disabled={loading}
+                    >
+                        {loading ? (
+                            <ActivityIndicator color="white" />
+                        ) : (
+                            <Text style={styles.submitText}>Send Money</Text>
+                        )}
+                    </TouchableOpacity>
                 </View>
-
-                <TouchableOpacity
-                    style={[styles.submitButton, loading && styles.disabledButton]}
-                    onPress={handleGrant}
-                    disabled={loading}
-                >
-                    {loading ? (
-                        <ActivityIndicator color="white" />
-                    ) : (
-                        <Text style={styles.submitText}>Send Money</Text>
-                    )}
-                </TouchableOpacity>
-            </View>
-        </SafeAreaView >
+            </SafeAreaView >
+        </TouchableWithoutFeedback>
     );
 }
 

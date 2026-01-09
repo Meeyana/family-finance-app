@@ -105,14 +105,9 @@ export const getAccountData = async (userRole, selectedMonth = new Date()) => {
 
     // Calculate Financial Status
     let financialStatus = '🟢 Healthy';
-    if (totalLimit > 0) {
-        const ratio = totalSpent / totalLimit;
-        if (ratio >= 1.0) financialStatus = '🔴 Critical';
-        else if (ratio >= 0.8) financialStatus = '🟡 Warning';
-    }
 
-    // Downgrade if Deficit
-    if (financialStatus !== '🔴 Critical' && netCashflow < 0) {
+    // Simple logic without limit: Warn if cashflow negative
+    if (netCashflow < 0) {
         financialStatus = '🟠 Deficit';
     }
 
@@ -135,7 +130,6 @@ export const getAccountData = async (userRole, selectedMonth = new Date()) => {
         totalGiven,     // Family Volume Given
         totalReceived,  // Family Volume Received (should be same)
         netCashflow,
-        totalLimit,
         financialStatus,
         burnRate,
         projectedSpend,

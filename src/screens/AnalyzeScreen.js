@@ -125,9 +125,10 @@ export default function AnalyzeScreen({ navigation }) {
             <ScrollView>
                 <View style={styles.header}>
                     <Text style={styles.title}>Detailed Analysis</Text>
+                    <View style={{ marginTop: 4 }}>
+                        <MonthPicker date={selectedDate} onMonthChange={setSelectedDate} />
+                    </View>
                 </View>
-
-                <MonthPicker date={selectedDate} onMonthChange={setSelectedDate} />
 
                 {/* Filters Row */}
                 <View style={styles.filterRow}>
@@ -281,11 +282,11 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     header: {
-        padding: 16,
+        paddingTop: 12,
+        paddingBottom: 12,
         backgroundColor: 'white',
         borderBottomWidth: 1,
-        borderBottomColor: '#eee',
-        flexDirection: 'row',
+        borderBottomColor: '#f0f0f0',
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -293,8 +294,9 @@ const styles = StyleSheet.create({
         paddingRight: 16,
     },
     title: {
-        fontSize: 18,
+        fontSize: 20,
         fontWeight: 'bold',
+        color: '#1a1a1a',
     },
     card: {
         backgroundColor: 'white',

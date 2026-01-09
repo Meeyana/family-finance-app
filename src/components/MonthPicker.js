@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function MonthPicker({ date, onMonthChange }) {
     const formattedDate = date.toLocaleString('default', { month: 'long', year: 'numeric' });
@@ -13,13 +14,13 @@ export default function MonthPicker({ date, onMonthChange }) {
     return (
         <View style={styles.container}>
             <TouchableOpacity onPress={() => changeMonth(-1)} style={styles.button}>
-                <Text style={styles.arrow}>◀</Text>
+                <Ionicons name="chevron-back" size={24} color="#007AFF" />
             </TouchableOpacity>
 
             <Text style={styles.dateText}>{formattedDate}</Text>
 
             <TouchableOpacity onPress={() => changeMonth(1)} style={styles.button}>
-                <Text style={styles.arrow}>▶</Text>
+                <Ionicons name="chevron-forward" size={24} color="#007AFF" />
             </TouchableOpacity>
         </View>
     );
@@ -30,23 +31,23 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#f5f7fa',
         paddingVertical: 12,
-        borderRadius: 12,
-        marginVertical: 8,
+        // Removed gray background
     },
     button: {
-        paddingHorizontal: 20,
+        paddingHorizontal: 24,
     },
     arrow: {
-        fontSize: 18,
-        color: '#007AFF',
+        fontSize: 24,
+        color: '#007AFF', // You can swap this for Ionicons in next step if text arrow is too simple
+        fontWeight: '300'
     },
     dateText: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#333',
-        minWidth: 120,
+        fontSize: 17,
+        fontWeight: '600',
+        color: '#1a1a1a',
+        letterSpacing: 0.5,
+        minWidth: 140,
         textAlign: 'center',
     },
 });

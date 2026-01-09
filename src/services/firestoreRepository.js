@@ -57,7 +57,7 @@ export const initializeFamily = async (uid, email) => {
         // 1. Create Root Family Document (Global Budget)
         await setDoc(familyRef, {
             ownerEmail: email,
-            totalLimit: 30000000, // Default 30M
+            ownerEmail: email,
             createdAt: new Date().toISOString()
         });
 

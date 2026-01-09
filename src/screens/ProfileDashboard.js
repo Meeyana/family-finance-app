@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../components/context/AuthContext';
@@ -14,6 +14,8 @@ export default function ProfileDashboard({ route, navigation }) {
     const profileData = userProfiles.find(p => p.id === targetId) || route.params?.profile || authProfile || {};
 
     const [name, setName] = useState(profileData.name || '');
+    const [pin, setPin] = useState(profileData.pin || '');
+    const [showPin, setShowPin] = useState(false);
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
@@ -28,7 +30,8 @@ export default function ProfileDashboard({ route, navigation }) {
         setLoading(true);
         try {
             await updateProfile(auth.currentUser.uid, profileData.id, {
-                name: name.trim()
+                name: name.trim(),
+                pin: pin.trim()
             });
             await refreshProfiles();
             Alert.alert("Success", "Profile updated");
@@ -41,47 +44,65 @@ export default function ProfileDashboard({ route, navigation }) {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <MaterialCommunityIcons name="arrow-left" size={24} color="#007AFF" />
-                </TouchableOpacity>
-                <Text style={styles.title}>My Profile</Text>
-                <View style={{ width: 24 }} />
-            </View>
-
-            <View style={styles.content}>
-                <View style={styles.avatarContainer}>
-                    <View style={styles.avatar}>
-                        <MaterialCommunityIcons name="account" size={60} color="white" />
-                    </View>
-                    {/* Placeholder for future image upload */}
-                    <TouchableOpacity style={styles.editIconBadge} onPress={() => Alert.alert("Coming Soon", "Image upload not implemented yet")}>
-                        <MaterialCommunityIcons name="camera" size={16} color="white" />
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <SafeAreaView style={styles.container}>
+                <View style={styles.header}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                        <MaterialCommunityIcons name="arrow-left" size={24} color="#007AFF" />
                     </TouchableOpacity>
+                    <Text style={styles.title}>My Profile</Text>
+                    <View style={{ width: 24 }} />
                 </View>
 
-                <View style={styles.form}>
-                    <Text style={styles.label}>Display Name</Text>
-                    <TextInput
-                        style={styles.input}
-                        value={name}
-                        onChangeText={setName}
-                        placeholder="Enter your name"
-                    />
-
-                    <Text style={styles.label}>Role</Text>
-                    <View style={styles.disabledInput}>
-                        <Text style={styles.disabledText}>{profileData.role || 'User'}</Text>
-                        <MaterialCommunityIcons name="lock" size={16} color="#999" />
+                <View style={styles.content}>
+                    <View style={styles.avatarContainer}>
+                        <View style={styles.avatar}>
+                            <MaterialCommunityIcons name="account" size={60} color="white" />
+                        </View>
+                        {/* Placeholder for future image upload */}
+                        <TouchableOpacity style={styles.editIconBadge} onPress={() => Alert.alert("Coming Soon", "Image upload not implemented yet")}>
+                            <MaterialCommunityIcons name="camera" size={16} color="white" />
+                        </TouchableOpacity>
                     </View>
 
-                    <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={loading}>
-                        {loading ? <ActivityIndicator color="white" /> : <Text style={styles.saveText}>Save Changes</Text>}
-                    </TouchableOpacity>
+                    <View style={styles.form}>
+                        <Text style={styles.label}>Display Name</Text>
+                        <TextInput
+                            style={styles.input}
+                            value={name}
+                            onChangeText={setName}
+                            placeholder="Enter your name"
+                        />
+
+                        <View style={styles.disabledInput}>
+                            <Text style={styles.disabledText}>{profileData.role || 'User'}</Text>
+                            <MaterialCommunityIcons name="lock" size={16} color="#999" />
+                        </View>
+
+                        <Text style={styles.label}>Profile PIN (Optional)</Text>
+                        <View style={styles.pinContainer}>
+                            <TextInput
+                                style={[styles.input, { flex: 1, marginBottom: 0 }]}
+                                value={pin}
+                                onChangeText={setPin}
+                                placeholder="Enter 4-6 digit PIN"
+                                keyboardType="numeric"
+                                secureTextEntry={!showPin}
+                                maxLength={6}
+                            />
+                            <TouchableOpacity style={styles.eyeButton} onPress={() => setShowPin(!showPin)}>
+                                <MaterialCommunityIcons name={showPin ? "eye-off" : "eye"} size={24} color="#666" />
+                            </TouchableOpacity>
+                        </View>
+                        <Text style={styles.helperText}>Leave empty for no PIN protection</Text>
+
+                        <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={loading}>
+                            {loading ? <ActivityIndicator color="white" /> : <Text style={styles.saveText}>Save Changes</Text>}
+                        </TouchableOpacity>
+                    </View>
                 </View>
-            </View>
-        </SafeAreaView>
+            </SafeAreaView>
+        </TouchableWithoutFeedback>
     );
 }
 
@@ -186,5 +207,23 @@ const styles = StyleSheet.create({
         color: 'white',
         fontWeight: 'bold',
         fontSize: 16,
+        fontSize: 16,
+    },
+    helperText: {
+        fontSize: 12,
+        color: '#999',
+        marginTop: 4,
+        marginBottom: 20,
+        marginLeft: 4
+    },
+    pinContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 4 // Space for helper text
+    },
+    eyeButton: {
+        position: 'absolute',
+        right: 12,
+        padding: 4
     }
 });

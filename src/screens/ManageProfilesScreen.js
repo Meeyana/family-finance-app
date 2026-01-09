@@ -1,10 +1,15 @@
-import React from 'react';
+import React, { useLayoutEffect } from 'react';
 import { View, Text, TouchableOpacity, FlatList, StyleSheet } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../components/context/AuthContext';
 
 export default function ManageProfilesScreen({ navigation }) {
     const { userProfiles } = useAuth(); // Live data from Context
+
+    useLayoutEffect(() => {
+        navigation.setOptions({ headerShown: false });
+    }, [navigation]);
 
     const renderItem = ({ item }) => (
         <TouchableOpacity
@@ -18,7 +23,7 @@ export default function ManageProfilesScreen({ navigation }) {
                 <Text style={styles.name}>{item.name}</Text>
                 <Text style={styles.role}>{item.role}</Text>
             </View>
-            <Text style={styles.arrow}>></Text>
+            <Text style={styles.arrow}></Text>
         </TouchableOpacity>
     );
 
@@ -26,7 +31,7 @@ export default function ManageProfilesScreen({ navigation }) {
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <Text style={styles.backText}>Back</Text>
+                    <MaterialCommunityIcons name="arrow-left" size={24} color="#007AFF" />
                 </TouchableOpacity>
                 <Text style={styles.title}>Manage Profiles</Text>
                 <TouchableOpacity onPress={() => navigation.navigate('EditProfile', { isNew: true, profile: {} })} >

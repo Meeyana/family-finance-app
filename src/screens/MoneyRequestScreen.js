@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ActivityIndicator, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../components/context/AuthContext';
@@ -59,78 +59,80 @@ export default function MoneyRequestScreen({ navigation }) {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <Ionicons name="arrow-back" size={24} color="#1a1a1a" />
-                </TouchableOpacity>
-                <Text style={styles.title}>Request Money</Text>
-                <View style={{ width: 24 }} />
-            </View>
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <SafeAreaView style={styles.container}>
+                <View style={styles.header}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                        <Ionicons name="arrow-back" size={24} color="#1a1a1a" />
+                    </TouchableOpacity>
+                    <Text style={styles.title}>Request Money</Text>
+                    <View style={{ width: 24 }} />
+                </View>
 
-            <View style={styles.content}>
-                <View style={styles.inputContainer}>
-                    <Text style={styles.label}>Amount</Text>
-                    <View style={styles.amountWrapper}>
-                        <Text style={styles.currency}>₫</Text>
+                <View style={styles.content}>
+                    <View style={styles.inputContainer}>
+                        <Text style={styles.label}>Amount</Text>
+                        <View style={styles.amountWrapper}>
+                            <Text style={styles.currency}>₫</Text>
+                            <TextInput
+                                style={styles.amountInput}
+                                value={amount}
+                                onChangeText={setAmount}
+                                placeholder="0"
+                                keyboardType="numeric"
+                                autoFocus
+                            />
+                        </View>
+                    </View>
+
+                    <View style={styles.inputContainer}>
+                        <Text style={styles.label}>Category</Text>
+                        <View style={styles.categoryRow}>
+                            {categories.map(cat => (
+                                <TouchableOpacity
+                                    key={cat.id || cat.name}
+                                    style={[
+                                        styles.categoryChip,
+                                        selectedCategory.name === cat.name && styles.categoryChipSelected
+                                    ]}
+                                    onPress={() => setSelectedCategory(cat)}
+                                >
+                                    <Text style={[
+                                        styles.categoryText,
+                                        selectedCategory.name === cat.name && styles.categoryTextSelected
+                                    ]}>
+                                        {cat.icon} {cat.name}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    </View>
+
+                    <View style={styles.inputContainer}>
+                        <Text style={styles.label}>Reason</Text>
                         <TextInput
-                            style={styles.amountInput}
-                            value={amount}
-                            onChangeText={setAmount}
-                            placeholder="0"
-                            keyboardType="numeric"
-                            autoFocus
+                            style={styles.reasonInput}
+                            value={reason}
+                            onChangeText={setReason}
+                            placeholder="What is this for?"
+                            multiline
                         />
                     </View>
-                </View>
 
-                <View style={styles.inputContainer}>
-                    <Text style={styles.label}>Category</Text>
-                    <View style={styles.categoryRow}>
-                        {categories.map(cat => (
-                            <TouchableOpacity
-                                key={cat.id || cat.name}
-                                style={[
-                                    styles.categoryChip,
-                                    selectedCategory.name === cat.name && styles.categoryChipSelected
-                                ]}
-                                onPress={() => setSelectedCategory(cat)}
-                            >
-                                <Text style={[
-                                    styles.categoryText,
-                                    selectedCategory.name === cat.name && styles.categoryTextSelected
-                                ]}>
-                                    {cat.icon} {cat.name}
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
+                    <TouchableOpacity
+                        style={[styles.submitButton, loading && styles.disabledButton]}
+                        onPress={handleSubmit}
+                        disabled={loading}
+                    >
+                        {loading ? (
+                            <ActivityIndicator color="white" />
+                        ) : (
+                            <Text style={styles.submitText}>Send Request</Text>
+                        )}
+                    </TouchableOpacity>
                 </View>
-
-                <View style={styles.inputContainer}>
-                    <Text style={styles.label}>Reason</Text>
-                    <TextInput
-                        style={styles.reasonInput}
-                        value={reason}
-                        onChangeText={setReason}
-                        placeholder="What is this for?"
-                        multiline
-                    />
-                </View>
-
-                <TouchableOpacity
-                    style={[styles.submitButton, loading && styles.disabledButton]}
-                    onPress={handleSubmit}
-                    disabled={loading}
-                >
-                    {loading ? (
-                        <ActivityIndicator color="white" />
-                    ) : (
-                        <Text style={styles.submitText}>Send Request</Text>
-                    )}
-                </TouchableOpacity>
-            </View>
-        </SafeAreaView>
+            </SafeAreaView>
+        </TouchableWithoutFeedback>
     );
 }
 

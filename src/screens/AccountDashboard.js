@@ -116,9 +116,7 @@ export default function AccountDashboard({ navigation }) {
             totalSpent: expense,
             totalGiven: given,
             totalReceived: received,
-            totalLimit: data.totalLimit || 0,
             netCashflow: income - expense,
-            remain: (income + received) - (expense + given), // New Metric
             projectedSpend: (expense / Math.max(new Date().getDate(), 1)) * 30
         };
     }, [data, categories]); // Added categories to dependency
@@ -148,9 +146,10 @@ export default function AccountDashboard({ navigation }) {
             <ScrollView>
                 <View style={styles.header}>
                     <Text style={styles.title}>My Overview</Text>
+                    <View style={{ marginTop: 4 }}>
+                        <MonthPicker date={selectedDate} onMonthChange={setSelectedDate} />
+                    </View>
                 </View>
-
-                <MonthPicker date={selectedDate} onMonthChange={setSelectedDate} />
 
                 {/* Scorecard Layout */}
                 <Text style={styles.sectionHeader}>Overview (My Snapshot)</Text>
@@ -197,16 +196,13 @@ export default function AccountDashboard({ navigation }) {
                     {/* Row 2: Budget & Presents */}
                     <View style={styles.gridRow}>
                         <View style={[styles.card, styles.gridCard]}>
-                            <View style={[styles.iconCircle, { backgroundColor: 'rgba(0, 122, 255, 0.1)' }]}>
-                                <MaterialCommunityIcons name="chart-arc" size={24} color="#007AFF" />
+                            <View style={[styles.iconCircle, { backgroundColor: 'rgba(52, 199, 89, 0.1)' }]}>
+                                <MaterialCommunityIcons name="gift-open" size={24} color="#34c759" />
                             </View>
-                            <Text style={styles.gridLabel}>Budget Used</Text>
-                            <Text style={styles.gridValue}>
-                                {Math.min((viewData?.totalSpent / viewData?.totalLimit) * 100, 100).toFixed(0)}%
+                            <Text style={styles.gridLabel}>Allowance Recv.</Text>
+                            <Text style={[styles.gridValue, { color: '#34c759' }]}>
+                                +{viewData?.totalReceived?.toLocaleString()} ₫
                             </Text>
-                            <View style={styles.miniProgressBar}>
-                                <View style={[styles.miniProgressFill, { width: `${Math.min((viewData?.totalSpent / viewData?.totalLimit) * 100, 100)}%`, backgroundColor: (viewData?.totalSpent > viewData?.totalLimit) ? '#ff3b30' : '#007AFF' }]} />
-                            </View>
                         </View>
 
                         <View style={[styles.card, styles.gridCard]}>
@@ -220,43 +216,23 @@ export default function AccountDashboard({ navigation }) {
                         </View>
                     </View>
 
-                    {/* Row 3: Forecast & Allowance Received */}
+                    {/* Row 3: Forecast & Presents Given */}
                     <View style={styles.gridRow}>
                         <View style={[styles.card, styles.gridCard]}>
                             <View style={[styles.iconCircle, { backgroundColor: 'rgba(251, 191, 36, 0.1)' }]}>
                                 <MaterialCommunityIcons name="crystal-ball" size={24} color="#fbbf24" />
                             </View>
                             <Text style={styles.gridLabel}>Forecast</Text>
-                            <Text style={[styles.gridValue, { color: (viewData?.projectedSpend > viewData?.totalLimit) ? '#ff3b30' : '#333' }]}>
+                            <Text style={[styles.gridValue, { color: '#333' }]}>
                                 {Math.round(viewData?.projectedSpend || 0).toLocaleString()}
                             </Text>
                         </View>
 
-                        <View style={[styles.card, styles.gridCard]}>
-                            <View style={[styles.iconCircle, { backgroundColor: 'rgba(52, 199, 89, 0.1)' }]}>
-                                <MaterialCommunityIcons name="gift-open" size={24} color="#34c759" />
-                            </View>
-                            <Text style={styles.gridLabel}>Allowance Recv.</Text>
-                            <Text style={[styles.gridValue, { color: '#34c759' }]}>
-                                +{viewData?.totalReceived?.toLocaleString()} ₫
-                            </Text>
+                        <View style={[styles.card, styles.gridCard, { opacity: 0 }]}>
                         </View>
                     </View>
 
-                    {/* Row 4: Remain (Parents Only) */}
-                    {profile?.role !== 'Child' && (
-                        <View style={styles.gridRow}>
-                            <View style={[styles.card, styles.gridCard, { flex: 1 }]}>
-                                <View style={[styles.iconCircle, { backgroundColor: viewData?.remain >= 0 ? 'rgba(52, 199, 89, 0.1)' : 'rgba(255, 59, 48, 0.1)' }]}>
-                                    <MaterialCommunityIcons name="scale-balance" size={24} color={viewData?.remain >= 0 ? "#34c759" : "#ff3b30"} />
-                                </View>
-                                <Text style={styles.gridLabel}>Remain (Real)</Text>
-                                <Text style={[styles.gridValue, { color: viewData?.remain >= 0 ? '#34c759' : '#ff3b30' }]}>
-                                    {viewData?.remain > 0 ? '+' : ''}{viewData?.remain?.toLocaleString()} ₫
-                                </Text>
-                            </View>
-                        </View>
-                    )}
+
                 </View>
 
                 {/* Category Breakdown */}
@@ -279,21 +255,23 @@ export default function AccountDashboard({ navigation }) {
                     )}
                 </View>
 
-                {/* DEBUG SECTION: REMOVE BEFORE PRODUCTION */}
-                <View style={{ padding: 16, backgroundColor: '#ffeebb', margin: 16, borderRadius: 8 }}>
-                    <Text style={{ fontWeight: 'bold', marginBottom: 8 }}>🐞 DEBUG: Income Source (Total: {viewData?.totalIncome?.toLocaleString()})</Text>
-                    {viewData?.transactions
-                        ?.filter(t => t.type === 'income' && !(
-                            t.isTransfer || t.category === 'Granted' || t.category === 'Present' || (t.note && t.note.includes('(Granted)'))
-                        ))
-                        .map((t, index) => (
-                            <Text key={index} style={{ fontSize: 12, marginBottom: 4 }}>
-                                {t.date}: {t.amount?.toLocaleString()} - {t.category} ({t.profileId})
-                            </Text>
-                        ))
-                    }
-                    {(!viewData?.transactions || viewData.transactions.length === 0) && <Text>No transactions loaded</Text>}
-                </View>
+                {/* DEBUG SECTION: HIDDEN FOR NOW */}
+                {false && (
+                    <View style={{ padding: 16, backgroundColor: '#ffeebb', margin: 16, borderRadius: 8 }}>
+                        <Text style={{ fontWeight: 'bold', marginBottom: 8 }}>🐞 DEBUG: Income Source (Total: {viewData?.totalIncome?.toLocaleString()})</Text>
+                        {viewData?.transactions
+                            ?.filter(t => t.type === 'income' && !(
+                                t.isTransfer || t.category === 'Granted' || t.category === 'Present' || (t.note && t.note.includes('(Granted)'))
+                            ))
+                            .map((t, index) => (
+                                <Text key={index} style={{ fontSize: 12, marginBottom: 4 }}>
+                                    {t.date}: {t.amount?.toLocaleString()} - {t.category} ({t.profileId})
+                                </Text>
+                            ))
+                        }
+                        {(!viewData?.transactions || viewData.transactions.length === 0) && <Text>No transactions loaded</Text>}
+                    </View>
+                )}
 
             </ScrollView>
         </SafeAreaView >
@@ -311,11 +289,11 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     header: {
-        padding: 16,
+        paddingTop: 12,
+        paddingBottom: 12,
         backgroundColor: 'white',
         borderBottomWidth: 1,
-        borderBottomColor: '#eee',
-        flexDirection: 'row',
+        borderBottomColor: '#f0f0f0',
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -326,8 +304,9 @@ const styles = StyleSheet.create({
         padding: 8,
     },
     title: {
-        fontSize: 18,
+        fontSize: 20,
         fontWeight: 'bold',
+        color: '#1a1a1a',
     },
     card: {
         backgroundColor: 'white',

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, DeviceEventEmitter, TextInput } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../components/context/AuthContext';
 import { getTransactions, getFamilyCategories } from '../services/firestoreRepository';
@@ -106,19 +106,21 @@ export default function TransactionListScreen({ navigation }) {
     };
 
     return (
-        <View style={styles.container}>
-            <LinearGradient colors={['#4c669f', '#3b5998', '#192f6a']} style={styles.header}>
+        <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+            <View style={styles.header}>
                 <Text style={styles.headerTitle}>All Transactions</Text>
-                <View style={{ marginTop: 12 }}>
+                <View style={{ marginTop: 8 }}>
                     <MonthPicker date={selectedDate} onMonthChange={setSelectedDate} />
                 </View>
-            </LinearGradient>
+            </View>
 
             <FlatList
                 data={filteredTransactions}
                 keyExtractor={item => item.id}
                 renderItem={renderItem}
                 contentContainerStyle={styles.list}
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="on-drag"
                 ListHeaderComponent={
                     <View style={{ marginBottom: 16 }}>
                         <TouchableOpacity
@@ -162,14 +164,22 @@ export default function TransactionListScreen({ navigation }) {
                     </View>
                 }
             />
-        </View>
+        </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#f8f9fa' },
-    header: { paddingTop: 50, paddingBottom: 20, paddingHorizontal: 20, justifyContent: 'center' },
-    headerTitle: { fontSize: 24, fontWeight: 'bold', color: 'white' },
+    header: {
+        paddingTop: 10,
+        paddingBottom: 16,
+        paddingHorizontal: 20,
+        backgroundColor: 'white',
+        borderBottomWidth: 1,
+        borderBottomColor: '#eee',
+        alignItems: 'center'
+    },
+    headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#1a1a1a', textAlign: 'center' },
     list: { padding: 16 },
     card: {
         flexDirection: 'row',

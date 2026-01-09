@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, Modal, TextInput, ActivityIndicator, Platform, DeviceEventEmitter } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, Modal, TextInput, ActivityIndicator, Platform, DeviceEventEmitter, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../components/context/AuthContext';
@@ -207,93 +207,95 @@ export default function RecurringScreen({ navigation }) {
             />
 
             <Modal visible={modalVisible} animationType="slide" presentationStyle="pageSheet">
-                <SafeAreaView style={styles.modalContainer}>
-                    <View style={styles.modalHeader}>
-                        <Text style={styles.modalTitle}>{editingItem ? 'Edit Recurring' : 'New Recurring'}</Text>
-                        <TouchableOpacity onPress={() => setModalVisible(false)}>
-                            <Text style={styles.closeText}>Close</Text>
-                        </TouchableOpacity>
-                    </View>
-
-                    <View style={styles.form}>
-                        <Text style={styles.label}>Name (e.g. Netflix)</Text>
-                        <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Title" />
-
-                        <Text style={styles.label}>Amount</Text>
-                        <TextInput style={styles.input} value={amount} onChangeText={setAmount} placeholder="0" keyboardType="numeric" />
-
-                        <View style={styles.row}>
-                            <TouchableOpacity
-                                style={[styles.typeBtn, type === 'expense' && styles.expenseActive]}
-                                onPress={() => setType('expense')}>
-                                <Text style={[styles.typeText, type === 'expense' && { color: 'white' }]}>Expense</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={[styles.typeBtn, type === 'income' && styles.incomeActive]}
-                                onPress={() => setType('income')}>
-                                <Text style={[styles.typeText, type === 'income' && { color: 'white' }]}>Income</Text>
+                <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                    <SafeAreaView style={styles.modalContainer}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>{editingItem ? 'Edit Recurring' : 'New Recurring'}</Text>
+                            <TouchableOpacity onPress={() => setModalVisible(false)}>
+                                <Text style={styles.closeText}>Close</Text>
                             </TouchableOpacity>
                         </View>
 
-                        <Text style={styles.label}>Duration</Text>
-                        <View style={styles.row}>
-                            <TouchableOpacity
-                                style={[styles.typeBtn, isForever && styles.freqActive]}
-                                onPress={() => setIsForever(true)}>
-                                <Text style={[styles.typeText, isForever && { color: 'white' }]}>Forever</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={[styles.typeBtn, !isForever && styles.freqActive]}
-                                onPress={() => setIsForever(false)}>
-                                <Text style={[styles.typeText, !isForever && { color: 'white' }]}>Fixed</Text>
-                            </TouchableOpacity>
-                        </View>
+                        <View style={styles.form}>
+                            <Text style={styles.label}>Name (e.g. Netflix)</Text>
+                            <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Title" />
 
-                        {!isForever && (
-                            <View style={{ marginTop: 12 }}>
-                                <Text style={styles.label}>Run for...</Text>
-                                <View style={styles.row}>
-                                    <TextInput
-                                        style={[styles.input, { flex: 0.4 }]}
-                                        value={durationCount}
-                                        onChangeText={setDurationCount}
-                                        placeholder="Num"
-                                        keyboardType="numeric"
-                                    />
-                                    <TouchableOpacity
-                                        style={[styles.typeBtn, unit === 'MONTHLY' && styles.freqActive, { flex: 0.3 }]}
-                                        onPress={() => setUnit('MONTHLY')}>
-                                        <Text style={[styles.typeText, unit === 'MONTHLY' && { color: 'white' }]}>Months</Text>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity
-                                        style={[styles.typeBtn, unit === 'YEARLY' && styles.freqActive, { flex: 0.3 }]}
-                                        onPress={() => setUnit('YEARLY')}>
-                                        <Text style={[styles.typeText, unit === 'YEARLY' && { color: 'white' }]}>Years</Text>
-                                    </TouchableOpacity>
-                                </View>
-                            </View>
-                        )}
+                            <Text style={styles.label}>Amount</Text>
+                            <TextInput style={styles.input} value={amount} onChangeText={setAmount} placeholder="0" keyboardType="numeric" />
 
-                        <Text style={styles.label}>Category</Text>
-                        <FlatList
-                            data={categories.filter(c => (c.type || 'expense') === type)}
-                            horizontal
-                            showsHorizontalScrollIndicator={false}
-                            style={{ maxHeight: 60 }}
-                            renderItem={({ item }) => (
+                            <View style={styles.row}>
                                 <TouchableOpacity
-                                    style={[styles.catChip, selectedCategory?.id === item.id && styles.catActive]}
-                                    onPress={() => setSelectedCategory(item)}>
-                                    <Text>{item.icon} {item.name}</Text>
+                                    style={[styles.typeBtn, type === 'expense' && styles.expenseActive]}
+                                    onPress={() => setType('expense')}>
+                                    <Text style={[styles.typeText, type === 'expense' && { color: 'white' }]}>Expense</Text>
                                 </TouchableOpacity>
-                            )}
-                        />
+                                <TouchableOpacity
+                                    style={[styles.typeBtn, type === 'income' && styles.incomeActive]}
+                                    onPress={() => setType('income')}>
+                                    <Text style={[styles.typeText, type === 'income' && { color: 'white' }]}>Income</Text>
+                                </TouchableOpacity>
+                            </View>
 
-                        <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
-                            <Text style={styles.saveText}>{editingItem ? 'Update Subscription' : 'Save Subscription'}</Text>
-                        </TouchableOpacity>
-                    </View>
-                </SafeAreaView>
+                            <Text style={styles.label}>Duration</Text>
+                            <View style={styles.row}>
+                                <TouchableOpacity
+                                    style={[styles.typeBtn, isForever && styles.freqActive]}
+                                    onPress={() => setIsForever(true)}>
+                                    <Text style={[styles.typeText, isForever && { color: 'white' }]}>Forever</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[styles.typeBtn, !isForever && styles.freqActive]}
+                                    onPress={() => setIsForever(false)}>
+                                    <Text style={[styles.typeText, !isForever && { color: 'white' }]}>Fixed</Text>
+                                </TouchableOpacity>
+                            </View>
+
+                            {!isForever && (
+                                <View style={{ marginTop: 12 }}>
+                                    <Text style={styles.label}>Run for...</Text>
+                                    <View style={styles.row}>
+                                        <TextInput
+                                            style={[styles.input, { flex: 0.4 }]}
+                                            value={durationCount}
+                                            onChangeText={setDurationCount}
+                                            placeholder="Num"
+                                            keyboardType="numeric"
+                                        />
+                                        <TouchableOpacity
+                                            style={[styles.typeBtn, unit === 'MONTHLY' && styles.freqActive, { flex: 0.3 }]}
+                                            onPress={() => setUnit('MONTHLY')}>
+                                            <Text style={[styles.typeText, unit === 'MONTHLY' && { color: 'white' }]}>Months</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            style={[styles.typeBtn, unit === 'YEARLY' && styles.freqActive, { flex: 0.3 }]}
+                                            onPress={() => setUnit('YEARLY')}>
+                                            <Text style={[styles.typeText, unit === 'YEARLY' && { color: 'white' }]}>Years</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                </View>
+                            )}
+
+                            <Text style={styles.label}>Category</Text>
+                            <FlatList
+                                data={categories.filter(c => (c.type || 'expense') === type)}
+                                horizontal
+                                showsHorizontalScrollIndicator={false}
+                                style={{ maxHeight: 60 }}
+                                renderItem={({ item }) => (
+                                    <TouchableOpacity
+                                        style={[styles.catChip, selectedCategory?.id === item.id && styles.catActive]}
+                                        onPress={() => setSelectedCategory(item)}>
+                                        <Text>{item.icon} {item.name}</Text>
+                                    </TouchableOpacity>
+                                )}
+                            />
+
+                            <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
+                                <Text style={styles.saveText}>{editingItem ? 'Update Subscription' : 'Save Subscription'}</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </SafeAreaView>
+                </TouchableWithoutFeedback>
             </Modal>
         </SafeAreaView>
     );

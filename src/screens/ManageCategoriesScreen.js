@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput, Alert, ActivityIndicator, Modal, ScrollView, Switch } from 'react-native';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput, Alert, ActivityIndicator, Modal, ScrollView, Switch, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { auth } from '../services/firebase';
@@ -30,6 +30,10 @@ export default function ManageCategoriesScreen({ navigation }) {
     const { profile, userProfiles } = useAuth();
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
+
+    useLayoutEffect(() => {
+        navigation.setOptions({ headerShown: false });
+    }, [navigation]);
 
     const [newCategoryName, setNewCategoryName] = useState('');
     const [newCategoryIcon, setNewCategoryIcon] = useState('🏷️');
@@ -196,160 +200,163 @@ export default function ManageCategoriesScreen({ navigation }) {
     );
 
     return (
-        <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <Text style={styles.backText}>Cancel</Text>
-                </TouchableOpacity>
-                <Text style={styles.title}>Categories</Text>
-                <TouchableOpacity onPress={() => { setIsAdding(!isAdding); setEditingCategory(null); setNewCategoryName(''); setNewCategoryIcon('🏷️'); setSharedWith([]); }} style={styles.addButton}>
-                    <Text style={[styles.addText, { color: themeColor }]}>{isAdding ? 'Close' : 'Add New'}</Text>
-                </TouchableOpacity>
-            </View>
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <SafeAreaView style={styles.container}>
+                <View style={styles.header}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                        <MaterialCommunityIcons name="arrow-left" size={24} color="#007AFF" />
+                    </TouchableOpacity>
+                    <Text style={styles.title}>Categories</Text>
+                    <TouchableOpacity onPress={() => { setIsAdding(!isAdding); setEditingCategory(null); setNewCategoryName(''); setNewCategoryIcon('🏷️'); setSharedWith([]); }} style={styles.addButton}>
+                        <Text style={[styles.addText, { color: themeColor }]}>{isAdding ? 'Close' : 'Add New'}</Text>
+                    </TouchableOpacity>
+                </View>
 
-            {/* Type Toggle - Refined */}
-            <View style={styles.toggleContainer}>
-                <TouchableOpacity
-                    style={[styles.toggleButton, selectedType === 'expense' && styles.toggleActive]}
-                    onPress={() => setSelectedType('expense')}
-                >
-                    <Text style={[styles.toggleText, selectedType === 'expense' && styles.toggleTextActive]}>Expense</Text>
-                </TouchableOpacity>
-                <View style={{ width: 1, backgroundColor: '#ddd', height: 20 }} />
-                <TouchableOpacity
-                    style={[styles.toggleButton, selectedType === 'income' && styles.toggleActive]}
-                    onPress={() => setSelectedType('income')}
-                >
-                    <Text style={[styles.toggleText, selectedType === 'income' && styles.toggleTextActive]}>Income</Text>
-                </TouchableOpacity>
-            </View>
+                {/* Type Toggle - Refined */}
+                <View style={styles.toggleContainer}>
+                    <TouchableOpacity
+                        style={[styles.toggleButton, selectedType === 'expense' && styles.toggleActive]}
+                        onPress={() => setSelectedType('expense')}
+                    >
+                        <Text style={[styles.toggleText, selectedType === 'expense' && styles.toggleTextActive]}>Expense</Text>
+                    </TouchableOpacity>
+                    <View style={{ width: 1, backgroundColor: '#ddd', height: 20 }} />
+                    <TouchableOpacity
+                        style={[styles.toggleButton, selectedType === 'income' && styles.toggleActive]}
+                        onPress={() => setSelectedType('income')}
+                    >
+                        <Text style={[styles.toggleText, selectedType === 'income' && styles.toggleTextActive]}>Income</Text>
+                    </TouchableOpacity>
+                </View>
 
-            {isAdding && (
-                <View style={styles.addForm}>
-                    <Text style={styles.formTitle}>
-                        {editingCategory ? 'Edit Category' : `New ${selectedType === 'income' ? 'Income' : 'Expense'} Category`}
-                    </Text>
-                    <View style={styles.inputRow}>
-                        <TouchableOpacity
-                            style={styles.emojiButton}
-                            onPress={() => setEmojiPickerVisible(true)}
-                        >
-                            <Text style={styles.emojiText}>{newCategoryIcon}</Text>
-                        </TouchableOpacity>
+                {isAdding && (
+                    <View style={styles.addForm}>
+                        <Text style={styles.formTitle}>
+                            {editingCategory ? 'Edit Category' : `New ${selectedType === 'income' ? 'Income' : 'Expense'} Category`}
+                        </Text>
+                        <View style={styles.inputRow}>
+                            <TouchableOpacity
+                                style={styles.emojiButton}
+                                onPress={() => setEmojiPickerVisible(true)}
+                            >
+                                <Text style={styles.emojiText}>{newCategoryIcon}</Text>
+                            </TouchableOpacity>
 
-                        <TextInput
-                            style={styles.nameInput}
-                            value={newCategoryName}
-                            onChangeText={setNewCategoryName}
-                            placeholder="Category Name"
-                        />
-                    </View>
-
-                    <View style={{ marginBottom: 20 }}>
-                        <View style={[styles.inputRow, { alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }]}>
-                            <Text style={{ fontSize: 16, color: '#333', fontWeight: 'bold' }}>Share with Everyone</Text>
-                            <Switch
-                                value={sharedWith.includes('ALL')}
-                                onValueChange={toggleShareAll}
-                                trackColor={{ false: "#767577", true: themeColor }}
+                            <TextInput
+                                style={styles.nameInput}
+                                value={newCategoryName}
+                                onChangeText={setNewCategoryName}
+                                placeholder="Category Name"
                             />
                         </View>
 
-                        {!sharedWith.includes('ALL') && (
-                            <View style={{ marginTop: 5, paddingLeft: 5 }}>
-                                <Text style={{ fontSize: 14, color: '#666', marginBottom: 8 }}>Or share with specific people:</Text>
-                                {userProfiles
-                                    .filter(p => p.id !== profile.id)
-                                    .map(p => (
-                                        <TouchableOpacity
-                                            key={p.id}
-                                            style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}
-                                            onPress={() => toggleUserShare(p.id)}
-                                        >
-                                            <MaterialCommunityIcons
-                                                name={sharedWith.includes(p.id) ? "checkbox-marked" : "checkbox-blank-outline"}
-                                                size={24}
-                                                color={sharedWith.includes(p.id) ? themeColor : "#999"}
-                                            />
-                                            <Text style={{ marginLeft: 8, fontSize: 16 }}>{p.name}</Text>
-                                        </TouchableOpacity>
-                                    ))}
+                        <View style={{ marginBottom: 20 }}>
+                            <View style={[styles.inputRow, { alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }]}>
+                                <Text style={{ fontSize: 16, color: '#333', fontWeight: 'bold' }}>Share with Everyone</Text>
+                                <Switch
+                                    value={sharedWith.includes('ALL')}
+                                    onValueChange={toggleShareAll}
+                                    trackColor={{ false: "#767577", true: themeColor }}
+                                />
                             </View>
+
+                            {!sharedWith.includes('ALL') && (
+                                <View style={{ marginTop: 5, paddingLeft: 5 }}>
+                                    <Text style={{ fontSize: 14, color: '#666', marginBottom: 8 }}>Or share with specific people:</Text>
+                                    {userProfiles
+                                        .filter(p => p.id !== profile.id)
+                                        .map(p => (
+                                            <TouchableOpacity
+                                                key={p.id}
+                                                style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}
+                                                onPress={() => toggleUserShare(p.id)}
+                                            >
+                                                <MaterialCommunityIcons
+                                                    name={sharedWith.includes(p.id) ? "checkbox-marked" : "checkbox-blank-outline"}
+                                                    size={24}
+                                                    color={sharedWith.includes(p.id) ? themeColor : "#999"}
+                                                />
+                                                <Text style={{ marginLeft: 8, fontSize: 16 }}>{p.name}</Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                </View>
+                            )}
+                        </View>
+
+                        <TouchableOpacity style={[styles.createButton, { backgroundColor: themeColor }]} onPress={handleAdd}>
+                            <Text style={styles.createText}>{editingCategory ? 'Update Category' : 'Create Category'}</Text>
+                        </TouchableOpacity>
+                        {editingCategory && (
+                            <TouchableOpacity style={[styles.createButton, { backgroundColor: '#999', marginTop: 8 }]} onPress={handleCancel}>
+                                <Text style={styles.createText}>Cancel Edit</Text>
+                            </TouchableOpacity>
                         )}
                     </View>
+                )}
 
-                    <TouchableOpacity style={[styles.createButton, { backgroundColor: themeColor }]} onPress={handleAdd}>
-                        <Text style={styles.createText}>{editingCategory ? 'Update Category' : 'Create Category'}</Text>
-                    </TouchableOpacity>
-                    {editingCategory && (
-                        <TouchableOpacity style={[styles.createButton, { backgroundColor: '#999', marginTop: 8 }]} onPress={handleCancel}>
-                            <Text style={styles.createText}>Cancel Edit</Text>
-                        </TouchableOpacity>
-                    )}
-                </View>
-            )}
+                {loading ? (
+                    <ActivityIndicator style={{ marginTop: 20 }} size="large" />
+                ) : (
+                    <FlatList
+                        data={filteredCategories}
+                        keyExtractor={item => item.id}
+                        renderItem={({ item }) => {
+                            const isSystem = !item.ownerId;
+                            const sharedWith = item.sharedWith;
 
-            {loading ? (
-                <ActivityIndicator style={{ marginTop: 20 }} size="large" />
-            ) : (
-                <FlatList
-                    data={filteredCategories}
-                    keyExtractor={item => item.id}
-                    renderItem={({ item }) => {
-                        const isSystem = !item.ownerId;
-                        const sharedWith = item.sharedWith;
+                            let isAll = false;
+                            let label = 'Private';
 
-                        let isAll = false;
-                        let label = 'Private';
+                            if (Array.isArray(sharedWith)) {
+                                // Explicit permissions exist
+                                isAll = sharedWith.includes('ALL');
+                                if (isAll) label = 'Shared (Everyone)';
+                                else if (sharedWith.length > 0) label = 'Shared (Restricted)';
+                                else label = 'Private';
+                            } else {
+                                // Legacy/Default Fallback
+                                const isLegacyShared = item.isShared === true;
+                                isAll = isSystem || isLegacyShared;
 
-                        if (Array.isArray(sharedWith)) {
-                            // Explicit permissions exist
-                            isAll = sharedWith.includes('ALL');
-                            if (isAll) label = 'Shared (Everyone)';
-                            else if (sharedWith.length > 0) label = 'Shared (Restricted)';
-                            else label = 'Private';
-                        } else {
-                            // Legacy/Default Fallback
-                            const isLegacyShared = item.isShared === true;
-                            isAll = isSystem || isLegacyShared;
+                                if (isAll) label = 'Shared (Everyone)';
+                                else label = 'Private';
+                            }
 
-                            if (isAll) label = 'Shared (Everyone)';
-                            else label = 'Private';
-                        }
+                            const isMine = item.ownerId === profile.id;
+                            const canEdit = profile.role === 'Owner' || isMine;
 
-                        const isMine = item.ownerId === profile.id;
-                        const canEdit = profile.role === 'Owner' || isMine;
-
-                        return (
-                            <View style={styles.row}>
-                                <View style={styles.catInfo}>
-                                    <Text style={styles.catIcon}>{item.icon}</Text>
-                                    <View>
-                                        <Text style={styles.catName}>{item.name}</Text>
-                                        <Text style={{ fontSize: 11, color: '#999' }}>
-                                            {label}
-                                        </Text>
+                            return (
+                                <View style={styles.row}>
+                                    <View style={styles.catInfo}>
+                                        <Text style={styles.catIcon}>{item.icon}</Text>
+                                        <View>
+                                            <Text style={styles.catName}>{item.name}</Text>
+                                            <Text style={{ fontSize: 11, color: '#999' }}>
+                                                {label}
+                                            </Text>
+                                        </View>
                                     </View>
+                                    {canEdit && (
+                                        <View style={{ flexDirection: 'row', gap: 16 }}>
+                                            <TouchableOpacity onPress={() => handleEdit(item)}>
+                                                <MaterialCommunityIcons name="pencil" size={22} color="#007AFF" />
+                                            </TouchableOpacity>
+                                            <TouchableOpacity onPress={() => handleDelete(item)}>
+                                                <MaterialCommunityIcons name="delete" size={22} color="#dc2626" />
+                                            </TouchableOpacity>
+                                        </View>
+                                    )}
                                 </View>
-                                {canEdit && (
-                                    <View style={{ flexDirection: 'row', gap: 16 }}>
-                                        <TouchableOpacity onPress={() => handleEdit(item)}>
-                                            <MaterialCommunityIcons name="pencil" size={22} color="#007AFF" />
-                                        </TouchableOpacity>
-                                        <TouchableOpacity onPress={() => handleDelete(item)}>
-                                            <MaterialCommunityIcons name="delete" size={22} color="#dc2626" />
-                                        </TouchableOpacity>
-                                    </View>
-                                )}
-                            </View>
-                        );
-                    }}
-                    contentContainerStyle={styles.list}
-                />
-            )}
+                            );
+                        }}
+                        contentContainerStyle={styles.list}
+                        keyboardShouldPersistTaps='handled'
+                    />
+                )}
 
-            {renderEmojiPicker()}
-        </SafeAreaView>
+                {renderEmojiPicker()}
+            </SafeAreaView>
+        </TouchableWithoutFeedback>
     );
 }
 
