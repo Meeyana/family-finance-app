@@ -1,40 +1,41 @@
 import React from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { View, StyleSheet, Dimensions } from 'react-native';
 import { VictoryBar, VictoryChart, VictoryAxis } from 'victory-native';
+import { COLORS, TYPOGRAPHY } from '../constants/theme';
 
 export default function IncomeExpenseBarChart({ income, expense }) {
     const data = [
-        { x: 'Income', y: income, fill: '#4CD964' },
-        { x: 'Expense', y: expense, fill: '#FF3B30' },
+        { x: 'Income', y: income, fill: '#34C759' }, // Green
+        { x: 'Expense', y: expense, fill: '#FF3B30' }, // Red
     ];
 
     const screenWidth = Dimensions.get('window').width;
 
     return (
         <View style={styles.container}>
-
-            <View pointerEvents="none" style={{ marginLeft: -20 }}>
+            <View pointerEvents="none">
                 <VictoryChart
-                    domainPadding={{ x: 80 }}
-                    height={220}
-                    width={screenWidth - 64}
-                    padding={{ top: 20, bottom: 40, left: 20, right: 20 }}
+                    domainPadding={{ x: 80, y: 40 }}
+                    height={250}
+                    width={screenWidth - 32} // Full width minus padding
+                    padding={{ top: 50, bottom: 40, left: 20, right: 20 }}
                 >
                     <VictoryAxis
                         style={{
-                            axis: { stroke: "#eee" },
-                            tickLabels: { fill: "#666", fontSize: 14, fontWeight: '500' }
+                            axis: { stroke: "none" }, // Hide axis line
+                            tickLabels: { fill: "#9CA3AF", fontSize: 13, fontWeight: '500', fontFamily: TYPOGRAPHY.fontFamily.medium },
+                            grid: { stroke: "none" }
                         }}
                     />
                     <VictoryBar
                         data={data}
                         style={{
-                            data: { fill: ({ datum }) => datum.fill },
-                            labels: { fill: "#666", fontSize: 12 }
+                            data: { fill: ({ datum }) => datum.fill, width: 60 },
+                            labels: { fill: "#6B7280", fontSize: 12, fontFamily: TYPOGRAPHY.fontFamily.regular }
                         }}
                         barWidth={60}
                         cornerRadius={{ top: 8 }}
-                        labels={({ datum }) => datum.y > 0 ? datum.y.toLocaleString() : ''}
+                        labels={({ datum }) => datum.y > 0 ? `${datum.y.toLocaleString()}đ` : ''}
                     />
                 </VictoryChart>
             </View>
@@ -44,21 +45,8 @@ export default function IncomeExpenseBarChart({ income, expense }) {
 
 const styles = StyleSheet.create({
     container: {
-        backgroundColor: 'white',
-        borderRadius: 16,
-        padding: 16,
-        marginVertical: 8,
-        marginHorizontal: 16,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
-        elevation: 2,
-    },
-    title: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        marginBottom: 0,
-        color: '#1a1a1a',
+        marginBottom: 8,
+        alignItems: 'center',
+        // No background, fit into the clean layout
     },
 });

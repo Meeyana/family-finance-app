@@ -1,24 +1,18 @@
-// Purpose: Input form for new transactions
-// Connected Flow: PROFILE_SPENDING_FLOW (Add_Expense)
-
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, DeviceEventEmitter, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, DeviceEventEmitter, TouchableWithoutFeedback, Keyboard, useColorScheme } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { auth } from '../services/firebase';
 import { addTransaction, updateTransaction, deleteTransaction, getFamilyCategories } from '../services/firestoreRepository';
 import { validateTransaction } from '../services/transactionService';
-import { useAuth } from '../components/context/AuthContext'; // Import useAuth
-
-// ------------------------------------------------------------------
-// Screen: Add/Edit Transaction
-// Flow: PROFILE_SPENDING_FLOW
-// Purpose: Allows a profile to Create OR Edit a Transaction.
-// ------------------------------------------------------------------
+import { useAuth } from '../components/context/AuthContext';
+import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
 
 export default function AddTransactionScreen({ route, navigation }) {
-    const { profile: authProfile } = useAuth(); // Get auth profile
+    const { profile: authProfile } = useAuth();
+    const theme = useColorScheme() || 'light';
+    const colors = COLORS[theme];
 
     // INPUT: Passed from ProfileDashboard OR Fallback
     const params = route.params || {};
@@ -33,12 +27,12 @@ export default function AddTransactionScreen({ route, navigation }) {
     const [note, setNote] = useState(transaction ? transaction.note : '');
     const [date, setDate] = useState(transaction ? transaction.date : new Date().toISOString().split('T')[0]);
 
-    const themeColor = type === 'income' ? '#34c759' : '#ff3b30';
+    // Active Color Theme
+    const activeColor = type === 'income' ? colors.success : colors.error;
 
     // ... existing state ...
     const [loading, setLoading] = useState(false);
     const [categories, setCategories] = useState([]);
-    const [confirmation, setConfirmation] = useState(null);
     const [showDatePicker, setShowDatePicker] = useState(false);
 
     // SIDE EFFECT: Fetch categories
@@ -46,7 +40,6 @@ export default function AddTransactionScreen({ route, navigation }) {
         const fetchCats = async () => {
             try {
                 if (auth.currentUser) {
-                    console.log('Fetching cats for profile:', profile.id);
                     const cats = await getFamilyCategories(auth.currentUser.uid, profile.id, profile.role);
                     setCategories(cats);
                 }
@@ -70,12 +63,8 @@ export default function AddTransactionScreen({ route, navigation }) {
 
     const onDateChange = (event, selectedDate) => {
         const currentDate = selectedDate || new Date(date);
-        // On Android, the picker dismisses itself, but we need to toggle state
         setShowDatePicker(Platform.OS === 'ios');
-
-        // Format to YYYY-MM-DD
-        const formattedDate = currentDate.toISOString().split('T')[0];
-        setDate(formattedDate);
+        setDate(currentDate.toISOString().split('T')[0]);
     };
 
     const handleSave = async () => {
@@ -83,7 +72,6 @@ export default function AddTransactionScreen({ route, navigation }) {
             Alert.alert('Error', 'Invalid amount');
             return;
         }
-
         const numAmount = Math.round(parseFloat(amount));
         setLoading(true);
 
@@ -93,12 +81,15 @@ export default function AddTransactionScreen({ route, navigation }) {
             } else {
                 const validation = await validateTransaction(profile.id, numAmount);
                 if (validation.status !== 'ALLOWED') {
-                    setConfirmation({
-                        title: validation.status === 'CRITICAL' ? 'Over Budget!' : 'Budget Warning',
-                        message: validation.message,
-                        onConfirm: () => executeSave(numAmount)
-                    });
-                    setLoading(false);
+                    // Simple alert for now, can be custom modal later
+                    Alert.alert(
+                        validation.status === 'CRITICAL' ? 'Over Budget!' : 'Budget Warning',
+                        validation.message,
+                        [
+                            { text: 'Cancel', style: 'cancel', onPress: () => setLoading(false) },
+                            { text: 'Save Anyway', style: 'destructive', onPress: () => executeSave(numAmount) }
+                        ]
+                    );
                 } else {
                     await executeSave(numAmount);
                 }
@@ -113,7 +104,6 @@ export default function AddTransactionScreen({ route, navigation }) {
             setLoading(true);
             if (!auth.currentUser) throw new Error("Not authenticated");
             const uid = auth.currentUser.uid;
-
             const selectedCatObj = categories.find(c => c.name === category);
 
             const transactionData = {
@@ -126,7 +116,6 @@ export default function AddTransactionScreen({ route, navigation }) {
                 type
             };
 
-            // ... rest of save logic
             if (isEditing) {
                 await updateTransaction(uid, transaction.id, transaction, transactionData);
             } else {
@@ -141,7 +130,6 @@ export default function AddTransactionScreen({ route, navigation }) {
             Alert.alert('Error', 'Failed to save');
         } finally {
             setLoading(false);
-            setConfirmation(null);
         }
     };
 
@@ -169,153 +157,149 @@ export default function AddTransactionScreen({ route, navigation }) {
 
     return (
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-            <SafeAreaView style={styles.container}>
-                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-                    <View style={styles.header}>
-                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                            <MaterialCommunityIcons name="close" size={28} color="#666" />
+            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+                {/* Header */}
+                <View style={styles.header}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeButton}>
+                        <Ionicons name="close" size={24} color={colors.primaryText} />
+                    </TouchableOpacity>
+
+                    {/* Segmented Control */}
+                    <View style={[styles.segmentContainer, { backgroundColor: colors.surface }]}>
+                        <TouchableOpacity
+                            style={[styles.segment, type === 'expense' && { backgroundColor: colors.background, shadowOpacity: 0.1 }]}
+                            onPress={() => setType('expense')}
+                        >
+                            <Text style={[styles.segmentText, { color: type === 'expense' ? colors.primaryText : colors.secondaryText }]}>Expense</Text>
                         </TouchableOpacity>
-                        <Text style={styles.title}>{isEditing ? 'Edit Transaction' : 'New Transaction'}</Text>
-                        {isEditing ? (
-                            <TouchableOpacity onPress={handleDelete}>
-                                <MaterialCommunityIcons name="delete" size={24} color="red" />
-                            </TouchableOpacity>
-                        ) : (
-                            <View style={{ width: 28 }} />
-                        )}
+                        <TouchableOpacity
+                            style={[styles.segment, type === 'income' && { backgroundColor: colors.background, shadowOpacity: 0.1 }]}
+                            onPress={() => setType('income')}
+                        >
+                            <Text style={[styles.segmentText, { color: type === 'income' ? colors.primaryText : colors.secondaryText }]}>Income</Text>
+                        </TouchableOpacity>
                     </View>
 
-                    <ScrollView style={styles.form} keyboardShouldPersistTaps="handled">
-                        {/* Type Toggle */}
-                        <View style={styles.toggleContainer}>
-                            <TouchableOpacity
-                                style={[styles.toggleButton, type === 'expense' && { backgroundColor: '#ff3b30' }]}
-                                onPress={() => setType('expense')}
-                            >
-                                <Text style={[styles.toggleText, type === 'expense' && styles.toggleTextSelected]}>💸 Expense</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={[styles.toggleButton, type === 'income' && { backgroundColor: '#34c759' }]}
-                                onPress={() => setType('income')}
-                            >
-                                <Text style={[styles.toggleText, type === 'income' && styles.toggleTextSelected]}>💰 Income</Text>
-                            </TouchableOpacity>
+                    {isEditing ? (
+                        <TouchableOpacity onPress={handleDelete}>
+                            <Ionicons name="trash-outline" size={24} color={colors.error} />
+                        </TouchableOpacity>
+                    ) : (
+                        <View style={{ width: 24 }} />
+                    )}
+                </View>
+
+                {/* Main Content */}
+                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+                    <View style={styles.content}>
+
+                        {/* HERO INPUT */}
+                        <View style={styles.heroInputContainer}>
+                            <Text style={[styles.currencySymbol, { color: activeColor }]}>₫</Text>
+                            <TextInput
+                                style={[styles.heroInput, { color: activeColor }]}
+                                placeholder="0"
+                                placeholderTextColor={colors.divider}
+                                keyboardType="numeric"
+                                value={amount}
+                                onChangeText={setAmount}
+                                autoFocus={!isEditing}
+                            />
                         </View>
 
-                        <Text style={styles.label}>Amount (VND)</Text>
-                        <TextInput
-                            style={[styles.inputLarge, { color: themeColor }]}
-                            placeholder="0"
-                            placeholderTextColor="#ccc"
-                            keyboardType="numeric"
-                            value={amount}
-                            onChangeText={setAmount}
-                        />
+                        {/* Category Selector (Horizontal) */}
+                        <View style={styles.inputSection}>
+                            <Text style={[styles.label, { color: colors.secondaryText }]}>Category</Text>
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
+                                {filteredCategories.map((cat) => {
+                                    const isSelected = category === cat.name;
+                                    return (
+                                        <TouchableOpacity
+                                            key={cat.id}
+                                            style={[
+                                                styles.categoryChip,
+                                                { backgroundColor: isSelected ? activeColor : colors.surface }
+                                            ]}
+                                            onPress={() => setCategory(cat.name)}
+                                        >
+                                            <Text style={{ fontSize: 16, marginRight: 6 }}>{cat.icon}</Text>
+                                            <Text style={[
+                                                styles.categoryText,
+                                                { color: isSelected ? '#fff' : colors.primaryText } // Contrast text
+                                            ]}>
+                                                {cat.name}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    );
+                                })}
+                            </ScrollView>
+                        </View>
 
-                        {/* ... Date Picker ... */}
-                        <Text style={styles.label}>Date</Text>
-                        {Platform.OS === 'ios' ? (
-                            <View style={{ alignSelf: 'flex-start' }}>
-                                <DateTimePicker
-                                    testID="dateTimePicker"
-                                    value={new Date(date)}
-                                    mode="date"
-                                    display="compact"
-                                    onChange={onDateChange}
-                                />
-                            </View>
-                        ) : Platform.OS === 'android' ? (
-                            <>
-                                <TouchableOpacity
-                                    style={styles.dateButton}
-                                    onPress={() => setShowDatePicker(true)}
-                                >
-                                    <Text style={styles.dateText}>{date}</Text>
-                                </TouchableOpacity>
-
-                                {showDatePicker && (
+                        {/* Details Grid */}
+                        <View style={styles.detailsRow}>
+                            {/* DATE */}
+                            <View style={{ flex: 1, marginRight: SPACING.m }}>
+                                <Text style={[styles.label, { color: colors.secondaryText }]}>Date</Text>
+                                {Platform.OS === 'ios' ? (
                                     <DateTimePicker
-                                        testID="dateTimePicker"
                                         value={new Date(date)}
                                         mode="date"
-                                        is24Hour={true}
-                                        display="default"
+                                        display="compact"
                                         onChange={onDateChange}
+                                        style={{ alignSelf: 'flex-start' }}
                                     />
+                                ) : (
+                                    <TouchableOpacity
+                                        style={[styles.inputBox, { backgroundColor: colors.surface }]}
+                                        onPress={() => setShowDatePicker(true)}
+                                    >
+                                        <Text style={{ color: colors.primaryText }}>{date}</Text>
+                                    </TouchableOpacity>
                                 )}
-                            </>
-                        ) : (
-                            <TextInput
-                                style={styles.input}
-                                placeholder="YYYY-MM-DD"
-                                value={date}
-                                onChangeText={setDate}
-                            />
-                        )}
+                            </View>
 
-                        <Text style={styles.label}>Category</Text>
-                        <View style={styles.categoryContainer}>
-                            {filteredCategories.map((cat) => (
-                                <TouchableOpacity
-                                    key={cat.id}
-                                    style={[
-                                        styles.categoryButton,
-                                        category === cat.name && { backgroundColor: type === 'income' ? '#e8f5e9' : '#ffebee', borderColor: themeColor }
-                                    ]}
-                                    onPress={() => setCategory(cat.name)}
-                                >
-                                    <Text style={[
-                                        styles.categoryText,
-                                        category === cat.name && { color: themeColor, fontWeight: 'bold' }
-                                    ]}>
-                                        {cat.icon} {cat.name}
-                                    </Text>
-                                </TouchableOpacity>
-                            ))}
+                            {/* NOTE */}
+                            <View style={{ flex: 1 }}>
+                                <Text style={[styles.label, { color: colors.secondaryText }]}>Note</Text>
+                                <TextInput
+                                    style={[styles.inputBox, { backgroundColor: colors.surface, color: colors.primaryText }]}
+                                    placeholder="Optional"
+                                    placeholderTextColor={colors.secondaryText}
+                                    value={note}
+                                    onChangeText={setNote}
+                                />
+                            </View>
                         </View>
 
-                        <Text style={styles.label}>Note (Optional)</Text>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="What is this for?"
-                            value={note}
-                            onChangeText={setNote}
-                        />
+                    </View>
 
+                    {/* Footer Action */}
+                    <View style={[styles.footer, { borderTopColor: colors.divider }]}>
                         <TouchableOpacity
-                            style={[styles.saveButton, { backgroundColor: themeColor }]}
+                            style={[styles.saveButton, { backgroundColor: activeColor }]}
                             onPress={handleSave}
                             disabled={loading}
                         >
-                            {loading ? <ActivityIndicator color="white" /> : <Text style={styles.saveText}>{isEditing ? 'Update' : 'Save'} {type === 'income' ? 'Income' : 'Expense'}</Text>}
+                            {loading ? (
+                                <ActivityIndicator color="white" />
+                            ) : (
+                                <Text style={styles.saveButtonText}>
+                                    {isEditing ? 'Update Transaction' : 'Save Transaction'}
+                                </Text>
+                            )}
                         </TouchableOpacity>
+                    </View>
 
-                        <View style={{ height: 40 }} />
-                    </ScrollView>
-
-                    {/* Custom Confirmation Modal/Overlay */}
-                    {confirmation && (
-                        <View style={styles.overlay}>
-                            <View style={styles.modal}>
-                                <Text style={styles.modalTitle}>{confirmation.title}</Text>
-                                <Text style={styles.modalMessage}>{confirmation.message}</Text>
-                                <View style={styles.modalButtons}>
-                                    <TouchableOpacity
-                                        style={[styles.modalButton, styles.cancelButton]}
-                                        onPress={() => setConfirmation(null)}
-                                    >
-                                        <Text style={styles.cancelButtonText}>Cancel</Text>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity
-                                        style={[styles.modalButton, styles.confirmButton]}
-                                        onPress={confirmation.onConfirm}
-                                    >
-                                        <Text style={styles.confirmButtonText}>Yes, Save</Text>
-                                    </TouchableOpacity>
-                                </View>
-                            </View>
-                        </View>
+                    {/* Android Date Modal */}
+                    {Platform.OS === 'android' && showDatePicker && (
+                        <DateTimePicker
+                            value={new Date(date)}
+                            mode="date"
+                            display="default"
+                            onChange={onDateChange}
+                        />
                     )}
+
                 </KeyboardAvoidingView>
             </SafeAreaView>
         </TouchableWithoutFeedback>
@@ -323,176 +307,107 @@ export default function AddTransactionScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#fff',
-    },
+    container: { flex: 1 },
     header: {
         flexDirection: 'row',
+        alignItems: 'center',
         justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: '#eee',
+        paddingHorizontal: SPACING.screenPadding,
+        paddingTop: SPACING.s,
+        marginBottom: SPACING.l,
     },
-    backText: {
-        fontSize: 16,
-        color: '#666',
-    },
-    title: {
-        fontSize: 18,
-        fontWeight: 'bold',
-    },
-    form: {
-        padding: 20,
-    },
-    label: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#666',
-        marginTop: 20,
-        marginBottom: 8,
-    },
-    inputLarge: {
-        fontSize: 32,
-        fontWeight: 'bold',
-        color: '#007AFF',
-        borderBottomWidth: 1,
-        borderBottomColor: '#ddd',
-        paddingVertical: 8,
-    },
-    input: {
-        borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 8,
-        padding: 12,
-        fontSize: 16,
-    },
-    dateButton: {
-        borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 8,
-        padding: 12,
-    },
-    dateText: {
-        fontSize: 16,
-        color: '#333',
-    },
-    categoryContainer: {
+    segmentContainer: {
         flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 8,
-    },
-    categoryButton: {
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 20,
-        backgroundColor: '#f0f0f0',
-        borderWidth: 1,
-        borderColor: 'transparent',
-    },
-    categorySelected: {
-        backgroundColor: '#e3f2fd',
-        borderColor: '#007AFF',
-    },
-    categoryText: {
-        fontSize: 14,
-        color: '#666',
-    },
-    categoryTextSelected: {
-        color: '#007AFF',
-        fontWeight: '600',
-    },
-    saveButton: {
-        marginTop: 40,
-        backgroundColor: '#007AFF',
-        paddingVertical: 16,
-        borderRadius: 12,
-        alignItems: 'center',
-    },
-    saveText: {
-        color: 'white',
-        fontWeight: 'bold',
-        fontSize: 16,
-    },
-    overlay: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        zIndex: 1000,
-    },
-    modal: {
-        width: '80%',
-        backgroundColor: 'white',
-        borderRadius: 16,
-        padding: 24,
-        alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 4,
-        elevation: 5,
-    },
-    modalTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        marginBottom: 12,
-        color: '#dc2626',
-    },
-    modalMessage: {
-        fontSize: 16,
-        textAlign: 'center',
-        marginBottom: 24,
-        color: '#333',
-    },
-    modalButtons: {
-        flexDirection: 'row',
-        gap: 12,
-    },
-    modalButton: {
-        flex: 1,
-        paddingVertical: 12,
-        borderRadius: 8,
-        alignItems: 'center',
-    },
-    cancelButton: {
-        backgroundColor: '#f3f4f6',
-    },
-    confirmButton: {
-        backgroundColor: '#dc2626',
-    },
-    cancelButtonText: {
-        color: '#333',
-        fontWeight: '600',
-    },
-    confirmButtonText: {
-        color: 'white',
-        fontWeight: 'bold',
-    },
-    toggleContainer: {
-        flexDirection: 'row',
-        backgroundColor: '#f1f1f1',
         borderRadius: 8,
         padding: 4,
-        marginBottom: 20,
+        flex: 1, // Take available space
+        maxWidth: 200,
+        marginHorizontal: SPACING.m,
     },
-    toggleButton: {
+    segment: {
         flex: 1,
-        paddingVertical: 8,
+        paddingVertical: 6,
         alignItems: 'center',
         borderRadius: 6,
     },
-    toggleText: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#666',
+    segmentText: {
+        fontSize: TYPOGRAPHY.size.caption,
+        fontWeight: TYPOGRAPHY.weight.medium,
     },
-    toggleTextSelected: {
+    content: {
+        flex: 1,
+        paddingHorizontal: SPACING.screenPadding,
+    },
+    heroInputContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexDirection: 'row',
+        marginBottom: SPACING.xl,
+        marginTop: SPACING.m,
+    },
+    currencySymbol: {
+        fontSize: TYPOGRAPHY.size.h2,
+        fontWeight: TYPOGRAPHY.weight.regular,
+        marginRight: 4,
+        marginTop: 8, // Align baseline roughly
+    },
+    heroInput: {
+        fontSize: 48, // HUGE
+        fontWeight: TYPOGRAPHY.weight.bold,
+        minWidth: 100,
+        textAlign: 'center',
+    },
+    inputSection: {
+        marginBottom: SPACING.xl,
+    },
+    label: {
+        fontSize: TYPOGRAPHY.size.caption,
+        fontWeight: TYPOGRAPHY.weight.medium,
+        marginBottom: SPACING.s,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+    },
+    categoryScroll: {
+        paddingRight: SPACING.screenPadding,
+    },
+    categoryChip: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 24,
+        marginRight: SPACING.s,
+    },
+    categoryText: {
+        fontSize: TYPOGRAPHY.size.body,
+        fontWeight: TYPOGRAPHY.weight.medium,
+    },
+    detailsRow: {
+        flexDirection: 'row',
+        marginBottom: SPACING.xl,
+    },
+    inputBox: {
+        padding: SPACING.m,
+        borderRadius: 12,
+        fontSize: TYPOGRAPHY.size.body,
+    },
+    footer: {
+        padding: SPACING.screenPadding,
+        borderTopWidth: 1,
+    },
+    saveButton: {
+        paddingVertical: 16,
+        borderRadius: 16,
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 2,
+    },
+    saveButtonText: {
         color: 'white',
+        fontSize: TYPOGRAPHY.size.body,
+        fontWeight: TYPOGRAPHY.weight.bold,
     },
 });

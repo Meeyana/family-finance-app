@@ -1,33 +1,36 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, Modal, TextInput, ActivityIndicator, Platform, DeviceEventEmitter, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, Modal, TextInput, ActivityIndicator, Platform, DeviceEventEmitter, TouchableWithoutFeedback, Keyboard, useColorScheme, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../components/context/AuthContext';
 import { getRecurring, addRecurring, deleteRecurring, updateRecurring, getFamilyCategories, checkAndProcessRecurring } from '../services/firestoreRepository';
+import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
+import CurrencyText from '../components/CurrencyText';
 
 export default function RecurringScreen({ navigation }) {
     const { user, profile } = useAuth();
+    const theme = useColorScheme() || 'light';
+    const colors = COLORS[theme];
+
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [modalVisible, setModalVisible] = useState(false);
 
     // Form State
     const [name, setName] = useState('');
+    const [description, setDescription] = useState('');
     const [amount, setAmount] = useState('');
     const [type, setType] = useState('expense');
-
-    // Unit State (Replaces Frequency)
     const [unit, setUnit] = useState('MONTHLY');
-
     const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
     const [categories, setCategories] = useState([]);
     const [selectedCategory, setSelectedCategory] = useState(null);
-
-    // Duration State
     const [isForever, setIsForever] = useState(true);
     const [durationCount, setDurationCount] = useState('');
-
     const [editingItem, setEditingItem] = useState(null);
+
+    // Dynamic Color
+    const activeColor = type === 'income' ? colors.success : colors.error;
 
     useEffect(() => {
         loadData();
@@ -38,7 +41,6 @@ export default function RecurringScreen({ navigation }) {
             setLoading(true);
             const data = await getRecurring(user.uid, profile.id);
             setItems(data);
-
             const cats = await getFamilyCategories(user.uid, profile.id, profile.role);
             setCategories(cats);
         } catch (e) {
@@ -51,6 +53,7 @@ export default function RecurringScreen({ navigation }) {
 
     const resetForm = () => {
         setName('');
+        setDescription('');
         setAmount('');
         setType('expense');
         setUnit('MONTHLY');
@@ -62,6 +65,7 @@ export default function RecurringScreen({ navigation }) {
 
     const handleEdit = (item) => {
         setName(item.name);
+        setDescription(item.description || '');
         setAmount(item.amount.toString());
         setType(item.type);
         setUnit(item.frequency === 'YEARLY' ? 'YEARLY' : 'MONTHLY');
@@ -87,7 +91,6 @@ export default function RecurringScreen({ navigation }) {
         try {
             setLoading(true);
 
-            // Calculate End Date
             let endDate = null;
             if (!isForever) {
                 const count = parseInt(durationCount);
@@ -107,9 +110,10 @@ export default function RecurringScreen({ navigation }) {
 
             const payload = {
                 name,
+                description,
                 amount: Number(amount),
                 type,
-                frequency: unit, // Unit IS the frequency
+                frequency: unit,
                 startDate,
                 endDate,
                 profileId: profile.id,
@@ -118,18 +122,13 @@ export default function RecurringScreen({ navigation }) {
             };
 
             if (editingItem) {
-                // Update
                 await updateRecurring(user.uid, editingItem.id, payload);
                 Alert.alert('Success', 'Updated subscription');
             } else {
-                // Add
                 await addRecurring(user.uid, payload);
-
-                // TRIGGER IMMEDIATE PROCESSING
                 console.log("⚡ Triggering immediate processing...");
                 await checkAndProcessRecurring(user.uid);
                 DeviceEventEmitter.emit('refresh_profile_dashboard');
-
                 Alert.alert('Success', 'Recurring transaction set up!');
             }
 
@@ -160,41 +159,50 @@ export default function RecurringScreen({ navigation }) {
         }
     };
 
-    const renderItem = ({ item }) => (
-        <TouchableOpacity
-            style={styles.card}
-            onPress={() => handleEdit(item)}
-            activeOpacity={0.7}
-        >
-            <View style={styles.cardLeft}>
-                <View style={[styles.iconBox, { backgroundColor: item.type === 'income' ? '#E8F5E9' : '#FFVkE9' }]}>
-                    <Text style={{ fontSize: 20 }}>{item.categoryData?.icon || '📅'}</Text>
+    const renderItem = ({ item }) => {
+        const isExpense = item.type === 'expense';
+        return (
+            <TouchableOpacity
+                style={[styles.itemContainer, { borderBottomColor: colors.divider }]}
+                onPress={() => handleEdit(item)}
+                activeOpacity={0.7}
+            >
+                {/* Left: Icon & Info */}
+                <View style={styles.itemLeft}>
+                    <View style={[styles.iconBox, { backgroundColor: colors.surface }]}>
+                        <Text style={{ fontSize: 20 }}>{item.categoryData?.icon || '📅'}</Text>
+                    </View>
+                    <View>
+                        <Text style={[styles.itemName, { color: colors.primaryText }]}>{item.name}</Text>
+                        <Text style={[styles.itemSub, { color: colors.secondaryText }]}>
+                            {item.description ? item.description + ' • ' : ''}{item.frequency} • Next: {item.nextDueDate}
+                        </Text>
+                    </View>
                 </View>
-                <View>
-                    <Text style={styles.itemName}>{item.name}</Text>
-                    <Text style={styles.itemSub}>{item.frequency} • Next: {item.nextDueDate}</Text>
+
+                {/* Right: Amount & Delete */}
+                <View style={styles.itemRight}>
+                    <CurrencyText
+                        amount={isExpense ? -item.amount : item.amount}
+                        showSign={true}
+                        style={[styles.itemAmount, { color: isExpense ? colors.primaryText : colors.success }]}
+                    />
+                    {/* Hidden delete context or explicit? Minimalist list usually swipes. 
+                         For now, no delete button to clutter. User taps to edit/delete. */}
                 </View>
-            </View>
-            <View style={{ alignItems: 'flex-end' }}>
-                <Text style={[styles.amount, { color: item.type === 'income' ? '#34C759' : '#FF3B30' }]}>
-                    {item.amount.toLocaleString()} ₫
-                </Text>
-                <TouchableOpacity onPress={() => handleDelete(item.id)} style={{ marginTop: 8 }}>
-                    <Ionicons name="trash-outline" size={20} color="#999" />
-                </TouchableOpacity>
-            </View>
-        </TouchableOpacity>
-    );
+            </TouchableOpacity>
+        );
+    };
 
     return (
-        <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                    <Ionicons name="arrow-back" size={24} color="#333" />
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'left', 'right']}>
+            <View style={[styles.header, { borderBottomColor: colors.divider }]}>
+                <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                    <Ionicons name="arrow-back" size={24} color={colors.primaryText} />
                 </TouchableOpacity>
-                <Text style={styles.title}>Recurring Transactions</Text>
+                <Text style={[styles.headerTitle, { color: colors.primaryText }]}>Subscriptions</Text>
                 <TouchableOpacity onPress={() => { resetForm(); setModalVisible(true); }}>
-                    <Ionicons name="add-circle" size={32} color="#007AFF" />
+                    <Ionicons name="add" size={28} color={colors.primaryAction} />
                 </TouchableOpacity>
             </View>
 
@@ -203,137 +211,349 @@ export default function RecurringScreen({ navigation }) {
                 renderItem={renderItem}
                 keyExtractor={i => i.id}
                 contentContainerStyle={styles.list}
-                ListEmptyComponent={!loading && <Text style={styles.empty}>No subscriptions found.</Text>}
+                ListEmptyComponent={!loading && <Text style={[styles.empty, { color: colors.secondaryText }]}>No subscriptions found.</Text>}
             />
 
-            <Modal visible={modalVisible} animationType="slide" presentationStyle="pageSheet">
-                <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                    <SafeAreaView style={styles.modalContainer}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>{editingItem ? 'Edit Recurring' : 'New Recurring'}</Text>
-                            <TouchableOpacity onPress={() => setModalVisible(false)}>
-                                <Text style={styles.closeText}>Close</Text>
+            {/* Modal - Full Screen Style or Bottom Sheet Style */}
+            <Modal
+                visible={modalVisible}
+                animationType="slide"
+                presentationStyle="pageSheet"
+                onRequestClose={() => setModalVisible(false)}
+            >
+                <SafeAreaView style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+                    {/* NEW HEADER: Close | Segment | Trash */}
+                    <View style={[styles.modalHeader, { backgroundColor: colors.background, paddingVertical: SPACING.s }]}>
+                        <TouchableOpacity onPress={() => setModalVisible(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                            <Ionicons name="close" size={28} color={colors.primaryText} />
+                        </TouchableOpacity>
+
+                        {/* Segmented Control Moved Here */}
+                        <View style={[styles.segmentContainer, { backgroundColor: colors.surface, marginBottom: 0 }]}>
+                            <TouchableOpacity
+                                style={[styles.segmentBtn, type === 'expense' && { backgroundColor: colors.background, shadowOpacity: 0.1 }]}
+                                onPress={() => setType('expense')}
+                            >
+                                <Text style={[styles.segmentText, { color: type === 'expense' ? colors.error : colors.secondaryText }]}>Expense</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.segmentBtn, type === 'income' && { backgroundColor: colors.background, shadowOpacity: 0.1 }]}
+                                onPress={() => setType('income')}
+                            >
+                                <Text style={[styles.segmentText, { color: type === 'income' ? colors.success : colors.secondaryText }]}>Income</Text>
                             </TouchableOpacity>
                         </View>
 
-                        <View style={styles.form}>
-                            <Text style={styles.label}>Name (e.g. Netflix)</Text>
-                            <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Title" />
+                        {editingItem ? (
+                            <TouchableOpacity onPress={() => handleDelete(editingItem.id)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                                <Ionicons name="trash-outline" size={24} color={colors.error} />
+                            </TouchableOpacity>
+                        ) : (
+                            <View style={{ width: 24 }} />
+                        )}
+                    </View>
 
-                            <Text style={styles.label}>Amount</Text>
-                            <TextInput style={styles.input} value={amount} onChangeText={setAmount} placeholder="0" keyboardType="numeric" />
+                    <ScrollView
+                        contentContainerStyle={styles.form}
+                        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+                        keyboardShouldPersistTaps="handled"
+                    >
+                        {/* Type Switcher Removed from here */}
 
-                            <View style={styles.row}>
-                                <TouchableOpacity
-                                    style={[styles.typeBtn, type === 'expense' && styles.expenseActive]}
-                                    onPress={() => setType('expense')}>
-                                    <Text style={[styles.typeText, type === 'expense' && { color: 'white' }]}>Expense</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    style={[styles.typeBtn, type === 'income' && styles.incomeActive]}
-                                    onPress={() => setType('income')}>
-                                    <Text style={[styles.typeText, type === 'income' && { color: 'white' }]}>Income</Text>
-                                </TouchableOpacity>
-                            </View>
+                        <View style={styles.inputGroup}>
+                            <Text style={[styles.label, { color: colors.secondaryText }]}>NAME</Text>
+                            <TextInput
+                                style={[styles.input, { color: colors.primaryText, backgroundColor: colors.surface }]}
+                                value={name}
+                                onChangeText={setName}
+                                placeholder="e.g. Netflix"
+                                placeholderTextColor={colors.secondaryText}
+                            />
+                        </View>
 
-                            <Text style={styles.label}>Duration</Text>
-                            <View style={styles.row}>
-                                <TouchableOpacity
-                                    style={[styles.typeBtn, isForever && styles.freqActive]}
-                                    onPress={() => setIsForever(true)}>
-                                    <Text style={[styles.typeText, isForever && { color: 'white' }]}>Forever</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    style={[styles.typeBtn, !isForever && styles.freqActive]}
-                                    onPress={() => setIsForever(false)}>
-                                    <Text style={[styles.typeText, !isForever && { color: 'white' }]}>Fixed</Text>
-                                </TouchableOpacity>
-                            </View>
+                        <View style={styles.inputGroup}>
+                            <Text style={[styles.label, { color: colors.secondaryText }]}>DESCRIPTION</Text>
+                            <TextInput
+                                style={[styles.input, { color: colors.primaryText, backgroundColor: colors.surface }]}
+                                value={description}
+                                onChangeText={setDescription}
+                                placeholder="Optional description..."
+                                placeholderTextColor={colors.secondaryText}
+                            />
+                        </View>
 
-                            {!isForever && (
-                                <View style={{ marginTop: 12 }}>
-                                    <Text style={styles.label}>Run for...</Text>
-                                    <View style={styles.row}>
-                                        <TextInput
-                                            style={[styles.input, { flex: 0.4 }]}
-                                            value={durationCount}
-                                            onChangeText={setDurationCount}
-                                            placeholder="Num"
-                                            keyboardType="numeric"
-                                        />
-                                        <TouchableOpacity
-                                            style={[styles.typeBtn, unit === 'MONTHLY' && styles.freqActive, { flex: 0.3 }]}
-                                            onPress={() => setUnit('MONTHLY')}>
-                                            <Text style={[styles.typeText, unit === 'MONTHLY' && { color: 'white' }]}>Months</Text>
-                                        </TouchableOpacity>
-                                        <TouchableOpacity
-                                            style={[styles.typeBtn, unit === 'YEARLY' && styles.freqActive, { flex: 0.3 }]}
-                                            onPress={() => setUnit('YEARLY')}>
-                                            <Text style={[styles.typeText, unit === 'YEARLY' && { color: 'white' }]}>Years</Text>
-                                        </TouchableOpacity>
-                                    </View>
-                                </View>
-                            )}
+                        {/* HERO AMOUNT INPUT */}
+                        <View style={styles.heroInputContainer}>
+                            <Text style={[styles.currencySymbol, { color: activeColor }]}>₫</Text>
+                            <TextInput
+                                style={[styles.heroInput, { color: activeColor }]}
+                                placeholder="0"
+                                placeholderTextColor={colors.divider}
+                                keyboardType="numeric"
+                                value={amount}
+                                onChangeText={setAmount}
+                            />
+                        </View>
 
-                            <Text style={styles.label}>Category</Text>
+                        <View style={styles.inputGroup}>
+                            <Text style={[styles.label, { color: colors.secondaryText }]}>CATEGORY</Text>
                             <FlatList
                                 data={categories.filter(c => (c.type || 'expense') === type)}
                                 horizontal
                                 showsHorizontalScrollIndicator={false}
-                                style={{ maxHeight: 60 }}
+                                style={{ marginHorizontal: -16 }}
+                                contentContainerStyle={{ paddingHorizontal: 16 }}
                                 renderItem={({ item }) => (
                                     <TouchableOpacity
-                                        style={[styles.catChip, selectedCategory?.id === item.id && styles.catActive]}
+                                        style={[
+                                            styles.catChip,
+                                            { borderColor: selectedCategory?.id === item.id ? activeColor : colors.divider, backgroundColor: colors.surface }
+                                        ]}
                                         onPress={() => setSelectedCategory(item)}>
-                                        <Text>{item.icon} {item.name}</Text>
+                                        <Text style={{ fontSize: 16 }}>{item.icon}</Text>
+                                        <Text style={[styles.catName, { color: selectedCategory?.id === item.id ? activeColor : colors.primaryText }]}>{item.name}</Text>
                                     </TouchableOpacity>
                                 )}
                             />
-
-                            <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
-                                <Text style={styles.saveText}>{editingItem ? 'Update Subscription' : 'Save Subscription'}</Text>
-                            </TouchableOpacity>
                         </View>
-                    </SafeAreaView>
-                </TouchableWithoutFeedback>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={[styles.label, { color: colors.secondaryText }]}>REPEAT</Text>
+                            <View style={{ flexDirection: 'row', gap: 12 }}>
+                                {['MONTHLY', 'YEARLY'].map(opt => (
+                                    <TouchableOpacity
+                                        key={opt}
+                                        style={[styles.freqChip, unit === opt && { backgroundColor: colors.primaryAction }]}
+                                        onPress={() => setUnit(opt)}
+                                    >
+                                        <Text style={[styles.freqText, { color: unit === opt ? colors.background : colors.secondaryText }]}>{opt}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        </View>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={[styles.label, { color: colors.secondaryText }]}>DURATION</Text>
+
+                            <View style={[styles.segmentContainer, { backgroundColor: colors.surface, marginBottom: 12 }]}>
+                                <TouchableOpacity
+                                    style={[styles.segmentBtn, isForever && { backgroundColor: colors.background, shadowOpacity: 0.1 }]}
+                                    onPress={() => setIsForever(true)}
+                                >
+                                    <Text style={[styles.segmentText, { color: isForever ? colors.primaryText : colors.secondaryText }]}>Forever</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[styles.segmentBtn, !isForever && { backgroundColor: colors.background, shadowOpacity: 0.1 }]}
+                                    onPress={() => setIsForever(false)}
+                                >
+                                    <Text style={[styles.segmentText, { color: !isForever ? colors.primaryText : colors.secondaryText }]}>Fixed</Text>
+                                </TouchableOpacity>
+                            </View>
+
+                            {!isForever && (
+                                <TextInput
+                                    style={[styles.input, { color: colors.primaryText, backgroundColor: colors.surface }]}
+                                    value={durationCount}
+                                    onChangeText={setDurationCount}
+                                    placeholder={`Number of ${unit === 'MONTHLY' ? 'Months' : 'Years'}`}
+                                    keyboardType="numeric"
+                                    placeholderTextColor={colors.secondaryText}
+                                />
+                            )}
+                        </View>
+
+                        {/* Delete Button Removed from here */}
+
+                    </ScrollView>
+
+                    {/* FOOTER CTA */}
+                    <View style={[styles.footer, { borderTopColor: colors.divider }]}>
+                        <TouchableOpacity
+                            style={[styles.saveButton, { backgroundColor: activeColor }]}
+                            onPress={handleSave}
+                        >
+                            <Text style={styles.saveButtonText}>
+                                {editingItem ? 'Update Subscription' : 'Save Subscription'}
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+
+                </SafeAreaView>
             </Modal>
-        </SafeAreaView>
+        </SafeAreaView >
     );
 
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#f8f9fa' },
-    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, backgroundColor: '#fff' },
-    title: { fontSize: 20, fontWeight: 'bold' },
-    list: { padding: 16 },
-    card: { flexDirection: 'row', justifyContent: 'space-between', backgroundColor: '#fff', padding: 16, borderRadius: 12, marginBottom: 12 },
-    cardLeft: { flexDirection: 'row', gap: 12, alignItems: 'center' },
-    iconBox: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: '#eee' },
-    itemName: { fontWeight: '600', fontSize: 16 },
-    itemSub: { color: '#666', fontSize: 12, marginTop: 2 },
-    amount: { fontWeight: 'bold', fontSize: 16 },
-    empty: { textAlign: 'center', marginTop: 50, color: '#999' },
+    container: { flex: 1 },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: SPACING.screenPadding,
+        paddingVertical: SPACING.m,
+        borderBottomWidth: 1,
+    },
+    headerTitle: {
+        fontSize: TYPOGRAPHY.size.h2,
+        fontWeight: TYPOGRAPHY.weight.bold,
+    },
+    list: {
+        // No padding needed for flat list items usually, internal padding
+    },
+    itemContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: SPACING.m,
+        paddingHorizontal: SPACING.screenPadding,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+    },
+    itemLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: SPACING.m,
+    },
+    iconBox: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    itemName: {
+        fontSize: TYPOGRAPHY.size.body,
+        fontWeight: TYPOGRAPHY.weight.medium,
+    },
+    itemSub: {
+        fontSize: TYPOGRAPHY.size.caption,
+        marginTop: 2,
+    },
+    itemAmount: {
+        fontSize: TYPOGRAPHY.size.body,
+        fontWeight: TYPOGRAPHY.weight.semiBold,
+        textAlign: 'right',
+    },
+    empty: {
+        textAlign: 'center',
+        marginTop: 60,
+    },
 
     // Modal
-    modalContainer: { flex: 1, backgroundColor: '#fff' },
-    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderColor: '#eee' },
-    modalTitle: { fontSize: 18, fontWeight: 'bold' },
-    closeText: { color: '#007AFF', fontSize: 16 },
-    form: { padding: 20 },
-    label: { color: '#666', marginBottom: 8, marginTop: 12, fontWeight: '600' },
-    input: { backgroundColor: '#f5f5f5', padding: 12, borderRadius: 8, fontSize: 16 },
-    row: { flexDirection: 'row', gap: 12 },
-    typeBtn: { flex: 1, padding: 12, borderRadius: 8, backgroundColor: '#f5f5f5', alignItems: 'center' },
-    expenseActive: { backgroundColor: '#FF3B30' },
-    incomeActive: { backgroundColor: '#34C759' },
-    typeText: { fontWeight: '600', color: '#666' },
-    freqBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: '#f5f5f5', marginRight: 8 },
-    freqActive: { backgroundColor: '#007AFF' },
-    freqText: { fontSize: 12, fontWeight: '600', color: '#666' },
-    saveBtn: { backgroundColor: '#007AFF', padding: 16, borderRadius: 12, alignItems: 'center', marginTop: 30 },
-    saveText: { color: 'white', fontWeight: 'bold', fontSize: 16 },
-    catChip: { padding: 10, backgroundColor: '#f5f5f5', borderRadius: 20, marginRight: 8, borderWidth: 1, borderColor: 'transparent' },
-    catActive: { borderColor: '#007AFF', backgroundColor: '#E3F2FD' }
+    modalContainer: { flex: 1 },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: SPACING.screenPadding,
+        paddingVertical: SPACING.m,
+        borderBottomWidth: 1,
+    },
+    modalTitle: {
+        fontSize: TYPOGRAPHY.size.body,
+        fontWeight: TYPOGRAPHY.weight.bold,
+    },
+    closeText: { fontSize: TYPOGRAPHY.size.body },
+    saveTextTop: { fontSize: TYPOGRAPHY.size.body, fontWeight: 'bold' },
+    form: { padding: SPACING.screenPadding },
 
+    segmentContainer: {
+        flexDirection: 'row',
+        borderRadius: 8,
+        padding: 4,
+        flex: 1,
+        maxWidth: 200,
+        marginHorizontal: SPACING.m,
+    },
+    segmentBtn: {
+        flex: 1,
+        paddingVertical: 6,
+        alignItems: 'center',
+        borderRadius: 6,
+    },
+    segmentText: {
+        fontSize: TYPOGRAPHY.size.caption,
+        fontWeight: '600',
+    },
+
+    inputGroup: { marginBottom: SPACING.l },
+    label: {
+        fontSize: TYPOGRAPHY.size.small,
+        fontWeight: '600',
+        marginBottom: 8,
+    },
+    input: {
+        padding: 12,
+        borderRadius: 8,
+        fontSize: TYPOGRAPHY.size.body,
+        letterSpacing: 0, // Explicitly set to 0 for iOS placeholder fix
+    },
+    catChip: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 20,
+        marginRight: 8,
+        borderWidth: 1,
+        gap: 6,
+    },
+    catName: {
+        fontSize: TYPOGRAPHY.size.caption,
+        fontWeight: '500',
+    },
+    freqChip: {
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 20,
+        backgroundColor: '#eee', // fallback
+    },
+    freqText: { fontSize: TYPOGRAPHY.size.caption, fontWeight: '600' },
+    deleteButton: {
+        alignItems: 'center',
+        padding: 16,
+        borderWidth: 1,
+        borderRadius: 12,
+        marginBottom: 40,
+        marginTop: 20,
+    },
+    footer: {
+        padding: SPACING.screenPadding,
+        borderTopWidth: 1,
+    },
+    saveButton: {
+        paddingVertical: 16,
+        borderRadius: 16,
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 2,
+    },
+    saveButtonText: {
+        color: 'white',
+        fontSize: TYPOGRAPHY.size.body,
+        fontWeight: TYPOGRAPHY.weight.bold,
+    },
+    heroInputContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexDirection: 'row',
+        marginBottom: SPACING.l,
+        marginTop: SPACING.s,
+    },
+    currencySymbol: {
+        fontSize: TYPOGRAPHY.size.h2,
+        fontWeight: TYPOGRAPHY.weight.regular,
+        marginRight: 4,
+        marginTop: 8,
+    },
+    heroInput: {
+        fontSize: 48,
+        fontWeight: TYPOGRAPHY.weight.bold,
+        minWidth: 100,
+        textAlign: 'center',
+    },
 });

@@ -226,14 +226,14 @@ const styles = StyleSheet.create({
         color: '#666'
     },
     tabTextActive: {
-        color: '#E91E63', // Pink from screenshot
+        color: '#111111', // Black active
         fontWeight: 'bold'
     },
     yearSelector: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        backgroundColor: '#f0f9ff', // Light blue tint
+        backgroundColor: '#f9fafb', // Lighter grey
         paddingVertical: 12,
         paddingHorizontal: 16,
         borderRadius: 8,
@@ -258,7 +258,7 @@ const styles = StyleSheet.create({
         marginBottom: 8
     },
     gridItemSelected: {
-        backgroundColor: '#E91E63'
+        backgroundColor: '#111111' // Black Selected
     },
     gridText: {
         fontSize: 14,
@@ -277,19 +277,19 @@ const styles = StyleSheet.create({
         flex: 1,
         paddingVertical: 14,
         borderWidth: 1,
-        borderColor: '#E91E63',
+        borderColor: '#E5E5E5', // Neutral border
         borderRadius: 12,
         alignItems: 'center'
     },
     clearButtonText: {
-        color: '#E91E63',
+        color: '#111111', // Black Text
         fontWeight: 'bold',
         fontSize: 16
     },
     applyButton: {
         flex: 1,
         paddingVertical: 14,
-        backgroundColor: '#E91E63',
+        backgroundColor: '#111111', // Black Bg
         borderRadius: 12,
         alignItems: 'center'
     },

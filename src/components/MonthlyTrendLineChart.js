@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { View, StyleSheet, Dimensions } from 'react-native';
 import { VictoryLine, VictoryChart, VictoryAxis, VictoryArea } from 'victory-native';
+import { COLORS, TYPOGRAPHY } from '../constants/theme';
 
 export default function MonthlyTrendLineChart({ data, startDate, endDate, filterCategory }) {
     // 1. Determine Range
@@ -35,7 +36,7 @@ export default function MonthlyTrendLineChart({ data, startDate, endDate, filter
             y: amount
         }));
     } else {
-        // Monthly Aggregation (e.g. Jan, Feb, Mar)
+        // Monthly Aggregation
         const months = [];
         let cursor = new Date(start);
         while (cursor <= end) {
@@ -43,7 +44,6 @@ export default function MonthlyTrendLineChart({ data, startDate, endDate, filter
             cursor.setMonth(cursor.getMonth() + 1);
         }
 
-        // Map: 'YYYY-MM' -> Amount
         const monthMap = {};
         months.forEach(m => {
             const key = `${m.getFullYear()}-${m.getMonth()}`;
@@ -64,35 +64,34 @@ export default function MonthlyTrendLineChart({ data, startDate, endDate, filter
 
         chartData = months.map((m, i) => ({
             x: i + 1,
-            // User requested to remove T1-T12 labels
             y: monthMap[`${m.getFullYear()}-${m.getMonth()}`] || 0
         }));
     }
 
-    const color = filterCategory ? "#FF9500" : "#007AFF";
-    const fillColor = filterCategory ? "rgba(255, 149, 0, 0.2)" : "rgba(0, 122, 255, 0.2)";
+    const color = filterCategory ? "#F59E0B" : "#007AFF"; // Ambient Blue or Warning Amber
+    const fillColor = filterCategory ? "rgba(245, 158, 11, 0.1)" : "rgba(0, 122, 255, 0.1)";
     const screenWidth = Dimensions.get('window').width;
 
     return (
         <View style={styles.container}>
-            <View pointerEvents="none" style={{ marginLeft: -30 }}>
+            <View pointerEvents="none">
                 <VictoryChart
-                    height={220}
-                    width={screenWidth - 50}
-                    padding={{ top: 20, bottom: 30, left: 35, right: 35 }}
+                    domainPadding={{ y: 30 }}
+                    height={250}
+                    width={screenWidth - 32}
+                    padding={{ top: 40, bottom: 30, left: 35, right: 35 }}
                 >
-
-                    {/* X-Axis: Clean 1-12 or 5-30 */}
+                    {/* X-Axis: Minimalist */}
                     <VictoryAxis
                         tickValues={isMonthlyView ? chartData.map(d => d.x) : [5, 10, 15, 20, 25, 30]}
                         style={{
-                            axis: { stroke: "#eee" },
-                            tickLabels: { fill: "#999", fontSize: 10 },
-                            grid: { stroke: "#f5f5f5" }
+                            axis: { stroke: "none" },
+                            tickLabels: { fill: "#9CA3AF", fontSize: 10, fontFamily: TYPOGRAPHY.fontFamily.regular },
+                            grid: { stroke: "none" }
                         }}
                     />
 
-                    {/* Y-Axis: Hidden as requested */}
+                    {/* Y-Axis: Hidden */}
                     <VictoryAxis
                         dependentAxis
                         style={{
@@ -101,6 +100,7 @@ export default function MonthlyTrendLineChart({ data, startDate, endDate, filter
                             grid: { stroke: "none" }
                         }}
                     />
+
                     <VictoryArea
                         data={chartData}
                         interpolation="natural"
@@ -123,26 +123,8 @@ export default function MonthlyTrendLineChart({ data, startDate, endDate, filter
 
 const styles = StyleSheet.create({
     container: {
-        backgroundColor: 'white',
-        borderRadius: 16,
-        padding: 16,
-        marginVertical: 8,
-        marginHorizontal: 16,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
-        elevation: 2,
-    },
-    header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
+        marginBottom: 8,
         alignItems: 'center',
-        marginBottom: 0,
-    },
-    title: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#1a1a1a',
+        // Transparent, no card
     },
 });

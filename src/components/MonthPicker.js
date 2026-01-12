@@ -1,8 +1,12 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, useColorScheme } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { COLORS, TYPOGRAPHY } from '../constants/theme';
 
 export default function MonthPicker({ date, onMonthChange }) {
+    const theme = useColorScheme() || 'light';
+    const colors = COLORS[theme];
+
     const formattedDate = date.toLocaleString('default', { month: 'long', year: 'numeric' });
 
     const changeMonth = (offset) => {
@@ -14,13 +18,13 @@ export default function MonthPicker({ date, onMonthChange }) {
     return (
         <View style={styles.container}>
             <TouchableOpacity onPress={() => changeMonth(-1)} style={styles.button}>
-                <Ionicons name="chevron-back" size={24} color="#007AFF" />
+                <Ionicons name="chevron-back" size={20} color={colors.secondaryText} />
             </TouchableOpacity>
 
-            <Text style={styles.dateText}>{formattedDate}</Text>
+            <Text style={[styles.dateText, { color: colors.primaryText }]}>{formattedDate}</Text>
 
             <TouchableOpacity onPress={() => changeMonth(1)} style={styles.button}>
-                <Ionicons name="chevron-forward" size={24} color="#007AFF" />
+                <Ionicons name="chevron-forward" size={20} color={colors.secondaryText} />
             </TouchableOpacity>
         </View>
     );
@@ -30,22 +34,15 @@ const styles = StyleSheet.create({
     container: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 12,
-        // Removed gray background
+        justifyContent: 'center', // Centered Date for Dashboard
+        paddingVertical: 8,
     },
     button: {
-        paddingHorizontal: 24,
-    },
-    arrow: {
-        fontSize: 24,
-        color: '#007AFF', // You can swap this for Ionicons in next step if text arrow is too simple
-        fontWeight: '300'
+        paddingHorizontal: 16,
     },
     dateText: {
-        fontSize: 17,
-        fontWeight: '600',
-        color: '#1a1a1a',
+        fontSize: TYPOGRAPHY.size.body,
+        fontWeight: TYPOGRAPHY.weight.medium,
         letterSpacing: 0.5,
         minWidth: 140,
         textAlign: 'center',

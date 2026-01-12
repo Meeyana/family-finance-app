@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, DeviceEventEmitter, TextInput } from 'react-native';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { View, Text, StyleSheet, SectionList, TouchableOpacity, RefreshControl, DeviceEventEmitter, TextInput, useColorScheme } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,9 +7,15 @@ import { useAuth } from '../components/context/AuthContext';
 import { getTransactions, getFamilyCategories } from '../services/firestoreRepository';
 import MultiSelectDropdown from '../components/MultiSelectDropdown';
 import MonthPicker from '../components/MonthPicker';
+import TransactionRow from '../components/TransactionRow';
+import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
 
 export default function TransactionListScreen({ navigation }) {
     const { user, profile } = useAuth();
+    const theme = useColorScheme() || 'light';
+    const colors = COLORS[theme];
+
+    // Data State
     const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -35,12 +41,6 @@ export default function TransactionListScreen({ navigation }) {
             };
         }, [user, profile, selectedDate])
     );
-
-    const filteredTransactions = transactions.filter(t => {
-        const matchesCategory = selectedCategoryIds.length === 0 || selectedCategoryIds.includes(t.category);
-        const matchesSearch = searchText.length < 3 || (t.note && t.note.toLowerCase().includes(searchText.toLowerCase()));
-        return matchesCategory && matchesSearch;
-    });
 
     const loadTransactions = async () => {
         if (!user || !profile) return;
@@ -68,181 +68,202 @@ export default function TransactionListScreen({ navigation }) {
         loadTransactions();
     };
 
+    // Filter Logic
+    const filteredTransactions = useMemo(() => {
+        return transactions.filter(t => {
+            const matchesCategory = selectedCategoryIds.length === 0 || selectedCategoryIds.includes(t.category);
+            const matchesSearch = searchText.length < 3 || (t.note && t.note.toLowerCase().includes(searchText.toLowerCase()));
+            return matchesCategory && matchesSearch;
+        });
+    }, [transactions, selectedCategoryIds, searchText]);
+
+    // Grouping Logic for SectionList
+    const sections = useMemo(() => {
+        const groups = {};
+        filteredTransactions.forEach(t => {
+            // Assume t.date is YYYY-MM-DD
+            if (!groups[t.date]) groups[t.date] = [];
+            groups[t.date].push(t);
+        });
+
+        // Sort dates descending
+        const sortedDates = Object.keys(groups).sort((a, b) => new Date(b) - new Date(a));
+
+        return sortedDates.map(date => ({
+            title: date,
+            data: groups[date]
+        }));
+    }, [filteredTransactions]);
+
+    // Format Date Title (e.g. "Today", "Yesterday", "Mon, Oct 24")
+    const formatDateTitle = (dateStr) => {
+        const date = new Date(dateStr);
+        const today = new Date();
+        const yesterday = new Date();
+        yesterday.setDate(today.getDate() - 1);
+
+        if (dateStr === today.toISOString().split('T')[0]) return 'Today';
+        if (dateStr === yesterday.toISOString().split('T')[0]) return 'Yesterday';
+
+        return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    };
+
     const renderItem = ({ item }) => {
-        const isTransfer = item.type === 'transfer';
-        const isExpense = (item.type || 'expense') === 'expense';
-
-        let color = isExpense ? '#FF3B30' : '#4CD964';
-        let sign = isExpense ? '-' : '+';
-
-        if (isTransfer) {
-            color = '#007AFF'; // Blue for neutral transfers
-            sign = ''; // No sign for neutral
-        }
-
-        const date = new Date(item.date).toLocaleDateString('vi-VN');
-
-        // Lookup Icon dynamically for consistency
+        // Resolve icon from category list if missing
         const catObj = categories.find(c => c.name === item.category);
-        const icon = catObj?.icon || item.categoryIcon || item.emoji || (isExpense ? '💸' : '💰');
+        const resolvedItem = {
+            ...item,
+            icon: catObj?.icon || item.categoryIcon || item.emoji
+        };
 
         return (
-            <TouchableOpacity
-                style={styles.card}
+            <TransactionRow
+                item={resolvedItem}
                 onPress={() => navigation.navigate('AddTransaction', { transaction: item })}
-            >
-                <View style={[styles.iconBox, { backgroundColor: isExpense ? '#FFF0F0' : '#F0FFF4' }]}>
-                    <Text style={{ fontSize: 24 }}>{icon}</Text>
-                </View>
-                <View style={styles.details}>
-                    <Text style={styles.category}>{item.category || 'Mục khác'}</Text>
-                    <Text style={styles.note}>{item.note || 'Không có ghi chú'} • {date}</Text>
-                </View>
-                <Text style={[styles.amount, { color }]}>
-                    {sign}{item.amount?.toLocaleString()} ₫
-                </Text>
-            </TouchableOpacity>
+            />
         );
     };
 
+    const renderSectionHeader = ({ section: { title } }) => (
+        <View style={[styles.sectionHeader, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.sectionTitle, { color: colors.secondaryText }]}>
+                {formatDateTitle(title)}
+            </Text>
+        </View>
+    );
+
     return (
-        <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-            <View style={styles.header}>
-                <Text style={styles.headerTitle}>All Transactions</Text>
-                <View style={{ marginTop: 8 }}>
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'left', 'right']}>
+            {/* Header */}
+            <View style={[styles.header, { borderBottomColor: colors.divider }]}>
+                <View style={styles.monthSelector}>
                     <MonthPicker date={selectedDate} onMonthChange={setSelectedDate} />
                 </View>
-            </View>
 
-            <FlatList
-                data={filteredTransactions}
-                keyExtractor={item => item.id}
-                renderItem={renderItem}
-                contentContainerStyle={styles.list}
-                keyboardShouldPersistTaps="handled"
-                keyboardDismissMode="on-drag"
-                ListHeaderComponent={
-                    <View style={{ marginBottom: 16 }}>
-                        <TouchableOpacity
-                            style={styles.addButton}
-                            onPress={() => navigation.navigate('AddTransaction')}
-                        >
-                            <Ionicons name="add-circle" size={24} color="white" style={{ marginRight: 8 }} />
-                            <Text style={styles.addButtonText}>Add Transaction</Text>
-                        </TouchableOpacity>
-
-                        <View style={styles.searchContainer}>
-                            <Ionicons name="search" size={20} color="#999" />
-                            <TextInput
-                                style={styles.searchInput}
-                                placeholder="Search by note..."
-                                value={searchText}
-                                onChangeText={setSearchText}
-                                placeholderTextColor="#999"
-                            />
-                            {searchText.length > 0 && (
-                                <TouchableOpacity onPress={() => setSearchText('')}>
-                                    <Ionicons name="close-circle" size={20} color="#ccc" />
-                                </TouchableOpacity>
-                            )}
-                        </View>
-
+                {/* Search / Filter Row */}
+                <View style={styles.filterRow}>
+                    <View style={[styles.searchContainer, { backgroundColor: colors.surface, borderColor: colors.divider }]}>
+                        <Ionicons name="search" size={16} color={colors.secondaryText} />
+                        <TextInput
+                            style={[styles.searchInput, { color: colors.primaryText }]}
+                            placeholder="Search..."
+                            placeholderTextColor={colors.secondaryText}
+                            value={searchText}
+                            onChangeText={setSearchText}
+                        />
+                        {searchText.length > 0 && (
+                            <TouchableOpacity onPress={() => setSearchText('')}>
+                                <Ionicons name="close-circle" size={16} color={colors.secondaryText} />
+                            </TouchableOpacity>
+                        )}
+                    </View>
+                    <View style={{ flex: 1, marginLeft: 8 }}>
                         <MultiSelectDropdown
-                            label="Filter Category"
+                            label="Filter"
                             options={categories.map(c => ({ id: c.name, name: c.name }))}
                             selectedValues={selectedCategoryIds}
                             onSelectionChange={setSelectedCategoryIds}
+                            compact={true} // New prop hint
                         />
                     </View>
-                }
+                </View>
+
+                {/* 1. Add Transaction Button (In-Page) - MOVED BELOW */}
+                <TouchableOpacity
+                    style={[styles.addButton, { backgroundColor: colors.primaryAction, marginTop: 12, marginBottom: 0 }]}
+                    onPress={() => navigation.navigate('AddTransaction')}
+                >
+                    <Ionicons name="add" size={20} color={colors.background} style={{ marginRight: 8 }} />
+                    <Text style={[styles.addButtonText, { color: colors.background }]}>Add New Transaction</Text>
+                </TouchableOpacity>
+            </View>
+
+            {/* List */}
+            <SectionList
+                sections={sections}
+                keyExtractor={item => item.id}
+                renderItem={renderItem}
+                renderSectionHeader={renderSectionHeader}
+                stickySectionHeadersEnabled={true}
+                contentContainerStyle={{ paddingBottom: 100 }} // Space for TabBar
                 refreshControl={
-                    <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor="#3b5998" />
+                    <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={colors.primaryAction} />
                 }
                 ListEmptyComponent={
                     <View style={styles.emptyContainer}>
-                        <Text style={styles.emptyText}>No transactions yet</Text>
+                        <Text style={[styles.emptyText, { color: colors.secondaryText }]}>
+                            {loading ? 'Loading...' : 'No transactions found'}
+                        </Text>
                     </View>
                 }
             />
+
+            {/* FAB for Add is NOT needed because it is in the Tab Bar. 
+                However, if user scrolls down, maybe we want one? 
+                For now, rely on Tab Bar "+" button.
+            */}
         </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#f8f9fa' },
+    container: { flex: 1 },
     header: {
-        paddingTop: 10,
-        paddingBottom: 16,
-        paddingHorizontal: 20,
-        backgroundColor: 'white',
+        paddingHorizontal: SPACING.screenPadding,
+        paddingBottom: SPACING.m,
         borderBottomWidth: 1,
-        borderBottomColor: '#eee',
-        alignItems: 'center'
     },
-    headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#1a1a1a', textAlign: 'center' },
-    list: { padding: 16 },
-    card: {
-        flexDirection: 'row',
-        backgroundColor: 'white',
-        borderRadius: 16,
-        padding: 16,
+    monthSelector: {
         alignItems: 'center',
-        marginBottom: 12,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 6,
-        elevation: 2,
+        marginBottom: SPACING.m,
     },
-    iconBox: {
-        width: 48,
-        height: 48,
-        borderRadius: 12,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 16,
-    },
-    details: { flex: 1 },
-    category: { fontSize: 16, fontWeight: '600', color: '#1a1a1a', marginBottom: 4 },
-    note: { fontSize: 13, color: '#666' },
-    amount: { fontSize: 16, fontWeight: 'bold' },
-    emptyContainer: { alignItems: 'center', marginTop: 100 },
-    emptyText: { color: '#999', fontSize: 16 },
-    addButton: {
-        backgroundColor: '#007AFF',
-        borderRadius: 12,
-        paddingVertical: 12,
+    filterRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center',
-        // Shadow
-        shadowColor: '#007AFF',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-        elevation: 4,
-    },
-    addButtonText: {
-        color: 'white',
-        fontWeight: 'bold',
-        fontSize: 16,
     },
     searchContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: 'white',
-        borderRadius: 12,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        marginBottom: 8,
+        borderRadius: 8,
+        paddingHorizontal: 8,
+        paddingVertical: 8, // Increased against 6 to match Dropdown
         borderWidth: 1,
-        borderColor: '#eee',
+        flex: 1.5,
     },
     searchInput: {
         flex: 1,
         marginLeft: 8,
-        fontSize: 16,
-        color: '#333',
-        paddingVertical: 4,
-    }
+        fontSize: TYPOGRAPHY.size.body,
+        paddingVertical: 0,
+        letterSpacing: -0.5, // Tighten font on iOS to match Android
+    },
+    sectionHeader: {
+        paddingVertical: 6,
+        paddingHorizontal: SPACING.screenPadding,
+    },
+    sectionTitle: {
+        fontSize: TYPOGRAPHY.size.small,
+        fontWeight: TYPOGRAPHY.weight.semiBold,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+    },
+    emptyContainer: {
+        alignItems: 'center',
+        marginTop: 60
+    },
+    emptyText: {
+        fontSize: TYPOGRAPHY.size.body
+    },
+    addButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 12,
+        borderRadius: 12,
+        marginBottom: SPACING.m,
+    },
+    addButtonText: {
+        fontSize: TYPOGRAPHY.size.body,
+        fontWeight: TYPOGRAPHY.weight.bold,
+    },
 });

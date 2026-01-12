@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, ActivityIndicator, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, ActivityIndicator, TouchableOpacity, StyleSheet, useColorScheme, Dimensions } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../components/context/AuthContext';
+import { COLORS } from '../constants/theme';
 
 import LoginScreen from '../screens/LoginScreen';
 import HomeScreen from '../screens/HomeScreen'; // Profile Selector
@@ -25,51 +26,106 @@ import RecurringScreen from '../screens/RecurringScreen';
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
-const CustomTabBarButton = ({ children, onPress }) => (
-    <TouchableOpacity
-        style={{
-            top: -20, // Elevate
-            justifyContent: 'center',
-            alignItems: 'center',
-            ...styles.shadow
-        }}
-        onPress={onPress}
-    >
-        <View style={{
-            width: 60,
-            height: 60,
-            borderRadius: 30,
-            backgroundColor: '#FFC107', // Yellow/Gold
-            justifyContent: 'center',
-            alignItems: 'center',
-        }}>
-            {children}
-        </View>
-    </TouchableOpacity>
-);
+const CustomTabBarButton = ({ children, onPress, theme }) => {
+    const colors = COLORS[theme];
+    return (
+        <TouchableOpacity
+            style={{
+                top: -20,
+                justifyContent: 'center',
+                alignItems: 'center',
+                ...styles.shadow
+            }}
+            onPress={onPress}
+        >
+            <View style={{
+                width: 56,
+                height: 56,
+                borderRadius: 28,
+                backgroundColor: colors.primaryAction, // Black (Light) / White (Dark)
+                justifyContent: 'center',
+                alignItems: 'center',
+                borderWidth: 4,
+                borderColor: colors.background // Creates a cutout effect
+            }}>
+                {children}
+            </View>
+        </TouchableOpacity>
+    );
+};
 
-const commonTabOptions = {
-    headerShown: false,
-    tabBarStyle: {
-        backgroundColor: '#fff',
-        borderTopWidth: 1,
-        borderTopColor: '#f0f0f0',
-        height: 60,
-        paddingBottom: 8,
-    },
-    tabBarActiveTintColor: '#007AFF',
-    tabBarInactiveTintColor: '#999',
+const { width } = Dimensions.get('window');
+const TAB_WIDTH = width / 5;
+
+const NavIcon = ({ name, focused, color, size }) => {
+    const theme = useColorScheme() || 'light';
+    const colors = COLORS[theme];
+
+    return (
+        <View style={{ alignItems: 'center', justifyContent: 'center', width: TAB_WIDTH }}>
+            {/* 1. Continuous Grey Line Segment (top of the bar) */}
+            <View style={{
+                position: 'absolute',
+                top: -8, // Flush with top (paddingTop is 8)
+                left: 0,
+                right: 0,
+                height: 1,
+                backgroundColor: colors.divider, // The "new grey line"
+            }} />
+
+            {/* 2. Active Indicator (Sits on top/inside the grey line) */}
+            {focused && (
+                <View style={{
+                    position: 'absolute',
+                    top: -8, // Same level as grey line
+                    width: 40,
+                    height: 4,
+                    backgroundColor: color,
+                    borderBottomLeftRadius: 4,
+                    borderBottomRightRadius: 4,
+                    zIndex: 10, // Ensure strictly on top
+                }} />
+            )}
+            <Ionicons name={name} size={size - 2} color={color} />
+        </View>
+    );
 };
 
 // 1. Adult Tabs (Owner/Partner)
 function DashboardTabs() {
+    const theme = useColorScheme() || 'light';
+    const colors = COLORS[theme];
+
+    const screenOptions = {
+        headerShown: false,
+        tabBarStyle: {
+            backgroundColor: colors.background,
+            borderTopWidth: 0, // HIDE default grey line
+            elevation: 0,
+            height: 88, // Reduced from 100 to push down
+            paddingTop: 8,
+            paddingBottom: 30, // Safe area
+            shadowOpacity: 0,
+        },
+        tabBarActiveTintColor: colors.primaryAction,
+        tabBarInactiveTintColor: '#c0c0c0',
+        tabBarShowLabel: true,
+        tabBarLabelStyle: {
+            fontSize: 10,
+            fontWeight: '500',
+            marginTop: 4,
+            marginBottom: 0,
+            zIndex: 50,
+        }
+    };
+
     return (
-        <Tab.Navigator screenOptions={commonTabOptions}>
+        <Tab.Navigator screenOptions={screenOptions}>
             <Tab.Screen
                 name="Dashboard"
                 component={AccountDashboard}
                 options={{
-                    tabBarIcon: ({ color, size }) => <Ionicons name="stats-chart" size={size} color={color} />,
+                    tabBarIcon: ({ color, size, focused }) => <NavIcon name="apps" size={size} color={color} focused={focused} />,
                     title: 'Overview'
                 }}
             />
@@ -77,8 +133,8 @@ function DashboardTabs() {
                 name="Transactions"
                 component={TransactionListScreen}
                 options={{
-                    tabBarIcon: ({ color, size }) => <Ionicons name="list" size={size} color={color} />,
-                    title: 'Transactions'
+                    tabBarIcon: ({ color, size, focused }) => <NavIcon name="list" size={size} color={color} focused={focused} />,
+                    title: 'Activity'
                 }}
             />
             <Tab.Screen
@@ -92,27 +148,27 @@ function DashboardTabs() {
                 })}
                 options={{
                     tabBarIcon: ({ focused }) => (
-                        <Ionicons name="add" size={32} color="white" />
+                        <Ionicons name="add" size={32} color={colors.background} /> // Inverse color icon
                     ),
                     tabBarButton: (props) => (
-                        <CustomTabBarButton {...props} />
+                        <CustomTabBarButton {...props} theme={theme} />
                     ),
-                    tabBarLabel: () => null // Hide label
+                    tabBarLabel: () => null
                 }}
             />
             <Tab.Screen
                 name="Analysis"
                 component={AnalyzeScreen}
                 options={{
-                    tabBarIcon: ({ color, size }) => <Ionicons name="pie-chart" size={size} color={color} />,
-                    title: 'Analysis'
+                    tabBarIcon: ({ color, size, focused }) => <NavIcon name="pie-chart" size={size} color={color} focused={focused} />,
+                    title: 'Insights'
                 }}
             />
             <Tab.Screen
                 name="More"
                 component={MoreMenuScreen}
                 options={{
-                    tabBarIcon: ({ color, size }) => <Ionicons name="ellipsis-horizontal" size={size} color={color} />,
+                    tabBarIcon: ({ color, size, focused }) => <NavIcon name="menu" size={size} color={color} focused={focused} />,
                     title: 'More'
                 }}
             />
@@ -122,13 +178,38 @@ function DashboardTabs() {
 
 // 2. Child Tabs
 function ChildTabs() {
+    const theme = useColorScheme() || 'light';
+    const colors = COLORS[theme];
+
+    const screenOptions = {
+        headerShown: false,
+        tabBarStyle: {
+            backgroundColor: colors.background,
+            borderTopWidth: 0, // HIDE default grey line
+            height: 88, // Reduced from 100
+            paddingTop: 8,
+            paddingBottom: 30,
+            elevation: 0,
+            shadowOpacity: 0,
+        },
+        tabBarActiveTintColor: colors.primaryAction,
+        tabBarInactiveTintColor: '#c0c0c0',
+        tabBarLabelStyle: {
+            fontSize: 10,
+            fontWeight: '500',
+            marginTop: 4,
+            marginBottom: 0,
+            zIndex: 50,
+        }
+    };
+
     return (
-        <Tab.Navigator screenOptions={commonTabOptions}>
+        <Tab.Navigator screenOptions={screenOptions}>
             <Tab.Screen
                 name="Dashboard"
                 component={AccountDashboard}
                 options={{
-                    tabBarIcon: ({ color, size }) => <Ionicons name="stats-chart" size={size} color={color} />,
+                    tabBarIcon: ({ color, size, focused }) => <NavIcon name="apps" size={size} color={color} focused={focused} />,
                     title: 'Overview'
                 }}
             />
@@ -136,8 +217,8 @@ function ChildTabs() {
                 name="Transactions"
                 component={TransactionListScreen}
                 options={{
-                    tabBarIcon: ({ color, size }) => <Ionicons name="list" size={size} color={color} />,
-                    title: 'My Spending'
+                    tabBarIcon: ({ color, size, focused }) => <NavIcon name="list" size={size} color={color} focused={focused} />,
+                    title: 'Spending'
                 }}
             />
             <Tab.Screen
@@ -151,20 +232,19 @@ function ChildTabs() {
                 })}
                 options={{
                     tabBarIcon: ({ focused }) => (
-                        <Ionicons name="add" size={32} color="white" />
+                        <Ionicons name="add" size={32} color={colors.background} />
                     ),
                     tabBarButton: (props) => (
-                        <CustomTabBarButton {...props} />
+                        <CustomTabBarButton {...props} theme={theme} />
                     ),
-                    tabBarLabel: () => null // Hide label
+                    tabBarLabel: () => null
                 }}
             />
-            {/* Child sees Requests directly */}
             <Tab.Screen
                 name="Requests"
                 component={RequestListScreen}
                 options={{
-                    tabBarIcon: ({ color, size }) => <Ionicons name="hand-right" size={size} color={color} />,
+                    tabBarIcon: ({ color, size, focused }) => <NavIcon name="hand-right" size={size} color={color} focused={focused} />,
                     title: 'Requests'
                 }}
             />
@@ -172,7 +252,7 @@ function ChildTabs() {
                 name="More"
                 component={MoreMenuScreen}
                 options={{
-                    tabBarIcon: ({ color, size }) => <Ionicons name="ellipsis-horizontal" size={size} color={color} />,
+                    tabBarIcon: ({ color, size, focused }) => <NavIcon name="menu" size={size} color={color} focused={focused} />,
                     title: 'More'
                 }}
             />
@@ -182,21 +262,22 @@ function ChildTabs() {
 
 export default function AppStack() {
     const { user, profile, loading } = useAuth();
+    const theme = useColorScheme() || 'light';
 
     if (loading) {
         return <View style={{ flex: 1, justifyContent: 'center' }}><ActivityIndicator /></View>;
     }
 
     return (
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Navigator screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: COLORS[theme].background }
+        }}>
             {!user ? (
-                // State 1: Not Logged In
                 <Stack.Screen name="Login" component={LoginScreen} />
             ) : !profile ? (
-                // State 2: Logged In, No Profile Selected
                 <Stack.Screen name="ProfileSelection" component={HomeScreen} />
             ) : (
-                // State 3: Profile Selected -> Check Role
                 <>
                     {profile.role === 'Child' ? (
                         <Stack.Screen name="ChildTabs" component={ChildTabs} />
@@ -204,47 +285,22 @@ export default function AppStack() {
                         <Stack.Screen name="MainTabs" component={DashboardTabs} />
                     )}
 
-                    {/* Common Modals & Screens accessible from More Menu */}
                     <Stack.Screen name="ProfileDashboard" component={ProfileDashboard} />
                     <Stack.Screen name="Settings" component={SettingsScreen} />
-
                     <Stack.Screen
                         name="AddTransaction"
                         component={AddTransactionScreen}
                         options={{ presentation: 'modal' }}
                     />
-                    <Stack.Screen
-                        name="ManageCategories"
-                        component={ManageCategoriesScreen}
-                        options={{
-                            headerShown: true,
-                            title: 'Manage Categories',
-                            headerStyle: { backgroundColor: '#f5f5f5' }
-                        }}
-                    />
-                    <Stack.Screen
-                        name="ManageProfiles"
-                        component={ManageProfilesScreen}
-                        options={{
-                            headerShown: true,
-                            title: 'Manage Profiles',
-                            headerStyle: { backgroundColor: '#f5f5f5' }
-                        }}
-                    />
-                    <Stack.Screen
-                        name="EditProfile"
-                        component={EditProfileScreen}
-                        options={{
-                            headerShown: true,
-                            title: 'Edit Profile',
-                            headerStyle: { backgroundColor: '#f5f5f5' }
-                        }}
-                    />
-                    <Stack.Screen name="Analyze" component={AnalyzeScreen} options={{ headerShown: false }} />
-                    <Stack.Screen name="MoneyRequest" component={MoneyRequestScreen} options={{ headerShown: false }} />
-                    <Stack.Screen name="RequestList" component={RequestListScreen} options={{ headerShown: false }} />
-                    <Stack.Screen name="GrantMoney" component={GrantMoneyScreen} options={{ headerShown: false }} />
-                    <Stack.Screen name="Recurring" component={RecurringScreen} options={{ headerShown: false }} />
+                    {/* Simplified Headers for Stack Screens */}
+                    <Stack.Screen name="ManageCategories" component={ManageCategoriesScreen} options={{ headerShown: true, title: 'Manage Categories' }} />
+                    <Stack.Screen name="ManageProfiles" component={ManageProfilesScreen} options={{ headerShown: true, title: 'Manage Profiles' }} />
+                    <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ headerShown: true, title: 'Edit Profile' }} />
+                    <Stack.Screen name="Analyze" component={AnalyzeScreen} />
+                    <Stack.Screen name="MoneyRequest" component={MoneyRequestScreen} />
+                    <Stack.Screen name="RequestList" component={RequestListScreen} />
+                    <Stack.Screen name="GrantMoney" component={GrantMoneyScreen} />
+                    <Stack.Screen name="Recurring" component={RecurringScreen} />
                 </>
             )}
         </Stack.Navigator>
@@ -253,10 +309,10 @@ export default function AppStack() {
 
 const styles = StyleSheet.create({
     shadow: {
-        shadowColor: '#7F5DF0',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.5,
-        elevation: 5
+        shadowColor: '#000000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2
     }
 });

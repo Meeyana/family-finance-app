@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import { VictoryPie } from 'victory-native';
+import { TYPOGRAPHY } from '../constants/theme';
 
 const COLORS = ['#007AFF', '#FF9500', '#FF2D55', '#5856D6', '#4CD964', '#FFCC00'];
 
@@ -46,12 +47,12 @@ export default function ExpensePieChart({ data }) {
                     labelRadius={90}
                     labels={({ datum }) => datum.percentage > 4 ? `${datum.x}\n${datum.percentage}%` : ''}
                     style={{
-                        labels: { fill: "white", fontSize: 11, fontWeight: "bold", textAlign: "center" },
+                        labels: { fill: "white", fontSize: 11, fontWeight: "bold", textAlign: "center", fontFamily: TYPOGRAPHY.fontFamily.bold },
                         data: { stroke: "#fff", strokeWidth: 2 }
                     }}
                     padAngle={2}
                     height={260}
-                    width={screenWidth - 64}
+                    width={screenWidth - 32}
                 />
             </View>
 
@@ -73,19 +74,14 @@ const styles = StyleSheet.create({
     container: {
         alignItems: 'center',
         padding: 10,
-        backgroundColor: 'white',
-        borderRadius: 16,
-        margin: 16,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
-        elevation: 2,
+        // Removed card styles (shadow, bg, radius) for minimalist consistency
+        marginBottom: 16,
     },
     noData: {
         textAlign: 'center',
         color: '#999',
         padding: 20,
+        fontFamily: TYPOGRAPHY.fontFamily.regular
     },
     legend: {
         flexDirection: 'row',
@@ -108,5 +104,6 @@ const styles = StyleSheet.create({
     legendText: {
         fontSize: 12,
         color: '#333',
+        fontFamily: TYPOGRAPHY.fontFamily.medium
     }
 });

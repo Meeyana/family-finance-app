@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Modal, StyleSheet, FlatList, SafeAreaView } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-export default function MultiSelectDropdown({ label, options, selectedValues, onSelectionChange }) {
+export default function MultiSelectDropdown({ label, options, selectedValues, onSelectionChange, compact = false }) {
     const [visible, setVisible] = useState(false);
 
     // Internal state for pending selection before "Apply"
@@ -28,7 +28,11 @@ export default function MultiSelectDropdown({ label, options, selectedValues, on
 
     // Helper to get display text
     const getDisplayText = () => {
-        if (selectedValues.length === 0) return `All ${label}s`;
+        if (selectedValues.length === 0) {
+            // User requested "All Profiles" / "All Categories" even in compact mode
+            const plural = label.endsWith('y') ? label.slice(0, -1) + 'ies' : label + 's';
+            return `All ${plural}`;
+        }
 
         // Find names for selected values
         const selectedNames = options
@@ -42,9 +46,15 @@ export default function MultiSelectDropdown({ label, options, selectedValues, on
     };
 
     return (
-        <View style={styles.container}>
-            <Text style={styles.label}>{label}</Text>
-            <TouchableOpacity style={styles.dropdown} onPress={openModal}>
+        <View style={[styles.container, compact && { marginRight: 0 }]}>
+            {!compact && <Text style={styles.label}>{label}</Text>}
+            <TouchableOpacity
+                style={[
+                    styles.dropdown,
+                    compact && { paddingVertical: 8, borderWidth: 1 } // Match Search Input Height (approx 40px)
+                ]}
+                onPress={openModal}
+            >
                 <Text style={[styles.dropdownText, selectedValues.length > 0 && styles.dropdownTextSelected]}>
                     {getDisplayText()}
                 </Text>
@@ -76,7 +86,7 @@ export default function MultiSelectDropdown({ label, options, selectedValues, on
                                             {item.name || item.label}
                                         </Text>
                                         {isSelected && (
-                                            <MaterialCommunityIcons name="check" size={20} color="#007AFF" />
+                                            <MaterialCommunityIcons name="check" size={20} color="#111111" />
                                         )}
                                     </TouchableOpacity>
                                 );
@@ -133,8 +143,8 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     dropdownTextSelected: {
-        color: '#007AFF',
-        fontWeight: '600',
+        color: '#111111',
+        fontWeight: 'bold',
     },
     modalOverlay: {
         flex: 1,
@@ -175,8 +185,8 @@ const styles = StyleSheet.create({
         color: '#333',
     },
     optionTextSelected: {
-        color: '#007AFF',
-        fontWeight: '600',
+        color: '#111111',
+        fontWeight: 'bold',
     },
     footer: {
         flexDirection: 'row',
@@ -202,7 +212,7 @@ const styles = StyleSheet.create({
         padding: 14,
         alignItems: 'center',
         borderRadius: 12,
-        backgroundColor: '#007AFF',
+        backgroundColor: '#111111',
     },
     applyText: {
         color: 'white',

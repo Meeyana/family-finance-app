@@ -1,6 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
-import { Platform } from 'react-native';
+import { Platform, useColorScheme } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import RootNavigator from './src/navigation/RootNavigator';
 import { AuthProvider } from './src/components/context/AuthContext';
@@ -14,10 +14,11 @@ if (Platform.OS === 'web') {
 }
 
 export default function App() {
+  const theme = useColorScheme();
   return (
     <SafeAreaProvider>
       <AuthProvider>
-        <StatusBar style="dark" />
+        <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
         <RootNavigator />
       </AuthProvider>
     </SafeAreaProvider>

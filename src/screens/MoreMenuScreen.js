@@ -1,139 +1,270 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Platform, useColorScheme } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../components/context/AuthContext';
 import { signOut } from 'firebase/auth';
 import { auth } from '../services/firebase';
+import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
 
 export default function MoreMenuScreen({ navigation }) {
     const { profile, switchProfile, pendingRequestCount } = useAuth();
+    const theme = useColorScheme() || 'light';
+    const colors = COLORS[theme];
 
     const handleLogout = async () => {
+        const title = "Log Out";
+        const message = "Are you sure you want to log out?";
+        const execute = async () => await signOut(auth);
+
         if (Platform.OS === 'web') {
-            if (window.confirm("Are you sure you want to log out completely?")) {
-                await signOut(auth);
-            }
+            if (confirm(message)) execute();
         } else {
-            Alert.alert("Logout", "Are you sure you want to log out completely?", [
+            Alert.alert(title, message, [
                 { text: "Cancel", style: "cancel" },
-                {
-                    text: "Logout",
-                    style: "destructive",
-                    onPress: async () => {
-                        await signOut(auth);
-                    }
-                }
+                { text: "Log Out", style: "destructive", onPress: execute }
             ]);
         }
     };
 
     const handleSwitchUser = () => {
+        const execute = () => switchProfile();
         if (Platform.OS === 'web') {
-            if (window.confirm("Go back to profile selection?")) {
-                switchProfile();
-            }
+            if (confirm("Switch profile?")) execute();
         } else {
             Alert.alert("Switch Profile", "Go back to profile selection?", [
                 { text: "Cancel", style: "cancel" },
-                { text: "Switch", onPress: switchProfile }
+                { text: "Switch", onPress: execute }
             ]);
         }
     };
 
-    const MenuOption = ({ icon, label, onPress, color = '#1a1a1a', subtext }) => (
-        <TouchableOpacity style={styles.option} onPress={onPress}>
-            <View style={styles.optionLeft}>
-                <View style={[styles.iconBox, { backgroundColor: color + '15' }]}>
-                    <MaterialCommunityIcons name={icon} size={24} color={color} />
+    const SectionHeader = ({ title }) => (
+        <Text style={[styles.sectionTitle, { color: colors.secondaryText }]}>{title}</Text>
+    );
+
+    const MenuOption = ({ icon, label, onPress, subtext, isDestructive, badge }) => (
+        <TouchableOpacity
+            style={[styles.option, { borderBottomColor: colors.divider }]}
+            onPress={onPress}
+            activeOpacity={0.7}
+        >
+            <View style={styles.optionContent}>
+                <View style={styles.leftContent}>
+                    <View style={[styles.iconBox, { backgroundColor: colors.surface }]}>
+                        <MaterialCommunityIcons
+                            name={icon}
+                            size={22}
+                            color={isDestructive ? colors.error : colors.primaryText}
+                        />
+                    </View>
+                    <View>
+                        <Text style={[
+                            styles.optionText,
+                            { color: isDestructive ? colors.error : colors.primaryText }
+                        ]}>
+                            {label}
+                        </Text>
+                        {subtext && (
+                            <Text style={[styles.subtext, { color: colors.secondaryText }]}>
+                                {subtext}
+                            </Text>
+                        )}
+                    </View>
                 </View>
-                <View>
-                    <Text style={styles.optionText}>{label}</Text>
-                    {subtext && <Text style={styles.subtext}>{subtext}</Text>}
+
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    {badge > 0 && (
+                        <View style={[styles.badge, { backgroundColor: colors.error }]}>
+                            <Text style={styles.badgeText}>{badge}</Text>
+                        </View>
+                    )}
+                    <MaterialCommunityIcons name="chevron-right" size={20} color={colors.secondaryText} />
                 </View>
             </View>
-            <MaterialCommunityIcons name="chevron-right" size={24} color="#ccc" />
         </TouchableOpacity>
     );
 
     return (
-        <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
-                <Text style={styles.title}>More</Text>
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'left', 'right']}>
+
+            {/* Header */}
+            <View style={[styles.header, { borderBottomColor: colors.divider }]}>
+                <Text style={[styles.headerTitle, { color: colors.primaryText }]}>More</Text>
             </View>
 
             <ScrollView contentContainerStyle={styles.content}>
-                {/* Profile Section */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Account</Text>
-                    <MenuOption
-                        icon="account-circle-outline"
-                        label="My Profile"
-                        subtext={`Logged in as ${profile?.name || 'User'}`}
-                        onPress={() => navigation.navigate('ProfileDashboard', { profile })}
-                        color="#007AFF"
-                    />
-                    <MenuOption
-                        icon="cog-outline"
-                        label="Settings"
-                        onPress={() => navigation.navigate('Settings')}
-                        color="#666"
-                    />
-                </View>
 
+                {/* Profile Summary Card */}
+                <TouchableOpacity
+                    style={[styles.profileCard, { backgroundColor: colors.surface }]}
+                    onPress={() => navigation.navigate('ProfileDashboard', { profile })}
+                >
+                    <View style={[styles.avatar, { backgroundColor: colors.primaryAction }]}>
+                        <Text style={{ fontSize: 24 }}>{profile?.avatar || '👤'}</Text>
+                    </View>
+                    <View>
+                        <Text style={[styles.profileName, { color: colors.primaryText }]}>{profile?.name}</Text>
+                        <Text style={[styles.profileRole, { color: colors.secondaryText }]}>{profile?.role}</Text>
+                    </View>
+                    <View style={{ flex: 1, alignItems: 'flex-end' }}>
+                        <Text style={[styles.editLink, { color: colors.primaryAction }]}>Edit</Text>
+                    </View>
+                </TouchableOpacity>
 
-                {/* Family Section */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Family</Text>
+                    <SectionHeader title="Management" />
                     {profile?.role !== 'Child' && (
                         <MenuOption
                             icon="hand-coin-outline"
                             label="Money Requests"
+                            subtext={pendingRequestCount > 0 ? "Pending approvals" : null}
+                            badge={pendingRequestCount}
                             onPress={() => navigation.navigate('RequestList')}
-                            color="#34C759"
-                            subtext={pendingRequestCount > 0 ? `${pendingRequestCount} Pending` : "Approvals & History"}
                         />
                     )}
                     <MenuOption
                         icon="calendar-sync-outline"
                         label="Recurring Transactions"
                         onPress={() => navigation.navigate('Recurring')}
-                        color="#00BCD4"
-                        subtext="Subscriptions & Bills"
                     />
                     <MenuOption
-                        icon="account-switch-outline"
-                        label="Switch User"
-                        onPress={handleSwitchUser}
-                        color="#FF9500"
+                        icon="tag-multiple-outline"
+                        label="Categories"
+                        onPress={() => navigation.navigate('ManageCategories')}
                     />
                 </View>
 
-                {/* App Section */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>App</Text>
+                    <SectionHeader title="App" />
+                    <MenuOption
+                        icon="cog-outline"
+                        label="Settings"
+                        onPress={() => navigation.navigate('Settings')}
+                    />
+                    <MenuOption
+                        icon="account-switch-outline"
+                        label="Switch Profile"
+                        onPress={handleSwitchUser}
+                    />
+                </View>
+
+                <View style={[styles.section, { marginTop: SPACING.l }]}>
                     <MenuOption
                         icon="logout"
                         label="Log Out"
+                        isDestructive
                         onPress={handleLogout}
-                        color="#FF3B30"
                     />
                 </View>
+
+
+
             </ScrollView>
         </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#f8f9fa' },
-    header: { padding: 20, backgroundColor: 'white', borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
-    title: { fontSize: 28, fontWeight: 'bold' },
-    content: { padding: 16 },
-    section: { marginBottom: 24 },
-    sectionTitle: { fontSize: 14, fontWeight: '600', color: '#666', marginBottom: 8, marginLeft: 8, textTransform: 'uppercase' },
-    option: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'white', padding: 16, borderRadius: 12, marginBottom: 8, elevation: 1 },
-    optionLeft: { flexDirection: 'row', alignItems: 'center' },
-    iconBox: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginRight: 16 },
-    optionText: { fontSize: 16, fontWeight: '500', color: '#1a1a1a' },
-    subtext: { fontSize: 12, color: '#999', marginTop: 2 }
+    container: {
+        flex: 1,
+    },
+    header: {
+        paddingHorizontal: SPACING.screenPadding,
+        paddingVertical: SPACING.m,
+        borderBottomWidth: 1,
+    },
+    headerTitle: {
+        fontSize: TYPOGRAPHY.size.h2,
+        fontWeight: TYPOGRAPHY.weight.bold,
+        letterSpacing: -0.5,
+    },
+    content: {
+        padding: SPACING.screenPadding,
+    },
+    section: {
+        marginBottom: SPACING.xl,
+    },
+    sectionTitle: {
+        fontSize: TYPOGRAPHY.size.small,
+        fontWeight: TYPOGRAPHY.weight.semiBold,
+        textTransform: 'uppercase',
+        marginBottom: SPACING.s,
+        letterSpacing: 1,
+        opacity: 0.8,
+    },
+    option: {
+        paddingVertical: SPACING.m,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+    },
+    optionContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    leftContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: SPACING.m,
+    },
+    iconBox: {
+        width: 40,
+        height: 40,
+        borderRadius: 12,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    optionText: {
+        fontSize: TYPOGRAPHY.size.body,
+        fontWeight: TYPOGRAPHY.weight.medium,
+        letterSpacing: -0.2, // Inter style tightness
+    },
+    subtext: {
+        fontSize: TYPOGRAPHY.size.small,
+        marginTop: 2,
+    },
+    badge: {
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 10,
+        marginRight: 8,
+    },
+    badgeText: {
+        color: 'white',
+        fontSize: 10,
+        fontWeight: 'bold',
+    },
+    // Contextual Profile Card
+    profileCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: SPACING.l,
+        borderRadius: SPACING.cardBorderRadius,
+        marginBottom: SPACING.xl,
+        gap: SPACING.m,
+    },
+    avatar: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    profileName: {
+        fontSize: TYPOGRAPHY.size.h3,
+        fontWeight: TYPOGRAPHY.weight.bold,
+    },
+    profileRole: {
+        fontSize: TYPOGRAPHY.size.caption,
+    },
+    editLink: {
+        fontSize: TYPOGRAPHY.size.caption,
+        fontWeight: TYPOGRAPHY.weight.semiBold,
+    },
+    version: {
+        textAlign: 'center',
+        fontSize: TYPOGRAPHY.size.small,
+        marginTop: SPACING.xl,
+        opacity: 0.5,
+    },
 });
