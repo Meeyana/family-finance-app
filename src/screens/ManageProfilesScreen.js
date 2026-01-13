@@ -1,11 +1,14 @@
 import React, { useLayoutEffect } from 'react';
-import { View, Text, TouchableOpacity, FlatList, StyleSheet } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { View, Text, TouchableOpacity, FlatList, StyleSheet, useColorScheme } from 'react-native';
+import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../components/context/AuthContext';
+import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
 
 export default function ManageProfilesScreen({ navigation }) {
     const { userProfiles } = useAuth(); // Live data from Context
+    const theme = useColorScheme() || 'light';
+    const colors = COLORS[theme];
 
     useLayoutEffect(() => {
         navigation.setOptions({ headerShown: false });
@@ -13,29 +16,32 @@ export default function ManageProfilesScreen({ navigation }) {
 
     const renderItem = ({ item }) => (
         <TouchableOpacity
-            style={styles.card}
+            style={[styles.itemContainer, { borderBottomColor: colors.divider }]}
             onPress={() => navigation.navigate('EditProfile', { profile: item })}
         >
-            <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{item.name[0]}</Text>
+            <View style={styles.itemLeft}>
+                <View style={[styles.avatar, { backgroundColor: colors.surface }]}>
+                    <Text style={[styles.avatarText, { color: colors.primaryText }]}>{item.name[0]}</Text>
+                </View>
+                <View>
+                    <Text style={[styles.name, { color: colors.primaryText }]}>{item.name}</Text>
+                    <Text style={[styles.role, { color: colors.secondaryText }]}>{item.role}</Text>
+                </View>
             </View>
-            <View style={styles.info}>
-                <Text style={styles.name}>{item.name}</Text>
-                <Text style={styles.role}>{item.role}</Text>
-            </View>
-            <Text style={styles.arrow}></Text>
+            <Ionicons name="chevron-forward" size={20} color={colors.divider} />
         </TouchableOpacity>
     );
 
     return (
-        <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <MaterialCommunityIcons name="arrow-left" size={24} color="#007AFF" />
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+            {/* Header */}
+            <View style={[styles.header, { borderBottomColor: colors.divider }]}>
+                <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                    <Ionicons name="arrow-back" size={24} color={colors.primaryText} />
                 </TouchableOpacity>
-                <Text style={styles.title}>Manage Profiles</Text>
+                <Text style={[styles.title, { color: colors.primaryText }]}>Manage Profiles</Text>
                 <TouchableOpacity onPress={() => navigation.navigate('EditProfile', { isNew: true, profile: {} })} >
-                    <Text style={{ fontSize: 30, color: '#007AFF', fontWeight: '300' }}>+</Text>
+                    <Ionicons name="add" size={28} color={colors.primaryAction} />
                 </TouchableOpacity>
             </View>
 
@@ -50,44 +56,49 @@ export default function ManageProfilesScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#f5f7fa' },
+    container: { flex: 1 },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: 16,
-        backgroundColor: 'white',
+        paddingHorizontal: SPACING.screenPadding,
+        paddingVertical: SPACING.m,
         borderBottomWidth: 1,
-        borderBottomColor: '#eee',
     },
-    backText: { fontSize: 16, color: '#007AFF' },
-    title: { fontSize: 18, fontWeight: 'bold' },
-    list: { padding: 16 },
-    card: {
+    title: {
+        fontSize: TYPOGRAPHY.size.h3,
+        fontWeight: TYPOGRAPHY.weight.bold,
+    },
+    list: { paddingBottom: 100 },
+    itemContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: 'white',
-        padding: 16,
-        borderRadius: 12,
-        marginBottom: 12,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-        elevation: 2,
+        justifyContent: 'space-between',
+        paddingVertical: SPACING.m,
+        paddingHorizontal: SPACING.screenPadding,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+    },
+    itemLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: SPACING.m,
     },
     avatar: {
-        width: 40, height: 40, borderRadius: 20,
-        backgroundColor: '#e3f2fd',
-        justifyContent: 'center', alignItems: 'center',
-        marginRight: 12,
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
-    avatarText: { fontSize: 18, fontWeight: 'bold', color: '#007AFF' },
-    info: { flex: 1 },
-    name: { fontSize: 16, fontWeight: '600', color: '#333' },
-    role: { fontSize: 13, color: '#888' },
-    limitContainer: { alignItems: 'flex-end', marginRight: 12 },
-    limitLabel: { fontSize: 11, color: '#888' },
-    limitValue: { fontSize: 14, fontWeight: 'bold', color: '#333' },
-    arrow: { fontSize: 18, color: '#ccc' },
+    avatarText: {
+        fontSize: TYPOGRAPHY.size.h3,
+        fontWeight: TYPOGRAPHY.weight.bold,
+    },
+    name: {
+        fontSize: TYPOGRAPHY.size.body,
+        fontWeight: TYPOGRAPHY.weight.medium,
+    },
+    role: {
+        fontSize: TYPOGRAPHY.size.caption,
+    },
 });

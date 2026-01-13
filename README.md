@@ -39,14 +39,27 @@ Built with **Expo** (SDK 52), **React Native**, and **Firebase Firestore**.
     - Assign unique icons to categories.
 - **Profile Management**: Update names and monthly spending limits.
 
-### 🔄 Recurring Transactions (New)
-- **Automated subscriptions**: Manage Netflix, Rent, Salaries, etc.
-- **Flexible Duration**:
-    - **Forever**: Billing runs indefinitely.
-    - **Fixed**: Set a specific number of months or years (e.g., 12-month installment).
-- **Auto-Processing**: Transactions are generated automatically when the app is opened.
+### 👨‍👩‍👧‍👦 Family Features
+- **Money Requests**: Children can request funds with a reason and category.
+- **Grant/Reject**: Parents receive requests and can approve or deny them instantly.
+- **Request History**: A unified list showing the status of all past requests.
 
-### 🩺 Financial Health Logic (New)
+### 🎯 Savings Goals (Shared)
+- **Visual Goals**: Set targets with progress bars and icons.
+- **Collaboration**: Share goals with specific family members (e.g., "Holiday Fund" shared with Partner).
+- **Contribution Tracking**:
+    - See exactly who saved how much (percentage and amount).
+    - Withdrawals are tracked and attributed to the user.
+- **Editing**: Owners can modify goal details, sharing settings, or delete goals.
+
+### 🔄 Recurring Transactions (Refined)
+- **Subscription Manager**: Track Netflix, Rent, Salary, etc.
+- **Flexible Durations**:
+    - **Forever**: Infinite subscriptions (hidden deadlines for cleaner UI).
+    - **Fixed**: Set duration (e.g., 12 months) with auto-calculated end dates ("Ends: Dec 2025").
+- **Smart Logic**: Auto-generates transactions on the due date.
+
+### 🩺 Financial Health Logic
 - **Deficit Detection**: Smart logic detects if **Expenses > Income**.
 - **Visual Status**:
     - **🟢 Healthy**: Under budget and positive cashflow.

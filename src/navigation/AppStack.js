@@ -22,6 +22,8 @@ import MoneyRequestScreen from '../screens/MoneyRequestScreen';
 import RequestListScreen from '../screens/RequestListScreen';
 import GrantMoneyScreen from '../screens/GrantMoneyScreen';
 import RecurringScreen from '../screens/RecurringScreen';
+import GoalScreen from '../screens/GoalScreen';
+import GoalDetailScreen from '../screens/GoalDetailScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -300,7 +302,12 @@ export default function AppStack() {
                     <Stack.Screen name="MoneyRequest" component={MoneyRequestScreen} />
                     <Stack.Screen name="RequestList" component={RequestListScreen} />
                     <Stack.Screen name="GrantMoney" component={GrantMoneyScreen} />
-                    <Stack.Screen name="Recurring" component={RecurringScreen} />
+                    <Stack.Screen name="Recurring" component={RecurringScreen} options={{ headerShown: false }} />
+
+
+                    {/* Phase 7: Goals */}
+                    <Stack.Screen name="Goals" component={GoalScreen} options={{ headerShown: true, title: 'Savings Goals' }} />
+                    <Stack.Screen name="GoalDetail" component={GoalDetailScreen} options={{ headerShown: true, title: 'Goal Details' }} />
                 </>
             )}
         </Stack.Navigator>

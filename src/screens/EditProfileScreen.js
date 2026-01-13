@@ -1,14 +1,19 @@
 import React, { useState, useLayoutEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, TouchableWithoutFeedback, Keyboard, useColorScheme } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { updateProfile, addProfile, deleteProfile } from '../services/firestoreRepository';
 import { auth } from '../services/firebase';
 import { useAuth } from '../components/context/AuthContext';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
+import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
 
 export default function EditProfileScreen({ route, navigation }) {
     const { profile, isNew } = route.params;
     const { refreshProfiles } = useAuth();
+
+    // Theme
+    const theme = useColorScheme() || 'light';
+    const colors = COLORS[theme];
 
     useLayoutEffect(() => {
         navigation.setOptions({ headerShown: false });
@@ -22,7 +27,6 @@ export default function EditProfileScreen({ route, navigation }) {
 
     // Has existing PIN?
     const hasPin = profile?.pin && profile.pin.length > 0;
-
     const isOwner = profile?.role === 'Owner';
 
     const handleSave = async () => {
@@ -98,80 +102,96 @@ export default function EditProfileScreen({ route, navigation }) {
 
     return (
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-            <SafeAreaView style={styles.container}>
+            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
                 <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-                    <View style={styles.header}>
-                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                            <MaterialCommunityIcons name="arrow-left" size={24} color="#666" />
+                    {/* Header */}
+                    <View style={[styles.header, { borderBottomColor: colors.divider }]}>
+                        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                            <Ionicons name="arrow-back" size={24} color={colors.primaryText} />
                         </TouchableOpacity>
-                        <Text style={styles.title}>{isNew ? 'New Profile' : 'Edit Profile'}</Text>
+                        <Text style={[styles.headerTitle, { color: colors.primaryText }]}>{isNew ? 'New Profile' : 'Edit Profile'}</Text>
                         <TouchableOpacity onPress={handleSave} disabled={loading}>
-                            {loading ? <ActivityIndicator color="#007AFF" /> : <Text style={styles.saveText}>Save</Text>}
+                            {loading ? <ActivityIndicator color={colors.primaryAction} /> : <Text style={[styles.saveText, { color: colors.primaryAction }]}>Save</Text>}
                         </TouchableOpacity>
                     </View>
 
                     <ScrollView contentContainerStyle={styles.form} keyboardShouldPersistTaps='handled'>
-                        <Text style={styles.label}>Profile Name</Text>
-                        {isNew ? (
+                        {/* Name Input */}
+                        <View style={styles.inputGroup}>
+                            <Text style={[styles.label, { color: colors.secondaryText }]}>NAME</Text>
+                            {isNew ? (
+                                <TextInput
+                                    style={[styles.input, { backgroundColor: colors.surface, color: colors.primaryText, borderColor: colors.divider }]}
+                                    value={name}
+                                    onChangeText={setName}
+                                    placeholder="Enter Name"
+                                    placeholderTextColor={colors.secondaryText}
+                                />
+                            ) : (
+                                <View style={[styles.disabledInput, { backgroundColor: colors.background, borderColor: colors.divider }]}>
+                                    <Text style={{ fontSize: TYPOGRAPHY.size.body, color: colors.primaryText, fontWeight: '600' }}>{name}</Text>
+                                    <Text style={{ fontSize: TYPOGRAPHY.size.caption, color: colors.secondaryText }}>(Managed by user)</Text>
+                                </View>
+                            )}
+                        </View>
+
+                        {/* Limit Input */}
+                        <View style={styles.inputGroup}>
+                            <Text style={[styles.label, { color: colors.secondaryText }]}>MONTHLY LIMIT (VND)</Text>
                             <TextInput
-                                style={styles.input}
-                                value={name}
-                                onChangeText={setName}
-                                placeholder="Enter Name"
+                                style={[styles.input, { backgroundColor: colors.surface, color: colors.primaryText, borderColor: colors.divider }]}
+                                value={limit}
+                                onChangeText={setLimit}
+                                keyboardType="numeric"
+                                placeholderTextColor={colors.secondaryText}
                             />
-                        ) : (
-                            <View style={styles.disabledInput}>
-                                <Text style={{ fontSize: 16, color: '#666' }}>{name}</Text>
-                                <Text style={{ fontSize: 12, color: '#999' }}>(Managed by user)</Text>
-                            </View>
-                        )}
+                        </View>
 
-                        <Text style={styles.label}>Monthly Limit (VND)</Text>
-                        <TextInput
-                            style={styles.input}
-                            value={limit}
-                            onChangeText={setLimit}
-                            keyboardType="numeric"
-                        />
+                        {/* Role Selector */}
+                        <View style={styles.inputGroup}>
+                            <Text style={[styles.label, { color: colors.secondaryText }]}>ROLE</Text>
+                            {isOwner ? (
+                                <View style={[styles.disabledInput, { backgroundColor: colors.background, borderColor: colors.divider }]}>
+                                    <Text style={{ color: colors.secondaryText }}>Owner (Cannot change)</Text>
+                                    <MaterialCommunityIcons name="lock" size={16} color={colors.secondaryText} />
+                                </View>
+                            ) : (
+                                <View style={[styles.segmentContainer, { backgroundColor: colors.surface }]}>
+                                    {['Partner', 'Child'].map(r => (
+                                        <TouchableOpacity
+                                            key={r}
+                                            style={[styles.segmentBtn, role === r && { backgroundColor: colors.background, shadowOpacity: 0.1 }]}
+                                            onPress={() => setRole(r)}
+                                        >
+                                            <Text style={[styles.segmentText, { color: role === r ? colors.primaryText : colors.secondaryText }]}>{r}</Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                            )}
+                        </View>
 
-                        <Text style={styles.label}>Role</Text>
-                        {isOwner ? (
-                            <View style={styles.disabledInput}>
-                                <Text style={styles.disabledText}>Owner (Cannot change)</Text>
-                                <MaterialCommunityIcons name="lock" size={16} color="#999" />
+                        {/* PIN Section */}
+                        <View style={styles.inputGroup}>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Text style={[styles.label, { color: colors.secondaryText, marginBottom: 0 }]}>PROFILE PIN</Text>
+                                <Text style={[styles.helperText, { color: colors.secondaryText }]}>{hasPin ? "Enter new to reset" : "Optional"}</Text>
                             </View>
-                        ) : (
-                            <View style={styles.roleContainer}>
-                                {['Partner', 'Child'].map(r => (
-                                    <TouchableOpacity
-                                        key={r}
-                                        style={[styles.roleButton, role === r && styles.roleButtonActive]}
-                                        onPress={() => setRole(r)}
-                                    >
-                                        <Text style={[styles.roleText, role === r && styles.roleTextActive]}>{r}</Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
-                        )}
-
-                        <Text style={styles.label}>Profile PIN (Optional)</Text>
-                        <Text style={styles.label}>Profile PIN</Text>
-                        <View style={styles.pinContainer}>
                             <TextInput
-                                style={[styles.input, { flex: 1, marginBottom: 0 }]}
+                                style={[styles.input, { marginTop: 8, backgroundColor: colors.surface, color: colors.primaryText, borderColor: colors.divider }]}
                                 value={pin}
                                 onChangeText={setPin}
-                                placeholder={hasPin ? "Enter new PIN to reset" : "Set a PIN"}
+                                placeholder={hasPin ? "••••••" : "Set a 6-digit PIN"}
+                                placeholderTextColor={colors.secondaryText}
                                 keyboardType="numeric"
-                                secureTextEntry={true} // Always secure
+                                secureTextEntry={true}
                                 maxLength={6}
                             />
                         </View>
-                        <Text style={styles.helperText}>{hasPin ? "Leave empty to keep current PIN" : "Leave empty for no PIN"}</Text>
 
+                        {/* Remove PIN Button */}
                         {hasPin && (
                             <TouchableOpacity
-                                style={[styles.deleteButton, { marginTop: 10, backgroundColor: '#f0f9ff', borderColor: '#bae6fd' }]}
+                                style={[styles.actionButton, { backgroundColor: colors.surface, borderColor: colors.divider }]}
                                 onPress={async () => {
                                     setLoading(true);
                                     await updateProfile(auth.currentUser.uid, profile.id, { pin: '' });
@@ -181,13 +201,14 @@ export default function EditProfileScreen({ route, navigation }) {
                                     navigation.goBack();
                                 }}
                             >
-                                <Text style={[styles.deleteText, { color: '#0284c7' }]}>Remove PIN Requirement</Text>
+                                <Text style={[styles.actionText, { color: colors.primaryAction }]}>Remove PIN Requirement</Text>
                             </TouchableOpacity>
                         )}
 
+                        {/* Delete Profile Button */}
                         {!isNew && !isOwner && (
-                            <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
-                                <Text style={styles.deleteText}>Delete Profile</Text>
+                            <TouchableOpacity style={[styles.actionButton, { marginTop: 20, backgroundColor: colors.surface, borderColor: colors.error }]} onPress={handleDelete}>
+                                <Text style={[styles.actionText, { color: colors.error }]}>Delete Profile</Text>
                             </TouchableOpacity>
                         )}
                     </ScrollView>
@@ -198,76 +219,77 @@ export default function EditProfileScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#f5f7fa' },
+    container: { flex: 1 },
     header: {
         flexDirection: 'row',
+        alignItems: 'center',
         justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: 16,
-        backgroundColor: 'white',
+        paddingHorizontal: SPACING.screenPadding,
+        paddingVertical: SPACING.m,
         borderBottomWidth: 1,
-        borderBottomColor: '#eee',
     },
-    backText: { fontSize: 16, color: '#666' },
-    saveText: { fontSize: 16, fontWeight: 'bold', color: '#007AFF' },
-    title: { fontSize: 18, fontWeight: 'bold' },
-    form: { padding: 20 },
-    label: { fontSize: 14, color: '#666', marginTop: 20, marginBottom: 8, fontWeight: '600' },
+    headerTitle: {
+        fontSize: TYPOGRAPHY.size.h3,
+        fontWeight: TYPOGRAPHY.weight.bold,
+    },
+    saveText: {
+        fontSize: TYPOGRAPHY.size.body,
+        fontWeight: TYPOGRAPHY.weight.bold,
+    },
+    form: { padding: SPACING.screenPadding },
+    inputGroup: { marginBottom: SPACING.l },
+    label: {
+        fontSize: TYPOGRAPHY.size.small,
+        fontWeight: '600',
+        marginBottom: 8,
+    },
     input: {
-        backgroundColor: 'white',
-        borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 8,
-        padding: 12,
-        fontSize: 16,
-    },
-    roleContainer: { flexDirection: 'row', marginBottom: 20 },
-    roleButton: {
-        flex: 1,
         padding: 12,
         borderRadius: 8,
         borderWidth: 1,
-        borderColor: '#ddd',
-        alignItems: 'center',
-        marginHorizontal: 4,
-        backgroundColor: 'white'
+        fontSize: TYPOGRAPHY.size.body,
+        letterSpacing: 0, // Fix iOS text spacing issue
     },
-    roleButtonActive: { backgroundColor: '#007AFF', borderColor: '#007AFF' },
-    roleText: { color: '#333' },
-    roleTextActive: { color: 'white', fontWeight: 'bold' },
     disabledInput: {
-        backgroundColor: '#f0f0f0',
         padding: 12,
         borderRadius: 8,
+        borderWidth: 1,
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        borderWidth: 1,
-        borderColor: '#ddd'
-    },
-    disabledText: { color: '#999' },
-    deleteButton: {
-        marginTop: 40,
-        backgroundColor: '#fee2e2',
-        padding: 16,
-        borderRadius: 8,
-        alignItems: 'center',
-        borderWidth: 1,
-        borderColor: '#fecaca'
-    },
-    deleteText: {
-        color: '#dc2626',
-        fontWeight: 'bold',
-        fontSize: 16
     },
     helperText: {
-        fontSize: 12,
-        color: '#999',
-        marginTop: 4,
-        marginLeft: 4
+        fontSize: TYPOGRAPHY.size.caption,
+        marginLeft: 4,
     },
-    pinContainer: {
+
+    // Segment Control
+    segmentContainer: {
         flexDirection: 'row',
-        alignItems: 'center'
-    }
+        borderRadius: 8,
+        padding: 4,
+    },
+    segmentBtn: {
+        flex: 1,
+        paddingVertical: 8,
+        alignItems: 'center',
+        borderRadius: 6,
+    },
+    segmentText: {
+        fontSize: TYPOGRAPHY.size.caption,
+        fontWeight: '600',
+    },
+
+    // Action Buttons
+    actionButton: {
+        padding: 16,
+        borderRadius: 12,
+        alignItems: 'center',
+        borderWidth: 1,
+        marginTop: 10,
+    },
+    actionText: {
+        fontSize: TYPOGRAPHY.size.body,
+        fontWeight: TYPOGRAPHY.weight.mid,
+    },
 });

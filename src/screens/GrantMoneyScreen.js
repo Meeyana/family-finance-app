@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ActivityIndicator, FlatList, DeviceEventEmitter, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ActivityIndicator, FlatList, DeviceEventEmitter, TouchableWithoutFeedback, Keyboard, useColorScheme, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../components/context/AuthContext';
 import { processTransfer, getFamilyProfiles } from '../services/firestoreRepository';
+import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
 
 export default function GrantMoneyScreen({ navigation }) {
     const { user, profile } = useAuth();
@@ -13,6 +14,8 @@ export default function GrantMoneyScreen({ navigation }) {
     const [receivers, setReceivers] = useState([]);
     const [selectedReceiver, setSelectedReceiver] = useState(null);
 
+    const theme = useColorScheme() || 'light';
+    const colors = COLORS[theme];
 
     useEffect(() => {
         loadProfiles();
@@ -68,73 +71,89 @@ export default function GrantMoneyScreen({ navigation }) {
         }
     };
 
+    const formatCurrencyInput = (value) => {
+        // Remove non-digits
+        const number = value.replace(/[^0-9]/g, '');
+        // Format with thousand separators
+        return number.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    };
+
+    const handleAmountChange = (text) => {
+        setAmount(formatCurrencyInput(text));
+    };
+
     return (
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-            <SafeAreaView style={styles.container}>
-                <View style={styles.header}>
+            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+                <View style={[styles.header, { borderBottomColor: colors.divider }]}>
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                        <Ionicons name="arrow-back" size={24} color="#1a1a1a" />
+                        <Ionicons name="arrow-back" size={24} color={colors.primaryText} />
                     </TouchableOpacity>
-                    <Text style={styles.title}>Grant Pocket Money</Text>
+                    <Text style={[styles.title, { color: colors.primaryText }]}>Grant Money</Text>
                     <View style={{ width: 24 }} />
                 </View>
 
                 <View style={styles.content}>
 
                     {/* Receiver Selector */}
-                    <Text style={styles.label}>To Who?</Text>
-                    <View style={styles.receiversRow}>
-                        {receivers.map(p => (
-                            <TouchableOpacity
-                                key={p.id}
-                                style={[
-                                    styles.receiverChip,
-                                    selectedReceiver?.id === p.id && styles.receiverChipSelected
-                                ]}
-                                onPress={() => setSelectedReceiver(p)}
-                            >
-                                <View style={styles.avatar}>
-                                    <Text style={styles.avatarText}>{p.name[0]}</Text>
-                                </View>
-                                <Text style={[
-                                    styles.receiverName,
-                                    selectedReceiver?.id === p.id && styles.receiverNameSelected
-                                ]}>
-                                    {p.name}
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
+                    <View style={styles.inputSection}>
+                        <Text style={[styles.label, { color: colors.secondaryText }]}>TO WHO?</Text>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.receiversRow}>
+                            {receivers.map(p => (
+                                <TouchableOpacity
+                                    key={p.id}
+                                    style={[
+                                        styles.receiverChip,
+                                        { backgroundColor: colors.surface, borderColor: colors.divider },
+                                        selectedReceiver?.id === p.id && { backgroundColor: colors.primaryAction + '15', borderColor: colors.primaryAction }
+                                    ]}
+                                    onPress={() => setSelectedReceiver(p)}
+                                >
+                                    <View style={[styles.avatar, { backgroundColor: colors.background }]}>
+                                        <Text style={[styles.avatarText, { color: colors.primaryText }]}>{p.name[0]}</Text>
+                                    </View>
+                                    <Text style={[
+                                        styles.receiverName,
+                                        { color: colors.secondaryText },
+                                        selectedReceiver?.id === p.id && { color: colors.primaryAction, fontWeight: 'bold' }
+                                    ]}>
+                                        {p.name}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
                     </View>
 
-
-                    <View style={styles.inputContainer}>
-                        <Text style={styles.label}>Amount</Text>
-                        <View style={styles.amountWrapper}>
-                            <Text style={styles.currency}>₫</Text>
+                    <View style={styles.inputSection}>
+                        <Text style={[styles.label, { color: colors.secondaryText }]}>AMOUNT</Text>
+                        <View style={[styles.amountWrapper, { borderBottomColor: colors.primaryAction }]}>
+                            <Text style={[styles.currency, { color: colors.primaryText }]}>₫</Text>
                             <TextInput
-                                style={styles.amountInput}
+                                style={[styles.amountInput, { color: colors.primaryText }]}
                                 value={amount}
-                                onChangeText={setAmount}
+                                onChangeText={handleAmountChange}
                                 placeholder="0"
+                                placeholderTextColor={colors.secondaryText}
                                 keyboardType="numeric"
                             />
                         </View>
                     </View>
 
                     {/* Reason */}
-                    <View style={styles.inputContainer}>
-                        <Text style={styles.label}>Reason/Message</Text>
+                    <View style={styles.inputSection}>
+                        <Text style={[styles.label, { color: colors.secondaryText }]}>REASON</Text>
                         <TextInput
-                            style={styles.reasonInput}
+                            style={[styles.reasonInput, { backgroundColor: colors.surface, color: colors.primaryText, borderColor: colors.divider }]}
                             value={reason}
                             onChangeText={setReason}
-                            placeholder="Enjoy!"
+                            placeholder="Reason or Message..."
+                            placeholderTextColor={colors.secondaryText}
                             multiline
                         />
                     </View>
 
                     <TouchableOpacity
-                        style={[styles.submitButton, loading && styles.disabledButton]}
+                        style={[styles.submitButton, { backgroundColor: colors.primaryAction }, loading && styles.disabledButton]}
                         onPress={handleGrant}
                         disabled={loading}
                     >
@@ -151,79 +170,78 @@ export default function GrantMoneyScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#fff' },
+    container: { flex: 1 },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0'
+        paddingHorizontal: SPACING.screenPadding,
+        paddingVertical: SPACING.m,
+        borderBottomWidth: StyleSheet.hairlineWidth,
     },
-    title: { fontSize: 20, fontWeight: 'bold' },
-    content: { padding: 24, flex: 1 },
-
-    label: { fontSize: 14, color: '#666', marginBottom: 12, textTransform: 'uppercase', fontWeight: '600' },
-
-    receiversRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 32 },
+    backButton: { padding: 4 },
+    title: { fontSize: TYPOGRAPHY.size.h3, fontWeight: '600' },
+    content: { padding: SPACING.screenPadding, flex: 1 },
+    inputSection: { marginBottom: SPACING.xl },
+    label: {
+        fontSize: TYPOGRAPHY.size.caption,
+        marginBottom: SPACING.s,
+        fontWeight: '600',
+        letterSpacing: 1
+    },
+    receiversRow: {
+        gap: SPACING.s
+    },
     receiverChip: {
         flexDirection: 'row', alignItems: 'center',
-        padding: 8, paddingRight: 16,
-        backgroundColor: '#f5f5f5', borderRadius: 24,
-        borderWidth: 1, borderColor: 'transparent'
-    },
-    receiverChipSelected: {
-        backgroundColor: '#e3f2fd',
-        borderColor: '#007AFF'
+        padding: SPACING.xs, paddingRight: SPACING.m,
+        borderRadius: 24,
+        borderWidth: 1,
+        marginRight: SPACING.s
     },
     avatar: {
         width: 32, height: 32, borderRadius: 16,
-        backgroundColor: '#ddd', justifyContent: 'center', alignItems: 'center', marginRight: 8
+        justifyContent: 'center', alignItems: 'center', marginRight: SPACING.xs
     },
-    avatarText: { fontWeight: 'bold', color: '#555' },
-    receiverName: { fontWeight: '600', color: '#333' },
-    receiverNameSelected: { color: '#007AFF' },
-
-    inputContainer: { marginBottom: 32 },
+    avatarText: { fontWeight: 'bold' },
+    receiverName: {
+        fontSize: TYPOGRAPHY.size.body
+    },
     amountWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
         borderBottomWidth: 2,
-        borderBottomColor: '#28a745', // Green for money
-        paddingBottom: 8
+        paddingBottom: SPACING.xs
     },
-    currency: { fontSize: 32, fontWeight: 'bold', color: '#1a1a1a', marginRight: 8 },
+    currency: {
+        fontSize: TYPOGRAPHY.size.h1,
+        fontWeight: 'bold',
+        marginRight: SPACING.xs
+    },
     amountInput: {
         flex: 1,
-        fontSize: 32,
+        fontSize: TYPOGRAPHY.size.h1,
         fontWeight: 'bold',
-        color: '#1a1a1a'
     },
     reasonInput: {
-        fontSize: 18,
-        color: '#1a1a1a',
-        backgroundColor: '#f9f9f9',
+        fontSize: TYPOGRAPHY.size.body,
         borderRadius: 12,
-        padding: 16,
+        padding: SPACING.m,
         height: 100,
-        textAlignVertical: 'top'
+        textAlignVertical: 'top',
+        borderWidth: 1,
     },
     submitButton: {
-        backgroundColor: '#28a745', // Green
         borderRadius: 16,
-        padding: 18,
+        padding: SPACING.l,
         alignItems: 'center',
         marginTop: 'auto',
-        elevation: 2
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+        elevation: 4,
     },
     disabledButton: { opacity: 0.7 },
-    submitText: { color: 'white', fontSize: 18, fontWeight: 'bold' },
-    categoryChip: {
-        paddingHorizontal: 12, paddingVertical: 8,
-        borderRadius: 20, backgroundColor: '#f0f0f0',
-        borderWidth: 1, borderColor: 'transparent'
-    },
-    categoryChipSelected: { backgroundColor: '#e3f2fd', borderColor: '#007AFF' },
-    categoryText: { fontSize: 14, color: '#666' },
-    categoryTextSelected: { color: '#007AFF', fontWeight: 'bold' }
+    submitText: { color: 'white', fontSize: TYPOGRAPHY.size.body, fontWeight: 'bold' }
 });

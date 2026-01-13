@@ -1,19 +1,18 @@
-// Purpose: Profile Selection Screen
-// Connected Flow: GLOBAL_FLOW (Select_Profile)
-// Navigation: AppStack (Initial Route) -> ProfileDashboard | AccountDashboard
-
 import React, { useMemo, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, FlatList, Alert, DeviceEventEmitter, Modal, TextInput, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, FlatList, Alert, DeviceEventEmitter, Modal, TextInput, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, useColorScheme } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { auth } from '../services/firebase';
 import { signOut } from 'firebase/auth';
 import { useAuth } from '../components/context/AuthContext';
 import { updateProfile } from '../services/firestoreRepository';
 import { canViewAccountDashboard } from '../services/permissionService';
+import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
 
 export default function HomeScreen({ navigation }) {
-    const { userProfiles, selectProfile, user, refreshProfiles } = useAuth(); // Added user, refreshProfiles
+    const { userProfiles, selectProfile, user, refreshProfiles } = useAuth();
+    const theme = useColorScheme() || 'light';
+    const colors = COLORS[theme];
 
     // Check if any available profile has Owner/Partner role to show the dashboard button
     const showAccountDashboard = useMemo(() => {
@@ -42,10 +41,10 @@ export default function HomeScreen({ navigation }) {
 
     // PIN Logic
     const [authModalVisible, setAuthModalVisible] = useState(false);
-    const [createPinModalVisible, setCreatePinModalVisible] = useState(false); // NEW: Create PIN
+    const [createPinModalVisible, setCreatePinModalVisible] = useState(false);
     const [selectedProfileForAuth, setSelectedProfileForAuth] = useState(null);
     const [enteredPin, setEnteredPin] = useState('');
-    const [newPin, setNewPin] = useState(''); // NEW: For creation
+    const [newPin, setNewPin] = useState('');
     const [pinError, setPinError] = useState('');
     const [creatingPin, setCreatingPin] = useState(false);
 
@@ -143,25 +142,31 @@ export default function HomeScreen({ navigation }) {
 
         return (
             <TouchableOpacity
-                style={styles.profileCard}
+                style={[styles.profileCard, { backgroundColor: colors.surface, borderColor: colors.divider }]}
                 onPress={() => handleProfileSelect(item)}
             >
-                <View style={styles.avatarPlaceholder}>
-                    <Text style={{ fontSize: 24 }}>{item.avatar || '👤'}</Text>
+                <View style={[styles.avatarPlaceholder, { backgroundColor: colors.background }]}>
+                    <Text style={{ fontSize: 24, paddingBottom: 2 }}>{item.avatar || '👤'}</Text>
                 </View>
-                <Text style={styles.profileName}>{item.name}</Text>
-                <Text style={styles.profileRole}>{item.role}</Text>
-                {status ? <Text style={styles.statusText}>{status}</Text> : null}
+                <Text style={[styles.profileName, { color: colors.primaryText }]}>{item.name}</Text>
+                <Text style={[styles.profileRole, { color: colors.secondaryText }]}>{item.role}</Text>
+                {status ? (
+                    <View style={{ marginTop: 8, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4, backgroundColor: colors.background }}>
+                        <Text style={[styles.statusText, { color: colors.primaryText }]}>{status}</Text>
+                    </View>
+                ) : null}
             </TouchableOpacity>
         );
     };
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
             <View style={styles.header}>
-                <Text style={styles.title}>Who is spending?</Text>
+                <View>
+                    <Text style={[styles.title, { color: colors.primaryText }]}>Who is spending?</Text>
+                </View>
                 <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-                    <MaterialCommunityIcons name="logout" size={24} color="#dc2626" />
+                    <Ionicons name="log-out-outline" size={24} color={colors.error} />
                 </TouchableOpacity>
             </View>
 
@@ -183,29 +188,29 @@ export default function HomeScreen({ navigation }) {
             >
                 <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
                     <View style={styles.modalOverlay}>
-                        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalContent}>
-                            <Text style={styles.modalTitle}>Enter PIN</Text>
-                            <Text style={styles.modalSubtitle}>for {selectedProfileForAuth?.name}</Text>
+                        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+                            <Text style={[styles.modalTitle, { color: colors.primaryText }]}>Enter PIN</Text>
+                            <Text style={[styles.modalSubtitle, { color: colors.secondaryText }]}>for {selectedProfileForAuth?.name}</Text>
 
                             <TextInput
-                                style={[styles.pinInput, pinError ? styles.inputError : null]}
+                                style={[styles.pinInput, { color: colors.primaryText, borderColor: pinError ? colors.error : colors.divider }]}
                                 value={enteredPin}
                                 onChangeText={setEnteredPin}
                                 placeholder="****"
-                                placeholderTextColor="#ccc"
+                                placeholderTextColor={colors.secondaryText}
                                 keyboardType="numeric"
                                 secureTextEntry
                                 maxLength={6}
                                 autoFocus={true}
                             />
-                            {pinError ? <Text style={styles.errorText}>{pinError}</Text> : null}
+                            {pinError ? <Text style={[styles.errorText, { color: colors.error }]}>{pinError}</Text> : null}
 
                             <View style={styles.modalButtons}>
-                                <TouchableOpacity style={styles.cancelButton} onPress={() => setAuthModalVisible(false)}>
-                                    <Text style={styles.cancelText}>Cancel</Text>
+                                <TouchableOpacity style={[styles.cancelButton, { backgroundColor: colors.background }]} onPress={() => setAuthModalVisible(false)}>
+                                    <Text style={[styles.cancelText, { color: colors.secondaryText }]}>Cancel</Text>
                                 </TouchableOpacity>
-                                <TouchableOpacity style={styles.enterButton} onPress={handlePinSubmit}>
-                                    <Text style={styles.enterText}>Enter</Text>
+                                <TouchableOpacity style={[styles.enterButton, { backgroundColor: colors.primaryAction }]} onPress={handlePinSubmit}>
+                                    <Text style={[styles.enterText, { color: '#fff' }]}>Enter</Text>
                                 </TouchableOpacity>
                             </View>
                         </KeyboardAvoidingView>
@@ -222,19 +227,19 @@ export default function HomeScreen({ navigation }) {
             >
                 <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
                     <View style={styles.modalOverlay}>
-                        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={[styles.modalContent, { backgroundColor: '#f0f9ff' }]}>
-                            <MaterialCommunityIcons name="shield-check" size={48} color="#007AFF" style={{ marginBottom: 16 }} />
-                            <Text style={styles.modalTitle}>Protect your Profile</Text>
-                            <Text style={[styles.modalSubtitle, { textAlign: 'center', marginBottom: 24 }]}>
+                        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={[styles.modalContent, { backgroundColor: colors.background }]}>
+                            <MaterialCommunityIcons name="shield-check" size={48} color={colors.primaryAction} style={{ marginBottom: 16 }} />
+                            <Text style={[styles.modalTitle, { color: colors.primaryText }]}>Protect your Profile</Text>
+                            <Text style={[styles.modalSubtitle, { textAlign: 'center', marginBottom: 24, color: colors.secondaryText }]}>
                                 Set a PIN for {selectedProfileForAuth?.name} to prevent unauthorized access.
                             </Text>
 
                             <TextInput
-                                style={styles.pinInput}
+                                style={[styles.pinInput, { color: colors.primaryText, borderColor: colors.divider, backgroundColor: colors.surface }]}
                                 value={newPin}
                                 onChangeText={setNewPin}
                                 placeholder="Create PIN (4-6 digits)"
-                                placeholderTextColor="#999"
+                                placeholderTextColor={colors.secondaryText}
                                 keyboardType="numeric"
                                 secureTextEntry
                                 maxLength={6}
@@ -242,11 +247,11 @@ export default function HomeScreen({ navigation }) {
                             />
 
                             <View style={styles.modalButtons}>
-                                <TouchableOpacity style={styles.cancelButton} onPress={handleSkipPin}>
-                                    <Text style={styles.cancelText}>Not Now</Text>
+                                <TouchableOpacity style={[styles.cancelButton, { backgroundColor: colors.surface }]} onPress={handleSkipPin}>
+                                    <Text style={[styles.cancelText, { color: colors.secondaryText }]}>Not Now</Text>
                                 </TouchableOpacity>
-                                <TouchableOpacity style={styles.enterButton} onPress={handleCreatePinSubmit} disabled={creatingPin}>
-                                    <Text style={styles.enterText}>{creatingPin ? 'Saving...' : 'Set PIN'}</Text>
+                                <TouchableOpacity style={[styles.enterButton, { backgroundColor: colors.primaryAction }]} onPress={handleCreatePinSubmit} disabled={creatingPin}>
+                                    <Text style={[styles.enterText, { color: '#fff' }]}>{creatingPin ? 'Saving...' : 'Set PIN'}</Text>
                                 </TouchableOpacity>
                             </View>
                         </KeyboardAvoidingView>
@@ -260,167 +265,123 @@ export default function HomeScreen({ navigation }) {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#fff',
     },
     header: {
-        padding: 24,
+        padding: SPACING.l,
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
     },
     title: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#1a1a1a',
+        fontSize: TYPOGRAPHY.size.h2,
+        fontWeight: TYPOGRAPHY.weight.bold,
     },
     logoutButton: {
         padding: 8,
     },
-    logoutText: {
-        color: '#dc2626',
-        fontSize: 14,
-        fontWeight: '600',
-    },
     listContent: {
-        padding: 16,
+        padding: SPACING.screenPadding,
     },
     row: {
         justifyContent: 'space-between',
+        gap: SPACING.m,
     },
     profileCard: {
-        width: '48%',
-        backgroundColor: '#f8f9fa',
+        width: '47%',
+        paddingVertical: 24,
+        paddingHorizontal: 16,
         borderRadius: 16,
-        padding: 20,
         marginBottom: 16,
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: '#eee',
-        // Shadow for iOS
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
-        // Elevation for Android
-        elevation: 2,
+        // No shadow, neo-bank minimal
     },
     avatarPlaceholder: {
-        width: 60,
-        height: 60,
-        borderRadius: 30,
-        backgroundColor: '#e1e4e8',
-        marginBottom: 12,
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        marginBottom: 16,
         justifyContent: 'center',
         alignItems: 'center',
     },
     profileName: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#1a1a1a',
-        textAlign: 'center',
+        fontSize: TYPOGRAPHY.size.body,
+        fontWeight: TYPOGRAPHY.weight.bold,
         marginBottom: 4,
+        textAlign: 'center',
     },
     profileRole: {
-        fontSize: 12,
-        color: '#666',
+        fontSize: TYPOGRAPHY.size.caption,
         textAlign: 'center',
     },
     statusText: {
-        fontSize: 12,
-        fontWeight: 'bold',
-        marginTop: 4,
-        color: '#333',
-    },
-    footer: {
-        padding: 24,
-        borderTopWidth: 1,
-        borderTopColor: '#f0f0f0',
-    },
-    accountButton: {
-        backgroundColor: '#1a1a1a',
-        paddingVertical: 16,
-        borderRadius: 12,
-        alignItems: 'center',
-    },
-    accountButtonText: {
-        color: '#fff',
-        fontSize: 16,
+        fontSize: TYPOGRAPHY.size.caption,
         fontWeight: 'bold',
     },
+
     // Modal Styles
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
+        backgroundColor: 'rgba(0,0,0,0.6)', // Darker overlay for focus
         justifyContent: 'center',
         alignItems: 'center',
     },
     modalContent: {
-        width: '80%',
-        backgroundColor: 'white',
-        borderRadius: 20,
-        padding: 24,
+        width: '85%',
+        borderRadius: 24,
+        padding: 32,
         alignItems: 'center',
         shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 4,
-        elevation: 5,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 12,
+        elevation: 10,
     },
     modalTitle: {
-        fontSize: 20,
+        fontSize: TYPOGRAPHY.size.h3,
         fontWeight: 'bold',
         marginBottom: 8,
     },
     modalSubtitle: {
-        fontSize: 16,
-        color: '#666',
-        marginBottom: 20,
+        fontSize: TYPOGRAPHY.size.body,
+        marginBottom: 24,
     },
     pinInput: {
         width: '100%',
         borderWidth: 1,
-        borderColor: '#ddd',
         borderRadius: 12,
         padding: 16,
         fontSize: 24,
         textAlign: 'center',
         letterSpacing: 8,
-        marginBottom: 10,
-    },
-    inputError: {
-        borderColor: '#dc2626',
-        backgroundColor: '#fee2e2'
+        marginBottom: 16,
+        height: 60,
     },
     errorText: {
-        color: '#dc2626',
-        marginBottom: 10,
+        marginBottom: 16,
+        fontWeight: 'bold',
     },
     modalButtons: {
         flexDirection: 'row',
         width: '100%',
         gap: 12,
-        marginTop: 10,
     },
     cancelButton: {
         flex: 1,
         padding: 16,
         borderRadius: 12,
-        backgroundColor: '#f5f5f5',
         alignItems: 'center',
     },
     enterButton: {
         flex: 1,
         padding: 16,
         borderRadius: 12,
-        backgroundColor: '#007AFF',
         alignItems: 'center',
     },
     cancelText: {
-        color: '#666',
         fontWeight: '600',
     },
     enterText: {
-        color: 'white',
         fontWeight: 'bold',
     }
 });

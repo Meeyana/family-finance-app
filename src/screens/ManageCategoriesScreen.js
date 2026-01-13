@@ -24,6 +24,10 @@ export default function ManageCategoriesScreen({ navigation }) {
     const theme = useColorScheme() || 'light';
     const colors = COLORS[theme];
 
+    // Role Check
+    const strRole = profile?.role?.toLowerCase() || '';
+    const isAdmin = strRole === 'owner' || strRole === 'partner';
+
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -76,11 +80,21 @@ export default function ManageCategoriesScreen({ navigation }) {
     };
 
     const handleAdd = () => {
+        if (!isAdmin) {
+            if (Platform.OS === 'web') {
+                window.alert('Permission Denied\nPlease contact the admin (owner) to add new category.');
+            } else {
+                Alert.alert('Permission Denied', 'Please contact the admin (owner) to add new category.');
+            }
+            return;
+        }
         resetForm();
         setModalVisible(true);
     };
 
     const handleEdit = (category) => {
+        if (!isAdmin) return; // Guard for non-admins
+
         setNewCategoryName(category.name);
         setNewCategoryIcon(category.icon);
         setFormType(category.type || 'expense');
@@ -94,6 +108,8 @@ export default function ManageCategoriesScreen({ navigation }) {
         setEditingCategory(category);
         setModalVisible(true);
     };
+
+    // ... (rest of functions)
 
     const handleSave = async () => {
         if (!newCategoryName.trim()) {
@@ -182,6 +198,7 @@ export default function ManageCategoriesScreen({ navigation }) {
             <TouchableOpacity
                 style={[styles.itemContainer, { borderBottomColor: colors.divider }]}
                 onPress={() => handleEdit(item)}
+                disabled={!isAdmin}
             >
                 <View style={styles.itemLeft}>
                     <View style={[styles.iconBox, { backgroundColor: colors.surface }]}>
@@ -189,10 +206,10 @@ export default function ManageCategoriesScreen({ navigation }) {
                     </View>
                     <View>
                         <Text style={[styles.itemName, { color: colors.primaryText }]}>{item.name}</Text>
-                        <Text style={[styles.itemSub, { color: colors.secondaryText }]}>{label}</Text>
+                        {isAdmin && <Text style={[styles.itemSub, { color: colors.secondaryText }]}>{label}</Text>}
                     </View>
                 </View>
-                <Ionicons name="chevron-forward" size={20} color={colors.divider} />
+                {isAdmin && <Ionicons name="chevron-forward" size={20} color={colors.divider} />}
             </TouchableOpacity>
         );
     };

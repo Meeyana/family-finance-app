@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Modal, StyleSheet, FlatList, SafeAreaView } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-export default function MultiSelectDropdown({ label, options, selectedValues, onSelectionChange, compact = false }) {
+export default function MultiSelectDropdown({ label, options, selectedValues, onSelectionChange, compact = false, emptyLabel = null }) {
     const [visible, setVisible] = useState(false);
 
     // Internal state for pending selection before "Apply"
@@ -29,6 +29,7 @@ export default function MultiSelectDropdown({ label, options, selectedValues, on
     // Helper to get display text
     const getDisplayText = () => {
         if (selectedValues.length === 0) {
+            if (emptyLabel) return emptyLabel;
             // User requested "All Profiles" / "All Categories" even in compact mode
             const plural = label.endsWith('y') ? label.slice(0, -1) + 'ies' : label + 's';
             return `All ${plural}`;

@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ActivityIndicator, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ActivityIndicator, TouchableWithoutFeedback, Keyboard, useColorScheme, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../components/context/AuthContext';
 import { addRequest, getFamilyCategories } from '../services/firestoreRepository';
+import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
+import { CurrencyText } from '../components/CurrencyText';
 
 export default function MoneyRequestScreen({ navigation }) {
     const { user, profile } = useAuth();
@@ -12,6 +14,9 @@ export default function MoneyRequestScreen({ navigation }) {
     const [loading, setLoading] = useState(false);
     const [categories, setCategories] = useState([]);
     const [selectedCategory, setSelectedCategory] = useState({ name: 'General', icon: '🏷️' });
+
+    const theme = useColorScheme() || 'light';
+    const colors = COLORS[theme];
 
     useEffect(() => {
         const loadCats = async () => {
@@ -58,69 +63,84 @@ export default function MoneyRequestScreen({ navigation }) {
         }
     };
 
+    const formatCurrencyInput = (value) => {
+        // Remove non-digits
+        const number = value.replace(/[^0-9]/g, '');
+        // Format with thousand separators
+        return number.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    };
+
+    const handleAmountChange = (text) => {
+        setAmount(formatCurrencyInput(text));
+    };
+
     return (
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-            <SafeAreaView style={styles.container}>
-                <View style={styles.header}>
+            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+                <View style={[styles.header, { borderBottomColor: colors.divider }]}>
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                        <Ionicons name="arrow-back" size={24} color="#1a1a1a" />
+                        <Ionicons name="arrow-back" size={24} color={colors.primaryText} />
                     </TouchableOpacity>
-                    <Text style={styles.title}>Request Money</Text>
+                    <Text style={[styles.title, { color: colors.primaryText }]}>Request Money</Text>
                     <View style={{ width: 24 }} />
                 </View>
 
                 <View style={styles.content}>
-                    <View style={styles.inputContainer}>
-                        <Text style={styles.label}>Amount</Text>
-                        <View style={styles.amountWrapper}>
-                            <Text style={styles.currency}>₫</Text>
+                    <View style={styles.inputSection}>
+                        <Text style={[styles.label, { color: colors.secondaryText }]}>AMOUNT</Text>
+                        <View style={[styles.amountWrapper, { borderBottomColor: colors.primaryAction }]}>
+                            <Text style={[styles.currency, { color: colors.primaryText }]}>₫</Text>
                             <TextInput
-                                style={styles.amountInput}
+                                style={[styles.amountInput, { color: colors.primaryText }]}
                                 value={amount}
-                                onChangeText={setAmount}
+                                onChangeText={handleAmountChange}
                                 placeholder="0"
+                                placeholderTextColor={colors.secondaryText}
                                 keyboardType="numeric"
                                 autoFocus
                             />
                         </View>
                     </View>
 
-                    <View style={styles.inputContainer}>
-                        <Text style={styles.label}>Category</Text>
-                        <View style={styles.categoryRow}>
+                    <View style={styles.inputSection}>
+                        <Text style={[styles.label, { color: colors.secondaryText }]}>CATEGORY</Text>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryRow}>
                             {categories.map(cat => (
                                 <TouchableOpacity
                                     key={cat.id || cat.name}
                                     style={[
                                         styles.categoryChip,
-                                        selectedCategory.name === cat.name && styles.categoryChipSelected
+                                        { backgroundColor: colors.surface, borderColor: colors.divider },
+                                        selectedCategory.name === cat.name && { backgroundColor: colors.primaryAction + '15', borderColor: colors.primaryAction }
                                     ]}
                                     onPress={() => setSelectedCategory(cat)}
                                 >
                                     <Text style={[
                                         styles.categoryText,
-                                        selectedCategory.name === cat.name && styles.categoryTextSelected
+                                        { color: colors.secondaryText },
+                                        selectedCategory.name === cat.name && { color: colors.primaryAction, fontWeight: 'bold' }
                                     ]}>
                                         {cat.icon} {cat.name}
                                     </Text>
                                 </TouchableOpacity>
                             ))}
-                        </View>
+                        </ScrollView>
                     </View>
 
-                    <View style={styles.inputContainer}>
-                        <Text style={styles.label}>Reason</Text>
+                    <View style={styles.inputSection}>
+                        <Text style={[styles.label, { color: colors.secondaryText }]}>REASON</Text>
                         <TextInput
-                            style={styles.reasonInput}
+                            style={[styles.reasonInput, { backgroundColor: colors.surface, color: colors.primaryText, borderColor: colors.divider }]}
                             value={reason}
                             onChangeText={setReason}
                             placeholder="What is this for?"
+                            placeholderTextColor={colors.secondaryText}
                             multiline
                         />
                     </View>
 
                     <TouchableOpacity
-                        style={[styles.submitButton, loading && styles.disabledButton]}
+                        style={[styles.submitButton, { backgroundColor: colors.primaryAction }, loading && styles.disabledButton]}
                         onPress={handleSubmit}
                         disabled={loading}
                     >
@@ -137,60 +157,73 @@ export default function MoneyRequestScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#fff' },
+    container: { flex: 1 },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0'
+        paddingHorizontal: SPACING.screenPadding,
+        paddingVertical: SPACING.m,
+        borderBottomWidth: StyleSheet.hairlineWidth,
     },
     backButton: { padding: 4 },
-    title: { fontSize: 20, fontWeight: 'bold' },
-    content: { padding: 24, flex: 1 },
-    inputContainer: { marginBottom: 24 },
-    categoryRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-    categoryChip: {
-        paddingHorizontal: 12, paddingVertical: 8,
-        borderRadius: 20, backgroundColor: '#f0f0f0',
-        borderWidth: 1, borderColor: 'transparent'
+    title: { fontSize: TYPOGRAPHY.size.h3, fontWeight: '600' },
+    content: { padding: SPACING.screenPadding, flex: 1 },
+    inputSection: { marginBottom: SPACING.xl },
+    label: {
+        fontSize: TYPOGRAPHY.size.caption,
+        marginBottom: SPACING.s,
+        fontWeight: '600',
+        letterSpacing: 1
     },
-    categoryChipSelected: { backgroundColor: '#e3f2fd', borderColor: '#007AFF' },
-    categoryText: { fontSize: 14, color: '#666' },
-    categoryTextSelected: { color: '#007AFF', fontWeight: 'bold' },
-    label: { fontSize: 14, color: '#666', marginBottom: 8, textTransform: 'uppercase', fontWeight: '600' },
     amountWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
         borderBottomWidth: 2,
-        borderBottomColor: '#007AFF', // Blue
-        paddingBottom: 8
+        paddingBottom: SPACING.xs
     },
-    currency: { fontSize: 32, fontWeight: 'bold', color: '#1a1a1a', marginRight: 8 },
+    currency: {
+        fontSize: TYPOGRAPHY.size.h1,
+        fontWeight: 'bold',
+        marginRight: SPACING.xs
+    },
     amountInput: {
         flex: 1,
-        fontSize: 32,
+        fontSize: TYPOGRAPHY.size.h1,
         fontWeight: 'bold',
-        color: '#1a1a1a'
+    },
+    categoryRow: {
+        gap: SPACING.s
+    },
+    categoryChip: {
+        paddingHorizontal: SPACING.m,
+        paddingVertical: SPACING.s,
+        borderRadius: 20,
+        borderWidth: 1,
+        marginRight: SPACING.s
+    },
+    categoryText: {
+        fontSize: TYPOGRAPHY.size.body
     },
     reasonInput: {
-        fontSize: 18,
-        color: '#1a1a1a',
-        backgroundColor: '#f9f9f9',
+        fontSize: TYPOGRAPHY.size.body,
         borderRadius: 12,
-        padding: 16,
+        padding: SPACING.m,
         height: 120,
-        textAlignVertical: 'top'
+        textAlignVertical: 'top',
+        borderWidth: 1,
     },
     submitButton: {
-        backgroundColor: '#007AFF',
         borderRadius: 16,
-        padding: 18,
+        padding: SPACING.l,
         alignItems: 'center',
         marginTop: 'auto',
-        elevation: 2
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+        elevation: 4,
     },
     disabledButton: { opacity: 0.7 },
-    submitText: { color: 'white', fontSize: 18, fontWeight: 'bold' }
+    submitText: { color: 'white', fontSize: TYPOGRAPHY.size.body, fontWeight: 'bold' }
 });

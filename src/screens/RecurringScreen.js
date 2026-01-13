@@ -102,8 +102,8 @@ export default function RecurringScreen({ navigation }) {
                 const end = new Date(start);
 
                 switch (unit) {
-                    case 'MONTHLY': end.setMonth(end.getMonth() + (count - 1)); break;
-                    case 'YEARLY': end.setFullYear(end.getFullYear() + (count - 1)); break;
+                    case 'MONTHLY': end.setMonth(end.getMonth() + count); break;
+                    case 'YEARLY': end.setFullYear(end.getFullYear() + count); break;
                 }
                 endDate = end.toISOString().split('T')[0];
             }
@@ -146,6 +146,8 @@ export default function RecurringScreen({ navigation }) {
     const handleDelete = (id) => {
         const executeDelete = async () => {
             await deleteRecurring(user.uid, id);
+            setModalVisible(false);
+            resetForm();
             loadData();
         };
 
@@ -167,28 +169,41 @@ export default function RecurringScreen({ navigation }) {
                 onPress={() => handleEdit(item)}
                 activeOpacity={0.7}
             >
-                {/* Left: Icon & Info */}
-                <View style={styles.itemLeft}>
+                {/* Left: Icon & Title/Tag/Desc */}
+                <View style={[styles.itemLeft, { flex: 1 }]}>
                     <View style={[styles.iconBox, { backgroundColor: colors.surface }]}>
                         <Text style={{ fontSize: 20 }}>{item.categoryData?.icon || '📅'}</Text>
                     </View>
-                    <View>
-                        <Text style={[styles.itemName, { color: colors.primaryText }]}>{item.name}</Text>
-                        <Text style={[styles.itemSub, { color: colors.secondaryText }]}>
-                            {item.description ? item.description + ' • ' : ''}{item.frequency} • Next: {item.nextDueDate}
-                        </Text>
+                    <View style={{ flex: 1, paddingRight: 8 }}>
+                        {/* Title Row with Tag */}
+                        <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginBottom: 2 }}>
+                            <Text style={[styles.itemName, { color: colors.primaryText }]}>{item.name}</Text>
+                            {!!item.endDate && (
+                                <View style={[styles.freqTag, { backgroundColor: colors.surface, borderColor: colors.divider }]}>
+                                    <Text style={[styles.freqTagText, { color: colors.secondaryText }]}>{item.frequency}</Text>
+                                </View>
+                            )}
+                        </View>
+                        {item.description ? (
+                            <Text style={[styles.itemSub, { color: colors.secondaryText }]}>
+                                {item.description}
+                            </Text>
+                        ) : null}
                     </View>
                 </View>
 
-                {/* Right: Amount & Delete */}
+                {/* Right: Amount & Date */}
                 <View style={styles.itemRight}>
                     <CurrencyText
                         amount={isExpense ? -item.amount : item.amount}
                         showSign={true}
                         style={[styles.itemAmount, { color: isExpense ? colors.primaryText : colors.success }]}
                     />
-                    {/* Hidden delete context or explicit? Minimalist list usually swipes. 
-                         For now, no delete button to clutter. User taps to edit/delete. */}
+                    {!!item.endDate && (
+                        <Text style={[styles.dateLabel, { color: colors.secondaryText }]}>
+                            Ends: {item.endDate}
+                        </Text>
+                    )}
                 </View>
             </TouchableOpacity>
         );
@@ -258,7 +273,18 @@ export default function RecurringScreen({ navigation }) {
                         keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
                         keyboardShouldPersistTaps="handled"
                     >
-                        {/* Type Switcher Removed from here */}
+                        {/* HERO AMOUNT INPUT */}
+                        <View style={styles.heroInputContainer}>
+                            <Text style={[styles.currencySymbol, { color: activeColor }]}>₫</Text>
+                            <TextInput
+                                style={[styles.heroInput, { color: activeColor }]}
+                                placeholder="0"
+                                placeholderTextColor={colors.divider}
+                                keyboardType="numeric"
+                                value={amount}
+                                onChangeText={setAmount}
+                            />
+                        </View>
 
                         <View style={styles.inputGroup}>
                             <Text style={[styles.label, { color: colors.secondaryText }]}>NAME</Text>
@@ -279,19 +305,6 @@ export default function RecurringScreen({ navigation }) {
                                 onChangeText={setDescription}
                                 placeholder="Optional description..."
                                 placeholderTextColor={colors.secondaryText}
-                            />
-                        </View>
-
-                        {/* HERO AMOUNT INPUT */}
-                        <View style={styles.heroInputContainer}>
-                            <Text style={[styles.currencySymbol, { color: activeColor }]}>₫</Text>
-                            <TextInput
-                                style={[styles.heroInput, { color: activeColor }]}
-                                placeholder="0"
-                                placeholderTextColor={colors.divider}
-                                keyboardType="numeric"
-                                value={amount}
-                                onChangeText={setAmount}
                             />
                         </View>
 
@@ -362,8 +375,6 @@ export default function RecurringScreen({ navigation }) {
                             )}
                         </View>
 
-                        {/* Delete Button Removed from here */}
-
                     </ScrollView>
 
                     {/* FOOTER CTA */}
@@ -411,9 +422,30 @@ const styles = StyleSheet.create({
         borderBottomWidth: StyleSheet.hairlineWidth,
     },
     itemLeft: {
+        flex: 1,
         flexDirection: 'row',
-        alignItems: 'center',
+        alignItems: 'center', // Maybe 'flex-start' if description is long? 'center' is okay if icon is centered. Let's stick to center for now.
         gap: SPACING.m,
+    },
+    itemRight: {
+        paddingLeft: SPACING.m,
+        alignItems: 'flex-end', // Right align content
+        justifyContent: 'center',
+    },
+    dateLabel: {
+        fontSize: TYPOGRAPHY.size.tiny, // or caption
+        marginTop: 4,
+    },
+    freqTag: {
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 4,
+        borderWidth: 1,
+    },
+    freqTagText: {
+        fontSize: 10,
+        fontWeight: '600',
+        textTransform: 'uppercase',
     },
     iconBox: {
         width: 44,

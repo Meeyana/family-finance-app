@@ -1,13 +1,10 @@
-// Purpose: Handle user login flow
-// Connected Flow: GLOBAL_FLOW (User_Login)
-// Components: TextInput, Button (standard React Native)
-
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, useColorScheme } from 'react-native';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../services/firebase';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
+import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
 
 const DEMO_CREDENTIALS = {
     email: 'demo@quanlychitieu.com',
@@ -19,6 +16,10 @@ export default function LoginScreen() {
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+
+    // Theme
+    const theme = useColorScheme() || 'light';
+    const colors = COLORS[theme];
 
     const handleLogin = async () => {
         if (!email || !password) {
@@ -52,24 +53,32 @@ export default function LoginScreen() {
 
     return (
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-            <SafeAreaView style={styles.container}>
+            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
                 <KeyboardAvoidingView
                     behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                     style={styles.keyboardView}
                 >
                     <View style={styles.header}>
-                        <Text style={styles.title}>Family Finance</Text>
-                        <Text style={styles.subtitle}>Sign in to manage your budgets</Text>
+                        <View style={[styles.iconContainer, { backgroundColor: colors.primaryAction + '10' }]}>
+                            <Ionicons name="wallet-outline" size={40} color={colors.primaryAction} />
+                        </View>
+                        <Text style={[styles.title, { color: colors.primaryText }]}>Family Finance</Text>
+                        <Text style={[styles.subtitle, { color: colors.secondaryText }]}>Sign in to manage your wealth</Text>
                     </View>
 
                     <View style={styles.form}>
-                        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+                        {error ? (
+                            <View style={[styles.errorContainer, { backgroundColor: colors.error + '10' }]}>
+                                <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
+                            </View>
+                        ) : null}
 
                         <View style={styles.inputContainer}>
-                            <Text style={styles.label}>Email</Text>
+                            <Text style={[styles.label, { color: colors.secondaryText }]}>EMAIL</Text>
                             <TextInput
-                                style={styles.input}
-                                placeholder="Enter your email"
+                                style={[styles.input, { backgroundColor: colors.surface, color: colors.primaryText, borderColor: colors.divider }]}
+                                placeholder="name@example.com"
+                                placeholderTextColor={colors.secondaryText}
                                 value={email}
                                 onChangeText={setEmail}
                                 autoCapitalize="none"
@@ -78,10 +87,11 @@ export default function LoginScreen() {
                         </View>
 
                         <View style={styles.inputContainer}>
-                            <Text style={styles.label}>Password</Text>
+                            <Text style={[styles.label, { color: colors.secondaryText }]}>PASSWORD</Text>
                             <TextInput
-                                style={styles.input}
-                                placeholder="Enter your password"
+                                style={[styles.input, { backgroundColor: colors.surface, color: colors.primaryText, borderColor: colors.divider }]}
+                                placeholder="••••••••"
+                                placeholderTextColor={colors.secondaryText}
                                 value={password}
                                 onChangeText={setPassword}
                                 secureTextEntry
@@ -89,7 +99,7 @@ export default function LoginScreen() {
                         </View>
 
                         <TouchableOpacity
-                            style={styles.button}
+                            style={[styles.button, { backgroundColor: colors.primaryAction }]}
                             onPress={handleLogin}
                             disabled={loading}
                         >
@@ -105,8 +115,8 @@ export default function LoginScreen() {
                             onPress={handleDemoLogin}
                             disabled={loading}
                         >
-                            <Text style={styles.demoText}>Try Demo User</Text>
-                            <Feather name="arrow-right" size={16} color="#666" />
+                            <Text style={[styles.demoText, { color: colors.secondaryText }]}>Try Demo User</Text>
+                            <Feather name="arrow-right" size={16} color={colors.secondaryText} />
                         </TouchableOpacity>
                     </View>
                 </KeyboardAvoidingView>
@@ -118,64 +128,77 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#fff',
     },
     keyboardView: {
         flex: 1,
         justifyContent: 'center',
-        paddingHorizontal: 24,
+        paddingHorizontal: SPACING.screenPadding,
     },
     header: {
         marginBottom: 48,
         alignItems: 'center',
     },
+    iconContainer: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: SPACING.l,
+    },
     title: {
-        fontSize: 32,
-        fontWeight: 'bold',
-        color: '#1a1a1a',
-        marginBottom: 8,
+        fontSize: TYPOGRAPHY.size.h1,
+        fontWeight: TYPOGRAPHY.weight.bold,
+        marginBottom: SPACING.xs,
+        textAlign: 'center',
     },
     subtitle: {
-        fontSize: 16,
-        color: '#666',
+        fontSize: TYPOGRAPHY.size.body,
+        textAlign: 'center',
     },
     form: {
         width: '100%',
     },
     inputContainer: {
-        marginBottom: 20,
+        marginBottom: SPACING.l,
     },
     label: {
-        fontSize: 14,
+        fontSize: TYPOGRAPHY.size.caption,
         fontWeight: '600',
-        color: '#333',
         marginBottom: 8,
     },
     input: {
-        height: 50,
+        height: 56,
         borderWidth: 1,
-        borderColor: '#ddd',
         borderRadius: 12,
         paddingHorizontal: 16,
-        fontSize: 16,
-        backgroundColor: '#f9f9f9',
+        fontSize: TYPOGRAPHY.size.body,
+    },
+    errorContainer: {
+        padding: 12,
+        borderRadius: 8,
+        marginBottom: SPACING.l,
+        alignItems: 'center',
     },
     errorText: {
-        color: '#dc2626',
-        marginBottom: 16,
-        textAlign: 'center',
+        fontSize: TYPOGRAPHY.size.caption,
+        fontWeight: '600',
     },
     button: {
-        height: 50,
-        backgroundColor: '#007AFF',
-        borderRadius: 12,
+        height: 56,
+        borderRadius: 16,
         justifyContent: 'center',
         alignItems: 'center',
-        marginTop: 12,
+        marginTop: SPACING.m,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+        elevation: 4,
     },
     buttonText: {
         color: '#fff',
-        fontSize: 16,
+        fontSize: TYPOGRAPHY.size.body,
         fontWeight: 'bold',
     },
     demoButton: {
@@ -186,8 +209,7 @@ const styles = StyleSheet.create({
         padding: 12,
     },
     demoText: {
-        color: '#666',
-        fontSize: 16,
+        fontSize: TYPOGRAPHY.size.body,
         fontWeight: '500',
         marginRight: 8,
     }

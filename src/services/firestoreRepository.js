@@ -140,7 +140,19 @@ export const updateTransaction = async (uid, transactionId, oldData, newData) =>
     // 2. Update Transaction
     await updateDoc(transactionRef, newData);
 
-    // 3. Update Profile Spent if amount changed logic
+    // 3. Update Goal if applicable
+    if (oldData.isGoalContribution && oldData.goalId) {
+        const goalRef = doc(familyRef, 'goals', oldData.goalId);
+        // If type is expense (contribution), amountDiff INCREASES goal.
+        // If type is income (withdrawal), amountDiff DECREASES goal.
+        const goalAdjustment = oldData.type === 'expense' ? amountDiff : -amountDiff;
+
+        await updateDoc(goalRef, {
+            currentAmount: increment(goalAdjustment)
+        });
+    }
+
+    // 4. Update Profile Spent if amount changed logic
     // Logic: 
     // If expense -> expense: (+ new - old) to spent
     // If income -> income: (+ new - old) to earned
@@ -681,4 +693,159 @@ export const checkAndProcessRecurring = async (uid) => {
         console.log("✅ No recurring transactions due.");
     }
     return processedCount;
+};
+
+// ------------------------------------------------------------------
+// Goals / Savings Management (Phase 7)
+// ------------------------------------------------------------------
+
+/**
+ * Add a new Savings Goal
+ */
+export const addGoal = async (uid, goalData) => {
+    console.log(`Goals: Adding new goal "${goalData.name}"`);
+    const familyRef = getFamilyRef(uid);
+    const goalsCol = collection(familyRef, 'goals');
+
+    const docRef = await addDoc(goalsCol, {
+        ...goalData,
+        currentAmount: 0,
+        createdAt: new Date().toISOString(),
+        status: 'ACTIVE'
+    });
+    return docRef.id;
+};
+
+/**
+ * Get all goals
+ */
+export const getGoals = async (uid, profileId = null) => {
+    const familyRef = getFamilyRef(uid);
+    const goalsCol = collection(familyRef, 'goals');
+
+    // Default sort by Created Date
+    const q = query(goalsCol, orderBy('createdAt', 'desc'));
+    const snapshot = await getDocs(q);
+
+    let goals = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    if (profileId) {
+        // Filter: Goal is owned by profile OR shared with profile
+        goals = goals.filter(g =>
+            !g.ownerId ||
+            g.ownerId === profileId ||
+            (g.sharedWith && Array.isArray(g.sharedWith) && g.sharedWith.includes(profileId))
+        );
+    }
+    return goals;
+};
+
+/**
+ * Update a goal
+ */
+export const updateGoal = async (uid, goalId, data) => {
+    const familyRef = getFamilyRef(uid);
+    const goalRef = doc(familyRef, 'goals', goalId);
+    await updateDoc(goalRef, data);
+    return true;
+};
+
+/**
+ * Delete a goal (and potentially refund?) -> For now just delete
+ */
+export const deleteGoal = async (uid, goalId) => {
+    const familyRef = getFamilyRef(uid);
+    const goalRef = doc(familyRef, 'goals', goalId);
+    await deleteDoc(goalRef);
+    return true;
+};
+
+/**
+ * Get single goal
+ */
+export const getGoal = async (uid, goalId) => {
+    const familyRef = getFamilyRef(uid);
+    const goalRef = doc(familyRef, 'goals', goalId);
+    const snap = await getDoc(goalRef);
+    return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+};
+export const contributeToGoal = async (uid, goalId, amount, note, profileId) => {
+    console.log(`Goals: Contributing ${amount} to ${goalId}`);
+    const familyRef = getFamilyRef(uid);
+    const goalRef = doc(familyRef, 'goals', goalId);
+    const batch = writeBatch(db);
+
+    // 1. Create Transaction (Expense)
+    const txRef = doc(collection(familyRef, 'transactions'));
+    const timestamp = new Date().toISOString();
+
+    batch.set(txRef, {
+        profileId,
+        amount: Number(amount),
+        type: 'expense',
+        category: 'Savings',
+        categoryId: 'savings',
+        categoryIcon: '🐷', // Piggy bank
+        date: timestamp.split('T')[0],
+        note: `Contributed to goal: ${note}`,
+        isGoalContribution: true,
+        goalId: goalId,
+        createdAt: timestamp
+    });
+
+    // 2. Update Profile Spent (since it is an expense from wallet)
+    const profileRef = doc(familyRef, 'profiles', profileId);
+    batch.update(profileRef, { spent: increment(amount) });
+
+    // 3. Update Goal Amount
+    batch.update(goalRef, {
+        currentAmount: increment(amount),
+        lastUpdated: timestamp
+    });
+
+    await batch.commit();
+    return true;
+};
+
+/**
+ * Withdraw money from a goal
+ * 1. Creates an Income Transaction (Money returns to wallet)
+ * 2. Updates Goal currentAmount (Money leaves goal)
+ */
+export const withdrawFromGoal = async (uid, goalId, amount, note, profileId) => {
+    console.log(`Goals: Withdrawing ${amount} from ${goalId}`);
+    const familyRef = getFamilyRef(uid);
+    const goalRef = doc(familyRef, 'goals', goalId);
+    const batch = writeBatch(db);
+
+    // 1. Create Transaction (Income)
+    const txRef = doc(collection(familyRef, 'transactions'));
+    const timestamp = new Date().toISOString();
+
+    batch.set(txRef, {
+        profileId,
+        amount: Number(amount),
+        type: 'income',
+        category: 'Savings Withdrawal',
+        categoryId: 'savings_withdrawal',
+        categoryIcon: '💰',
+        date: timestamp.split('T')[0],
+        note: `Withdrew from goal: ${note}`,
+        isGoalWithdrawal: true,
+        goalId: goalId,
+        createdAt: timestamp
+    });
+
+    // 2. Update Profile Earned (Money available again)
+    const profileRef = doc(familyRef, 'profiles', profileId);
+    batch.update(profileRef, { earned: increment(amount) });
+
+    // 3. Update Goal Amount
+    batch.update(goalRef, {
+        currentAmount: increment(-amount),
+        lastUpdated: timestamp
+    });
+
+    await batch.commit();
+    return true;
 };

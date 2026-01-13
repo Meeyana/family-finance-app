@@ -1,44 +1,47 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, useColorScheme } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../components/context/AuthContext';
+import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
 
 export default function SettingsScreen({ navigation }) {
     const { profile } = useAuth(); // Get current profile for role check
+    const theme = useColorScheme() || 'light';
+    const colors = COLORS[theme];
 
     return (
-        <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <MaterialCommunityIcons name="arrow-left" size={24} color="#007AFF" />
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+            {/* Header */}
+            <View style={[styles.header, { borderBottomColor: colors.divider }]}>
+                <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                    <Ionicons name="arrow-back" size={24} color={colors.primaryText} />
                 </TouchableOpacity>
-                <Text style={styles.title}>Settings</Text>
+                <Text style={[styles.headerTitle, { color: colors.primaryText }]}>Settings</Text>
                 <View style={{ width: 24 }} />
             </View>
 
-
-            <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Family Management</Text>
-
+            <View style={styles.content}>
                 {profile?.role === 'Owner' && (
-                    <TouchableOpacity
-                        style={styles.menuItem}
-                        onPress={() => navigation.navigate('ManageProfiles')}
-                    >
-                        <Text style={styles.menuText}>Manage Profiles</Text>
-                        <MaterialCommunityIcons name="chevron-right" size={24} color="#ccc" />
-                    </TouchableOpacity>
-                )}
+                    <View>
+                        <Text style={[styles.sectionTitle, { color: colors.secondaryText }]}>FAMILY MANAGEMENT</Text>
 
-                {profile?.role === 'Owner' && (
-                    <TouchableOpacity
-                        style={styles.menuItem}
-                        onPress={() => navigation.navigate('ManageCategories')}
-                    >
-                        <Text style={styles.menuText}>Manage Categories</Text>
-                        <MaterialCommunityIcons name="chevron-right" size={24} color="#ccc" />
-                    </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.menuItem, { borderBottomColor: colors.divider }]}
+                            onPress={() => navigation.navigate('ManageProfiles')}
+                        >
+                            <Text style={[styles.menuText, { color: colors.primaryText }]}>Manage Profiles</Text>
+                            <Ionicons name="chevron-forward" size={20} color={colors.divider} />
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={[styles.menuItem, { borderBottomColor: colors.divider }]}
+                            onPress={() => navigation.navigate('ManageCategories')}
+                        >
+                            <Text style={[styles.menuText, { color: colors.primaryText }]}>Manage Categories</Text>
+                            <Ionicons name="chevron-forward" size={20} color={colors.divider} />
+                        </TouchableOpacity>
+                    </View>
                 )}
             </View>
         </SafeAreaView>
@@ -46,30 +49,38 @@ export default function SettingsScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#f5f7fa' },
+    container: { flex: 1 },
     header: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center',
-        padding: 16,
-        backgroundColor: 'white',
+        justifyContent: 'space-between',
+        paddingHorizontal: SPACING.screenPadding,
+        paddingVertical: SPACING.m,
         borderBottomWidth: 1,
-        borderBottomColor: '#eee',
     },
-    backText: { fontSize: 16, color: '#007AFF' },
-    title: { fontSize: 18, fontWeight: 'bold' },
-    section: { marginTop: 24, backgroundColor: 'white', borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#eee' },
-    sectionTitle: { padding: 16, fontSize: 13, color: '#666', textTransform: 'uppercase', backgroundColor: '#f5f7fa' },
+    headerTitle: {
+        fontSize: TYPOGRAPHY.size.h3,
+        fontWeight: TYPOGRAPHY.weight.bold,
+    },
+    content: {
+        paddingTop: SPACING.l,
+    },
+    sectionTitle: {
+        fontSize: TYPOGRAPHY.size.small,
+        fontWeight: '600',
+        marginBottom: SPACING.s,
+        marginLeft: SPACING.screenPadding,
+    },
     menuItem: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
+        paddingVertical: SPACING.m,
+        paddingHorizontal: SPACING.screenPadding,
+        borderBottomWidth: StyleSheet.hairlineWidth,
     },
-    menuText: { fontSize: 16, color: '#333' },
-    arrow: { fontSize: 18, color: '#ccc' },
-    logoutButton: { borderBottomWidth: 0 },
-    logoutText: { color: '#dc2626' },
+    menuText: {
+        fontSize: TYPOGRAPHY.size.body,
+        fontWeight: TYPOGRAPHY.weight.medium,
+    },
 });

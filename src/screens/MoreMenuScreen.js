@@ -129,6 +129,11 @@ export default function MoreMenuScreen({ navigation }) {
                         onPress={() => navigation.navigate('Recurring')}
                     />
                     <MenuOption
+                        icon="piggy-bank-outline"
+                        label="Savings Goals"
+                        onPress={() => navigation.navigate('Goals')}
+                    />
+                    <MenuOption
                         icon="tag-multiple-outline"
                         label="Categories"
                         onPress={() => navigation.navigate('ManageCategories')}
