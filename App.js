@@ -13,8 +13,10 @@ if (Platform.OS === 'web') {
   };
 }
 
-export default function App() {
-  const theme = useColorScheme();
+import { ThemeProvider, useTheme } from './src/components/context/ThemeContext';
+
+const MainLayout = () => {
+  const { theme } = useTheme();
   return (
     <SafeAreaProvider>
       <AuthProvider>
@@ -22,5 +24,13 @@ export default function App() {
         <RootNavigator />
       </AuthProvider>
     </SafeAreaProvider>
+  );
+};
+
+export default function App() {
+  return (
+    <ThemeProvider>
+      <MainLayout />
+    </ThemeProvider>
   );
 }

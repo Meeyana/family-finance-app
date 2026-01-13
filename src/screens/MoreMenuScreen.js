@@ -1,15 +1,16 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Platform, useColorScheme } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../components/context/AuthContext';
 import { signOut } from 'firebase/auth';
 import { auth } from '../services/firebase';
 import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
+import { useTheme } from '../components/context/ThemeContext';
 
 export default function MoreMenuScreen({ navigation }) {
     const { profile, switchProfile, pendingRequestCount } = useAuth();
-    const theme = useColorScheme() || 'light';
+    const { theme } = useTheme();
     const colors = COLORS[theme];
 
     const handleLogout = async () => {

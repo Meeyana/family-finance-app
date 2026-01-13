@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, DeviceEventEmitter, useColorScheme } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, DeviceEventEmitter } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { getAccountData } from '../services/dataService';
@@ -12,12 +12,13 @@ import MonthlyTrendLineChart from '../components/MonthlyTrendLineChart';
 import CustomDateFilterModal from '../components/CustomDateFilterModal';
 import CurrencyText from '../components/CurrencyText';
 import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
+import { useTheme } from '../components/context/ThemeContext';
 
 import ExpensePieChart from '../components/ExpensePieChart';
 
 export default function AnalyzeScreen({ navigation }) {
     const { userProfiles } = useAuth();
-    const theme = useColorScheme() || 'light';
+    const { theme } = useTheme();
     const colors = COLORS[theme];
 
     const [data, setData] = useState(null);

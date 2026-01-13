@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, ActivityIndicator, TouchableOpacity, StyleSheet, useColorScheme, Dimensions } from 'react-native';
+import { View, ActivityIndicator, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../components/context/AuthContext';
+import { useTheme } from '../components/context/ThemeContext';
 import { COLORS } from '../constants/theme';
 
 import LoginScreen from '../screens/LoginScreen';
@@ -60,7 +61,7 @@ const { width } = Dimensions.get('window');
 const TAB_WIDTH = width / 5;
 
 const NavIcon = ({ name, focused, color, size }) => {
-    const theme = useColorScheme() || 'light';
+    const { theme } = useTheme();
     const colors = COLORS[theme];
 
     return (
@@ -95,7 +96,7 @@ const NavIcon = ({ name, focused, color, size }) => {
 
 // 1. Adult Tabs (Owner/Partner)
 function DashboardTabs() {
-    const theme = useColorScheme() || 'light';
+    const { theme } = useTheme();
     const colors = COLORS[theme];
 
     const screenOptions = {
@@ -180,7 +181,7 @@ function DashboardTabs() {
 
 // 2. Child Tabs
 function ChildTabs() {
-    const theme = useColorScheme() || 'light';
+    const { theme } = useTheme();
     const colors = COLORS[theme];
 
     const screenOptions = {
@@ -264,7 +265,7 @@ function ChildTabs() {
 
 export default function AppStack() {
     const { user, profile, loading } = useAuth();
-    const theme = useColorScheme() || 'light';
+    const { theme } = useTheme();
 
     if (loading) {
         return <View style={{ flex: 1, justifyContent: 'center' }}><ActivityIndicator /></View>;

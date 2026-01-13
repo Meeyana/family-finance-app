@@ -67,8 +67,9 @@ Primary Text      #111111
 Secondary Text    #6B6B6B
 Divider / Border  #E5E5E5
 
-Primary Action    #111111
-Success (Increase) #16A34A
+Primary Action    #6ca749
+Secondary Action  #111111
+Success (Increase) #2da249
 Error (Decrease)   #DC2626
 ```
 
@@ -81,8 +82,9 @@ Primary Text      #F5F5F5
 Secondary Text    #9CA3AF
 Divider / Border  #2A2A2A
 
-Primary Action    #FFFFFF
-Success (Increase) #22C55E
+Primary Action    #6ca749
+Secondary Action  #FFFFFF
+Success (Increase) #2da249
 Error (Decrease)   #EF4444
 ```
 
@@ -174,8 +176,8 @@ Button height:   ≥ 44
 ### Buttons
 
 * One primary button per screen
-* Background: black (light mode) / white (dark mode)
-* Text: white / black
+* Background: #6ca749 (Primary Action)
+* Text: #FFFFFF
 * No gradient, minimal shadow
 
 ### Transaction List

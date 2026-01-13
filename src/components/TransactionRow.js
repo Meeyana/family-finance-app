@@ -1,8 +1,9 @@
+import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, useColorScheme } from 'react-native';
 import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
 import CurrencyText from './CurrencyText';
 
-const TransactionRow = ({ item, onPress }) => {
+const TransactionRow = ({ item, onPress, iconBackgroundColor }) => {
     const theme = useColorScheme() || 'light';
     const colors = COLORS[theme];
 
@@ -10,10 +11,7 @@ const TransactionRow = ({ item, onPress }) => {
     const isTransfer = item.type === 'transfer';
 
     // Determine Color and Sign
-    let amountColor = isExpense ? colors.primaryText : colors.success; // Default expenses to primaryText (neutral) for minimalism, or keep red?
-    // User requested Neo-Bank Minimal -> Usually Black for expense, Green for Income. Or Red for expense.
-    // Let's stick to Red/Green for clarity but maybe muted.
-    // Actually, "Neo-Bank Minimal" often uses Black for expenses and Green for Income.
+    let amountColor = isExpense ? colors.primaryText : colors.success;
     if (isExpense) amountColor = colors.primaryText;
     if (!isExpense) amountColor = colors.success;
 
@@ -23,14 +21,11 @@ const TransactionRow = ({ item, onPress }) => {
         sign = '';
     }
 
-    // Icon Logic (Passed from parent usually, or we determine here?)
-    // Ideally the parent passes a resolved 'icon' prop, but item might have it.
     const icon = item.icon || item.categoryIcon || (isExpense ? '💸' : '💰');
-
     return (
         <TouchableOpacity style={styles.container} onPress={onPress}>
             {/* Icon Circle */}
-            <View style={[styles.iconBox, { backgroundColor: colors.surface }]}>
+            <View style={[styles.iconBox, { backgroundColor: iconBackgroundColor || colors.surface }]}>
                 <Text style={{ fontSize: 20 }}>{icon}</Text>
             </View>
 

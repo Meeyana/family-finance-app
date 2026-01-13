@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, useColorScheme } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
+import { useTheme } from '../components/context/ThemeContext';
 import CurrencyText from './CurrencyText';
 
 export default function BudgetProgressBar({ spent, limit, label, showAmount = true, compact = false, boxed = false }) {
-    const theme = useColorScheme() || 'light';
+    const { theme } = useTheme();
     const colors = COLORS[theme];
 
     const usage = limit > 0 ? (spent / limit) : 0;

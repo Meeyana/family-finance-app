@@ -1,24 +1,28 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, DeviceEventEmitter, useColorScheme, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, DeviceEventEmitter, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getProfileData } from '../services/dataService';
-import { getFamilyCategories } from '../services/firestoreRepository';
+import { getTransactions, getFamilyCategories, getLatestTransactions } from '../services/firestoreRepository';
 import { auth } from '../services/firebase';
 import { useAuth } from '../components/context/AuthContext';
-import MonthPicker from '../components/MonthPicker';
+import SwipeDateFilter from '../components/SwipeDateFilter';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../components/context/ThemeContext';
 import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
 import CurrencyText from '../components/CurrencyText';
+import TransactionRow from '../components/TransactionRow';
 
 export default function AccountDashboard({ navigation }) {
-    const { profile } = useAuth();
+    const { user, profile } = useAuth();
     const [data, setData] = useState(null);
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [selectedDate, setSelectedDate] = useState(new Date());
 
-    const theme = useColorScheme() || 'light';
+    const [recentTransactions, setRecentTransactions] = useState([]);
+
+    const { theme } = useTheme();
     const colors = COLORS[theme];
 
     const getGreeting = () => {
@@ -38,21 +42,50 @@ export default function AccountDashboard({ navigation }) {
         return () => {
             subscription.remove();
         };
-    }, [selectedDate, profile]);
+    }, [selectedDate, profile, user]);
 
     const loadData = async () => {
+        if (!user || !profile) return;
+        setLoading(true);
+
+        const year = selectedDate.getFullYear();
+        const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+        const startDate = `${year}-${month}-01`;
+
+        // Calculate end date based on actual days in month
+        const lastDayNode = new Date(year, selectedDate.getMonth() + 1, 0);
+        const endDay = String(lastDayNode.getDate()).padStart(2, '0');
+        const endDate = `${year}-${month}-${endDay}`;
+
         try {
-            setLoading(true);
-            if (!profile?.id) return;
+            // 1. Fetch Month Data for Stats (Implicitly fetched via getProfileData below)
+            // const txs = await getTransactions(user.uid, profile.id, startDate, endDate);
+            // setTransactions(txs); 
+
+
+            const cats = await getFamilyCategories(user.uid, profile.id, profile.role);
+            setCategories(cats);
+
+            // 2. Fetch Latest 4 (Global) for New Section - IGNORING DATE FILTER
+            const latestTxs = await getLatestTransactions(user.uid, profile.id, 4);
+            setRecentTransactions(latestTxs);
+
+            // Existing logic for prev month data for comparison
             const prevMonthDate = new Date(selectedDate);
             prevMonthDate.setMonth(prevMonthDate.getMonth() - 1);
+            const prevMonthYear = prevMonthDate.getFullYear();
+            const prevMonth = String(prevMonthDate.getMonth() + 1).padStart(2, '0');
+            const prevMonthStartDate = `${prevMonthYear}-${prevMonth}-01`;
+            const prevMonthLastDayNode = new Date(prevMonthYear, prevMonthDate.getMonth() + 1, 0);
+            const prevMonthEndDay = String(prevMonthLastDayNode.getDate()).padStart(2, '0');
+            const prevMonthEndDate = `${prevMonthYear}-${prevMonth}-${prevMonthEndDay}`;
 
             const [currentResult, prevResult] = await Promise.all([
-                getProfileData(profile.id, selectedDate),
+                getProfileData(profile.id, selectedDate), // This still uses dataService, which might be different from getTransactions
                 getProfileData(profile.id, prevMonthDate)
             ]);
-
             setData({ current: currentResult, prev: prevResult });
+
         } catch (err) {
             console.error(err);
             setError(err.message);
@@ -69,19 +102,57 @@ export default function AccountDashboard({ navigation }) {
             if (!dataset) return { income: 0, expense: 0, given: 0, received: 0, net: 0, categoryMap: {}, txs: [] };
             const filteredTxs = dataset.transactions || [];
 
+            // MODIFIED LOGIC: Merge Received into Income, Given into Expense
             const isInternalTransfer = (t) => t.isTransfer || t.type === 'transfer' || t.category === 'Granted' || t.category === 'Present' || (t.note && t.note.includes('(Granted)'));
 
-            const income = filteredTxs.filter(t => t.type === 'income' && !isInternalTransfer(t)).reduce((acc, t) => acc + t.amount, 0);
-            const expenseTxs = filteredTxs.filter(t => (t.type || 'expense') === 'expense' && !isInternalTransfer(t));
-            const expense = expenseTxs.reduce((acc, t) => acc + t.amount, 0);
+            let income = 0;
+            let expense = 0;
 
-            let given = 0;
-            let received = 0;
-            filteredTxs.filter(isInternalTransfer).forEach(t => {
+            filteredTxs.forEach(t => {
                 const isGiven = (t.note && t.note.includes('Transfer to')) || t.category === 'Transfer Out' || t.categoryIcon === '💸';
                 const isReceived = (t.note && t.note.includes('Received from')) || t.category === 'Allowance' || t.categoryIcon === '💰';
-                if (isGiven) given += t.amount; else if (isReceived) received += t.amount; else given += t.amount;
+
+                // PRIORITY 1: Explicit Transfer Directions
+                if (isReceived) {
+                    income += t.amount;
+                } else if (isGiven) {
+                    expense += t.amount;
+                }
+                // PRIORITY 2: Explicit Types
+                else if (t.type === 'income') {
+                    income += t.amount;
+                }
+                else if ((t.type || 'expense') === 'expense' && !isInternalTransfer(t)) {
+                    // Normal expense
+                    expense += t.amount;
+                }
+                // PRIORITY 3: Fallback for other Internal Transfers (Default to Expense/Given)
+                else if (isInternalTransfer(t)) {
+                    // If it's internal but not caught by isReceived (which is above), it treats as Given (Expense)
+                    expense += t.amount;
+                }
+                else {
+                    // Default uncategorized to expense
+                    expense += t.amount;
+                }
             });
+
+            const expenseTxs = filteredTxs.filter(t => {
+                const isGiven = (t.note && t.note.includes('Transfer to')) || t.category === 'Transfer Out' || t.categoryIcon === '💸';
+                const isReceived = (t.note && t.note.includes('Received from')) || t.category === 'Allowance' || t.categoryIcon === '💰';
+
+                if (isReceived) return false; // Counts as income
+                if (isGiven) return true; // Counts as expense
+                if (t.type === 'income') return false;
+                return true; // Catch-all expense
+            });
+
+            // DEBUG LOGS
+            console.log('--- DASHBOARD CALC DEBUG (STRICT) ---');
+            console.log(`Total Txs: ${filteredTxs.length}`);
+            console.log(`Final Income: ${income}`);
+            console.log(`Final Expense: ${expense}`);
+            console.log(`Net: ${income - expense}`);
 
             const categoryMap = {};
             expenseTxs.forEach(t => {
@@ -90,7 +161,7 @@ export default function AccountDashboard({ navigation }) {
                 categoryMap[catName] = (categoryMap[catName] || 0) + t.amount;
             });
 
-            return { income, expense, given, received, net: income - expense, categoryMap, txs: filteredTxs, expenseTxs };
+            return { income, expense, given: 0, received: 0, net: income - expense, categoryMap, txs: filteredTxs, expenseTxs };
         };
 
         const currentStats = processDataset(current);
@@ -98,7 +169,7 @@ export default function AccountDashboard({ navigation }) {
 
         const categoryBreakdown = Object.keys(currentStats.categoryMap).map(catName => {
             const catObj = categories.find(c => c.name === catName);
-            const emoji = catObj?.icon || (catName === 'Present' ? '🎁' : '🏷️');
+            const emoji = catObj?.icon || (catName === 'Present' ? '🎁' : (catName === 'Savings' ? '🐷' : '🏷️'));
             return {
                 name: catName,
                 emoji,
@@ -136,11 +207,25 @@ export default function AccountDashboard({ navigation }) {
 
                 {/* HEADER */}
                 <View style={styles.header}>
-                    <View>
-                        <Text style={[styles.greeting, { color: colors.secondaryText }]}>{getGreeting()}</Text>
-                        <Text style={[styles.username, { color: colors.primaryText }]}>{profile?.name || 'User'}</Text>
+                    <View style={styles.headerLeft}>
+                        <View style={[styles.avatarContainer, { backgroundColor: colors.surface }]}>
+                            <Text style={{ fontSize: 24 }}>{profile?.avatar || '👤'}</Text>
+                        </View>
+                        <View>
+                            <Text style={[styles.greeting, { color: colors.secondaryText }]}>{getGreeting()}</Text>
+                            <Text style={[styles.username, { color: colors.primaryText }]}>{profile?.name || 'User'}</Text>
+                        </View>
                     </View>
-                    <MonthPicker date={selectedDate} onMonthChange={setSelectedDate} />
+
+                    <TouchableOpacity style={[styles.iconButton, { backgroundColor: colors.surface }]}>
+                        <Ionicons name="notifications-outline" size={24} color={colors.primaryText} />
+                        <View style={[styles.notificationBadge, { backgroundColor: colors.error }]} />
+                    </TouchableOpacity>
+                </View>
+
+                {/* DATE FILTER */}
+                <View style={{ marginBottom: 0, width: '60%', alignSelf: 'center' }}>
+                    <SwipeDateFilter date={selectedDate} onMonthChange={setSelectedDate} />
                 </View>
 
                 {/* HERO: NET CASHFLOW */}
@@ -149,7 +234,7 @@ export default function AccountDashboard({ navigation }) {
                     <View style={styles.heroRow}>
                         <CurrencyText
                             amount={viewData?.netCashflow}
-                            showSign={true}
+                            showSign={false}
                             style={[styles.heroValue, { color: viewData?.netCashflow >= 0 ? colors.success : colors.error }]}
                             symbolStyle={[styles.currency, { color: viewData?.netCashflow >= 0 ? colors.success : colors.error }]}
                         />
@@ -200,60 +285,52 @@ export default function AccountDashboard({ navigation }) {
                         </View>
                     </View>
 
-                    {/* Row 2: Allowance & Presents (Restored) */}
-                    <View style={styles.row}>
-                        <View style={[styles.card, { backgroundColor: colors.surface, flex: 1 }]}>
-                            <View style={styles.cardHeader}>
-                                <MaterialCommunityIcons name="gift-open" size={20} color={colors.success} />
-                                <Text style={[styles.cardLabel, { color: colors.secondaryText }]}>Receive</Text>
-                            </View>
-                            <CurrencyText
-                                amount={viewData?.totalReceived}
-                                showSign={true}
-                                style={[styles.cardValue, { color: colors.primaryText }]}
-                            />
-                        </View>
-
-                        <View style={[styles.card, { backgroundColor: colors.surface, flex: 1 }]}>
-                            <View style={styles.cardHeader}>
-                                <MaterialCommunityIcons name="gift" size={20} color={colors.primaryText} />
-                                <Text style={[styles.cardLabel, { color: colors.secondaryText }]}>Given</Text>
-                            </View>
-                            <CurrencyText
-                                amount={-viewData?.totalGiven}
-                                showSign={true}
-                                style={[styles.cardValue, { color: colors.primaryText }]}
-                            />
-                        </View>
-                    </View>
-
-                    {/* Row 3: Forecast (Restored) */}
-                    <View style={styles.row}>
-                        <View style={[styles.card, { backgroundColor: colors.surface, flex: 1 }]}>
-                            <View style={styles.cardHeader}>
-                                <MaterialCommunityIcons name="crystal-ball" size={20} color={colors.secondaryText} />
-                                <Text style={[styles.cardLabel, { color: colors.secondaryText }]}>Forecast</Text>
-                            </View>
-                            <CurrencyText
-                                amount={-Math.round(viewData?.projectedSpend || 0)}
-                                style={[styles.cardValue, { color: colors.primaryText }]}
-                            />
-                            <Text style={[styles.tinyLabel, { color: colors.secondaryText }]}>Est. Month End</Text>
-                        </View>
-                        <View style={{ flex: 1 }} />
-                    </View>
+                    {/* REMOVED: Forecast Row */}
                 </View>
 
-                {/* VISUAL BREAKDOWN (Restored) */}
+                {/* RECENT TRANSACTIONS (New Section) */}
+                <View style={styles.sectionHeaderRow}>
+                    <Text style={[styles.sectionTitle, { color: colors.secondaryText }]}>Recent Transactions</Text>
+                    <TouchableOpacity onPress={() => navigation.navigate('Transactions')}>
+                        <Text style={[styles.seeAllText, { color: colors.primaryAction }]}>See all</Text>
+                    </TouchableOpacity>
+                </View>
+
+                <View style={styles.section}>
+                    {recentTransactions.map((item, index) => (
+                        <View key={item.id} style={[styles.transactionCard, { backgroundColor: colors.surface }]}>
+                            <TransactionRow
+                                item={{
+                                    ...item,
+                                    icon: categories ? categories.find(c => c.name === item.category)?.icon : (item.category === 'Savings' ? '🐷' : item.categoryIcon)
+                                }}
+                                iconBackgroundColor={colors.background}
+                                onPress={() => navigation.navigate('AddTransaction', { transaction: item })}
+                            />
+                        </View>
+                    ))}
+                    {recentTransactions.length === 0 && (
+                        <Text style={[styles.emptyText, { color: colors.secondaryText, padding: SPACING.m, textAlign: 'center' }]}>
+                            No recent activity
+                        </Text>
+                    )}
+                </View>
+
+                {/* SPENDING BREAKDOWN */}
                 <View style={[styles.section, { marginTop: SPACING.xl }]}>
                     <Text style={[styles.sectionTitle, { color: colors.primaryText, marginBottom: SPACING.m }]}>Spending Breakdown</Text>
 
                     {viewData?.categoryBreakdown?.map((cat, index) => (
                         <View key={index} style={[styles.categoryRow, { backgroundColor: colors.surface }]}>
                             <View style={styles.categoryHeader}>
-                                <Text style={[styles.categoryName, { color: colors.primaryText }]}>
-                                    {cat.emoji} {cat.name}
-                                </Text>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACING.s }}>
+                                    <View style={[styles.iconBox, { backgroundColor: colors.background }]}>
+                                        <Text style={{ fontSize: 20 }}>{cat.emoji}</Text>
+                                    </View>
+                                    <Text style={[styles.categoryName, { color: colors.primaryText }]}>
+                                        {cat.name}
+                                    </Text>
+                                </View>
                                 <CurrencyText
                                     amount={cat.amount}
                                     style={[styles.categoryAmount, { color: colors.primaryText }]}
@@ -274,7 +351,7 @@ export default function AccountDashboard({ navigation }) {
                                         styles.progressBarTrack,
                                         {
                                             flex: 1,
-                                            backgroundColor: colors.background // Darker/Lighter than surface to show track
+                                            backgroundColor: colors.background
                                         }
                                     ]}
                                 />
@@ -291,7 +368,7 @@ export default function AccountDashboard({ navigation }) {
                 </View>
 
             </ScrollView>
-        </SafeAreaView>
+        </SafeAreaView >
     );
 }
 
@@ -312,7 +389,36 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: SPACING.l,
+        marginBottom: SPACING.m, // Reduced margin since filter is below
+    },
+    headerLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: SPACING.m,
+    },
+    avatarContainer: {
+        width: 48,
+        height: 48,
+        borderRadius: 24, // Circle
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    iconButton: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    notificationBadge: {
+        position: 'absolute',
+        top: 12,
+        right: 14,
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        borderWidth: 1,
+        borderColor: '#FFFFFF', // White border to separate from icon
     },
     greeting: {
         fontSize: TYPOGRAPHY.size.caption,
@@ -386,12 +492,35 @@ const styles = StyleSheet.create({
         letterSpacing: -0.5,
     },
     tinyLabel: {
-        fontSize: TYPOGRAPHY.size.small,
-        marginTop: 4,
+        fontSize: 10,
+        marginTop: 4
+    },
+    // New Styles
+    sectionHeaderRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: SPACING.xl,
+        marginBottom: SPACING.s,
+    },
+    seeAllText: {
+        fontSize: TYPOGRAPHY.size.caption,
+        fontWeight: 'bold',
+    },
+    transactionCard: {
+        marginBottom: SPACING.m,
+        borderRadius: SPACING.cardBorderRadius,
+        overflow: 'hidden', // Ensures ripple effect stays inside
+    },
+    recentTxContainer: {
+        // borderRadius: 16,
+        // paddingVertical: 4, 
+        // overflow: 'hidden'
     },
     categoryRow: {
         marginBottom: SPACING.m,
-        padding: SPACING.m,
+        paddingVertical: 12, // Matches TransactionRow
+        paddingHorizontal: SPACING.screenPadding, // Matches TransactionRow (16)
         borderRadius: SPACING.cardBorderRadius,
     },
     categoryHeader: {

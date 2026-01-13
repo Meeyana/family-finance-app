@@ -1,12 +1,16 @@
 import React from 'react';
+import { useTheme } from '../components/context/ThemeContext';
 import { View, StyleSheet, Dimensions } from 'react-native';
 import { VictoryBar, VictoryChart, VictoryAxis } from 'victory-native';
 import { COLORS, TYPOGRAPHY } from '../constants/theme';
 
 export default function IncomeExpenseBarChart({ income, expense }) {
+    const { theme } = useTheme();
+    const colors = COLORS[theme];
+
     const data = [
-        { x: 'Income', y: income, fill: '#34C759' }, // Green
-        { x: 'Expense', y: expense, fill: '#FF3B30' }, // Red
+        { x: 'Income', y: income, fill: colors.success },
+        { x: 'Expense', y: expense, fill: colors.error },
     ];
 
     const screenWidth = Dimensions.get('window').width;

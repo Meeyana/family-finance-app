@@ -1,13 +1,14 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, useColorScheme } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../components/context/AuthContext';
 import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
+import { useTheme } from '../components/context/ThemeContext';
 
 export default function SettingsScreen({ navigation }) {
     const { profile } = useAuth(); // Get current profile for role check
-    const theme = useColorScheme() || 'light';
+    const { theme, themeMode, setTheme } = useTheme();
     const colors = COLORS[theme];
 
     return (
@@ -43,6 +44,42 @@ export default function SettingsScreen({ navigation }) {
                         </TouchableOpacity>
                     </View>
                 )}
+
+                <View style={{ marginTop: SPACING.xl }}>
+                    <Text style={[styles.sectionTitle, { color: colors.secondaryText }]}>APPEARANCE</Text>
+                    <View style={styles.themeContainer}>
+                        {['light', 'dark', 'system'].map((mode) => (
+                            <TouchableOpacity
+                                key={mode}
+                                style={[
+                                    styles.themeButton,
+                                    {
+                                        backgroundColor: themeMode === mode ? colors.primaryAction : 'transparent',
+                                        borderColor: colors.divider,
+                                    }
+                                ]}
+                                onPress={() => setTheme(mode)}
+                            >
+                                <Text style={[
+                                    styles.themeText,
+                                    {
+                                        color: themeMode === mode ? '#FFFFFF' : colors.primaryText,
+                                        fontWeight: themeMode === mode ? 'bold' : 'normal'
+                                    }
+                                ]}>
+                                    {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                </View>
+
+                {/* Debug Info (Optional) */}
+                <View style={{ marginTop: SPACING.xl, paddingHorizontal: SPACING.screenPadding }}>
+                    <Text style={{ color: colors.secondaryText, fontSize: TYPOGRAPHY.size.caption }}>
+                        Version 1.1.0
+                    </Text>
+                </View>
             </View>
         </SafeAreaView>
     );
@@ -82,5 +119,21 @@ const styles = StyleSheet.create({
     menuText: {
         fontSize: TYPOGRAPHY.size.body,
         fontWeight: TYPOGRAPHY.weight.medium,
+    },
+    themeContainer: {
+        flexDirection: 'row',
+        paddingHorizontal: SPACING.screenPadding,
+        gap: SPACING.s,
+    },
+    themeButton: {
+        flex: 1,
+        paddingVertical: SPACING.s,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: 8,
+        borderWidth: 1,
+    },
+    themeText: {
+        fontSize: TYPOGRAPHY.size.body,
     },
 });

@@ -1,18 +1,19 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, SectionList, TouchableOpacity, RefreshControl, DeviceEventEmitter, TextInput, useColorScheme } from 'react-native';
+import { View, Text, StyleSheet, SectionList, TouchableOpacity, RefreshControl, DeviceEventEmitter, TextInput } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../components/context/AuthContext';
 import { getTransactions, getFamilyCategories } from '../services/firestoreRepository';
 import MultiSelectDropdown from '../components/MultiSelectDropdown';
-import MonthPicker from '../components/MonthPicker';
+import { useTheme } from '../components/context/ThemeContext';
+import SwipeDateFilter from '../components/SwipeDateFilter';
 import TransactionRow from '../components/TransactionRow';
 import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
 
 export default function TransactionListScreen({ navigation }) {
     const { user, profile } = useAuth();
-    const theme = useColorScheme() || 'light';
+    const { theme } = useTheme();
     const colors = COLORS[theme];
 
     // Data State
@@ -136,8 +137,10 @@ export default function TransactionListScreen({ navigation }) {
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'left', 'right']}>
             {/* Header */}
             <View style={[styles.header, { borderBottomColor: colors.divider }]}>
-                <View style={styles.monthSelector}>
-                    <MonthPicker date={selectedDate} onMonthChange={setSelectedDate} />
+
+                {/* DATE FILTER */}
+                <View style={{ marginBottom: SPACING.m, width: '60%', alignSelf: 'center' }}>
+                    <SwipeDateFilter date={selectedDate} onMonthChange={setSelectedDate} />
                 </View>
 
                 {/* Search / Filter Row */}
@@ -209,14 +212,12 @@ export default function TransactionListScreen({ navigation }) {
 const styles = StyleSheet.create({
     container: { flex: 1 },
     header: {
+        paddingTop: SPACING.m, // Added padding top
         paddingHorizontal: SPACING.screenPadding,
         paddingBottom: SPACING.m,
         borderBottomWidth: 1,
     },
-    monthSelector: {
-        alignItems: 'center',
-        marginBottom: SPACING.m,
-    },
+
     filterRow: {
         flexDirection: 'row',
         alignItems: 'center',
