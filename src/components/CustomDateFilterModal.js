@@ -1,10 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../components/context/ThemeContext';
+import { COLORS, SPACING, TYPOGRAPHY } from '../constants/theme';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
 export default function CustomDateFilterModal({ visible, onClose, onApply, initialDate, initialMode = 'month' }) {
+    const { theme } = useTheme();
+    const colors = COLORS[theme];
+
     const [mode, setMode] = useState(initialMode); // 'month' | 'year'
     const [selectedYear, setSelectedYear] = useState(initialDate.getFullYear());
 
@@ -76,10 +81,16 @@ export default function CustomDateFilterModal({ visible, onClose, onApply, initi
                     return (
                         <TouchableOpacity
                             key={index}
-                            style={[styles.gridItem, isSelected && styles.gridItemSelected]}
+                            style={[
+                                styles.gridItem,
+                                { backgroundColor: isSelected ? colors.primaryAction : colors.surface, borderWidth: 1, borderColor: colors.divider }
+                            ]}
                             onPress={() => handleMonthPress(index)}
                         >
-                            <Text style={[styles.gridText, isSelected && styles.gridTextSelected]}>{m}</Text>
+                            <Text style={[
+                                styles.gridText,
+                                { color: isSelected ? colors.background : colors.primaryText, fontWeight: isSelected ? 'bold' : 'normal' }
+                            ]}>{m}</Text>
                         </TouchableOpacity>
                     );
                 })}
@@ -100,10 +111,16 @@ export default function CustomDateFilterModal({ visible, onClose, onApply, initi
                     return (
                         <TouchableOpacity
                             key={y}
-                            style={[styles.gridItem, isSelected && styles.gridItemSelected]}
+                            style={[
+                                styles.gridItem,
+                                { backgroundColor: isSelected ? colors.primaryAction : colors.surface, borderWidth: 1, borderColor: colors.divider }
+                            ]}
                             onPress={() => setSelectedYear(y)}
                         >
-                            <Text style={[styles.gridText, isSelected && styles.gridTextSelected]}>{y}</Text>
+                            <Text style={[
+                                styles.gridText,
+                                { color: isSelected ? colors.background : colors.primaryText, fontWeight: isSelected ? 'bold' : 'normal' }
+                            ]}>{y}</Text>
                         </TouchableOpacity>
                     );
                 })}
@@ -115,40 +132,40 @@ export default function CustomDateFilterModal({ visible, onClose, onApply, initi
         <Modal visible={visible} transparent animationType="slide">
             <View style={styles.overlay}>
                 <TouchableOpacity style={styles.backdrop} onPress={onClose} />
-                <View style={styles.modalContainer}>
+                <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
                     {/* Header */}
                     <View style={styles.header}>
-                        <Text style={styles.title}>Select Time Period</Text>
+                        <Text style={[styles.title, { color: colors.primaryText }]}>Select Time Period</Text>
                         <TouchableOpacity onPress={onClose}>
-                            <Ionicons name="close" size={24} color="#333" />
+                            <Ionicons name="close" size={24} color={colors.primaryText} />
                         </TouchableOpacity>
                     </View>
 
                     {/* Tabs */}
-                    <View style={styles.tabContainer}>
+                    <View style={[styles.tabContainer, { backgroundColor: colors.surface }]}>
                         <TouchableOpacity
-                            style={[styles.tab, mode === 'month' && styles.tabActive]}
+                            style={[styles.tab, mode === 'month' && { backgroundColor: colors.background, elevation: 2 }]}
                             onPress={() => setMode('month')}
                         >
-                            <Text style={[styles.tabText, mode === 'month' && styles.tabTextActive]}>Month</Text>
+                            <Text style={[styles.tabText, { color: mode === 'month' ? colors.primaryText : colors.secondaryText }]}>Month</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
-                            style={[styles.tab, mode === 'year' && styles.tabActive]}
+                            style={[styles.tab, mode === 'year' && { backgroundColor: colors.background, elevation: 2 }]}
                             onPress={() => setMode('year')}
                         >
-                            <Text style={[styles.tabText, mode === 'year' && styles.tabTextActive]}>Year</Text>
+                            <Text style={[styles.tabText, { color: mode === 'year' ? colors.primaryText : colors.secondaryText }]}>Year</Text>
                         </TouchableOpacity>
                     </View>
 
                     {/* Year Selector (Only for Month Mode) */}
                     {mode === 'month' && (
-                        <View style={styles.yearSelector}>
+                        <View style={[styles.yearSelector, { backgroundColor: colors.surface, borderColor: colors.divider }]}>
                             <TouchableOpacity onPress={() => setSelectedYear(y => y - 1)}>
-                                <Ionicons name="chevron-back" size={20} color="#333" />
+                                <Ionicons name="chevron-back" size={20} color={colors.primaryText} />
                             </TouchableOpacity>
-                            <Text style={styles.yearText}>{selectedYear}</Text>
+                            <Text style={[styles.yearText, { color: colors.primaryText }]}>{selectedYear}</Text>
                             <TouchableOpacity onPress={() => setSelectedYear(y => y + 1)}>
-                                <Ionicons name="chevron-forward" size={20} color="#333" />
+                                <Ionicons name="chevron-forward" size={20} color={colors.primaryText} />
                             </TouchableOpacity>
                         </View>
                     )}
@@ -158,11 +175,11 @@ export default function CustomDateFilterModal({ visible, onClose, onApply, initi
 
                     {/* Footer Actions */}
                     <View style={styles.footer}>
-                        <TouchableOpacity style={styles.clearButton} onPress={onClose}>
-                            <Text style={styles.clearButtonText}>Cancel</Text>
+                        <TouchableOpacity style={[styles.clearButton, { borderColor: colors.divider }]} onPress={onClose}>
+                            <Text style={[styles.clearButtonText, { color: colors.primaryText }]}>Cancel</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={styles.applyButton} onPress={handleApply}>
-                            <Text style={styles.applyButtonText}>Apply</Text>
+                        <TouchableOpacity style={[styles.applyButton, { backgroundColor: colors.primaryAction }]} onPress={handleApply}>
+                            <Text style={[styles.applyButtonText, { color: colors.background }]}>Apply</Text>
                         </TouchableOpacity>
                     </View>
                 </View>

@@ -68,8 +68,8 @@ export default function MonthlyTrendLineChart({ data, startDate, endDate, filter
         }));
     }
 
-    const color = filterCategory ? "#F59E0B" : "#007AFF"; // Ambient Blue or Warning Amber
-    const fillColor = filterCategory ? "rgba(245, 158, 11, 0.1)" : "rgba(0, 122, 255, 0.1)";
+    const color = filterCategory ? "#F59E0B" : "#6ca749"; // Main Green
+    const fillColor = filterCategory ? "rgba(245, 158, 11, 0.1)" : "rgba(108, 167, 73, 0.1)";
     const screenWidth = Dimensions.get('window').width;
 
     return (

@@ -137,7 +137,7 @@ function DashboardTabs() {
                 component={TransactionListScreen}
                 options={{
                     tabBarIcon: ({ color, size, focused }) => <NavIcon name="list" size={size} color={color} focused={focused} />,
-                    title: 'Activity'
+                    title: 'Transactions'
                 }}
             />
             <Tab.Screen
@@ -164,7 +164,7 @@ function DashboardTabs() {
                 component={AnalyzeScreen}
                 options={{
                     tabBarIcon: ({ color, size, focused }) => <NavIcon name="pie-chart" size={size} color={color} focused={focused} />,
-                    title: 'Insights'
+                    title: 'Analysis'
                 }}
             />
             <Tab.Screen

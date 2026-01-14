@@ -1,8 +1,13 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Modal, StyleSheet, FlatList, SafeAreaView } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTheme } from './context/ThemeContext';
+import { COLORS } from '../constants/theme';
 
 export default function MultiSelectDropdown({ label, options, selectedValues, onSelectionChange, compact = false, emptyLabel = null }) {
+    const { theme } = useTheme();
+    const colors = COLORS[theme];
+
     const [visible, setVisible] = useState(false);
 
     // Internal state for pending selection before "Apply"
@@ -30,12 +35,10 @@ export default function MultiSelectDropdown({ label, options, selectedValues, on
     const getDisplayText = () => {
         if (selectedValues.length === 0) {
             if (emptyLabel) return emptyLabel;
-            // User requested "All Profiles" / "All Categories" even in compact mode
             const plural = label.endsWith('y') ? label.slice(0, -1) + 'ies' : label + 's';
             return `All ${plural}`;
         }
 
-        // Find names for selected values
         const selectedNames = options
             .filter(opt => selectedValues.includes(opt.id || opt.value))
             .map(opt => opt.name || opt.label);
@@ -48,27 +51,32 @@ export default function MultiSelectDropdown({ label, options, selectedValues, on
 
     return (
         <View style={[styles.container, compact && { marginRight: 0 }]}>
-            {!compact && <Text style={styles.label}>{label}</Text>}
+            {!compact && <Text style={[styles.label, { color: colors.secondaryText }]}>{label}</Text>}
             <TouchableOpacity
                 style={[
                     styles.dropdown,
-                    compact && { paddingVertical: 8, borderWidth: 1 } // Match Search Input Height (approx 40px)
+                    { backgroundColor: colors.surface, borderColor: colors.divider },
+                    compact && { paddingVertical: 8, borderWidth: 1 }
                 ]}
                 onPress={openModal}
             >
-                <Text style={[styles.dropdownText, selectedValues.length > 0 && styles.dropdownTextSelected]}>
+                <Text style={[
+                    styles.dropdownText,
+                    { color: selectedValues.length > 0 ? colors.primaryText : colors.secondaryText },
+                    selectedValues.length > 0 && { fontWeight: 'bold' }
+                ]}>
                     {getDisplayText()}
                 </Text>
-                <MaterialCommunityIcons name="chevron-down" size={20} color="#666" />
+                <MaterialCommunityIcons name="chevron-down" size={20} color={colors.secondaryText} />
             </TouchableOpacity>
 
             <Modal visible={visible} animationType="slide" transparent={true}>
                 <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Select {label}</Text>
+                    <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+                        <View style={[styles.modalHeader, { borderBottomColor: colors.divider }]}>
+                            <Text style={[styles.modalTitle, { color: colors.primaryText }]}>Select {label}</Text>
                             <TouchableOpacity onPress={() => setVisible(false)}>
-                                <MaterialCommunityIcons name="close" size={24} color="#333" />
+                                <MaterialCommunityIcons name="close" size={24} color={colors.primaryText} />
                             </TouchableOpacity>
                         </View>
 
@@ -80,32 +88,35 @@ export default function MultiSelectDropdown({ label, options, selectedValues, on
                                 const isSelected = tempSelected.includes(val);
                                 return (
                                     <TouchableOpacity
-                                        style={styles.optionItem}
+                                        style={[styles.optionItem, { borderBottomColor: colors.divider }]}
                                         onPress={() => toggleSelection(val)}
                                     >
-                                        <Text style={[styles.optionText, isSelected && styles.optionTextSelected]}>
+                                        <Text style={[
+                                            styles.optionText,
+                                            { color: isSelected ? colors.primaryText : colors.primaryText, fontWeight: isSelected ? 'bold' : 'normal' }
+                                        ]}>
                                             {item.name || item.label}
                                         </Text>
                                         {isSelected && (
-                                            <MaterialCommunityIcons name="check" size={20} color="#111111" />
+                                            <MaterialCommunityIcons name="check" size={20} color={colors.primaryAction} />
                                         )}
                                     </TouchableOpacity>
                                 );
                             }}
                         />
 
-                        <View style={styles.footer}>
+                        <View style={[styles.footer, { borderTopColor: colors.divider }]}>
                             <TouchableOpacity
-                                style={styles.clearButton}
+                                style={[styles.clearButton, { backgroundColor: colors.surface }]}
                                 onPress={() => setTempSelected([])}
                             >
-                                <Text style={styles.clearText}>Clear All</Text>
+                                <Text style={[styles.clearText, { color: colors.secondaryText }]}>Clear All</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
-                                style={styles.applyButton}
+                                style={[styles.applyButton, { backgroundColor: colors.primaryAction }]}
                                 onPress={applySelection}
                             >
-                                <Text style={styles.applyText}>Apply Filter</Text>
+                                <Text style={[styles.applyText, { color: colors.white }]}>Apply Filter</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -122,7 +133,6 @@ const styles = StyleSheet.create({
     },
     label: {
         fontSize: 12,
-        color: '#999',
         textTransform: 'uppercase',
         marginBottom: 4,
         fontWeight: '600'
@@ -131,21 +141,14 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        backgroundColor: 'white',
         borderWidth: 1,
-        borderColor: '#eee',
         paddingHorizontal: 12,
         paddingVertical: 10,
         borderRadius: 8,
     },
     dropdownText: {
         fontSize: 14,
-        color: '#666',
         flex: 1,
-    },
-    dropdownTextSelected: {
-        color: '#111111',
-        fontWeight: 'bold',
     },
     modalOverlay: {
         flex: 1,
@@ -153,7 +156,6 @@ const styles = StyleSheet.create({
         justifyContent: 'flex-end',
     },
     modalContent: {
-        backgroundColor: 'white',
         borderTopLeftRadius: 20,
         borderTopRightRadius: 20,
         height: '60%',
@@ -165,13 +167,11 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: 20,
         borderBottomWidth: 1,
-        borderBottomColor: '#eee',
         paddingBottom: 15,
     },
     modalTitle: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: '#1a1a1a',
     },
     optionItem: {
         flexDirection: 'row',
@@ -179,22 +179,15 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingVertical: 16,
         borderBottomWidth: 1,
-        borderBottomColor: '#f5f5f5',
     },
     optionText: {
         fontSize: 16,
-        color: '#333',
-    },
-    optionTextSelected: {
-        color: '#111111',
-        fontWeight: 'bold',
     },
     footer: {
         flexDirection: 'row',
         marginTop: 20,
         paddingTop: 20,
         borderTopWidth: 1,
-        borderTopColor: '#eee',
         gap: 12,
     },
     clearButton: {
@@ -202,10 +195,8 @@ const styles = StyleSheet.create({
         padding: 14,
         alignItems: 'center',
         borderRadius: 12,
-        backgroundColor: '#f5f5f5',
     },
     clearText: {
-        color: '#666',
         fontWeight: '600',
     },
     applyButton: {
@@ -213,10 +204,8 @@ const styles = StyleSheet.create({
         padding: 14,
         alignItems: 'center',
         borderRadius: 12,
-        backgroundColor: '#111111',
     },
     applyText: {
-        color: 'white',
         fontWeight: 'bold',
     },
 });

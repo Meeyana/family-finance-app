@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, SectionList, TouchableOpacity, RefreshControl, DeviceEventEmitter, TextInput } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../components/context/AuthContext';
 import { getTransactions, getFamilyCategories } from '../services/firestoreRepository';
 import MultiSelectDropdown from '../components/MultiSelectDropdown';
@@ -137,6 +137,16 @@ export default function TransactionListScreen({ navigation }) {
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'left', 'right']}>
             {/* Header */}
             <View style={[styles.header, { borderBottomColor: colors.divider }]}>
+                {/* Standard App Header */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.m }}>
+                    <View style={{
+                        width: 48, height: 48, borderRadius: 24,
+                        backgroundColor: colors.surface, justifyContent: 'center', alignItems: 'center', marginRight: SPACING.m
+                    }}>
+                        <Text style={{ fontSize: 24 }}>{profile?.avatar || '👤'}</Text>
+                    </View>
+                    <Text style={{ fontSize: TYPOGRAPHY.size.h2, fontWeight: TYPOGRAPHY.weight.bold, color: colors.primaryText }}>Transactions</Text>
+                </View>
 
                 {/* DATE FILTER */}
                 <View style={{ marginBottom: SPACING.m, width: '60%', alignSelf: 'center' }}>

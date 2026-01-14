@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, DeviceEventEmitter } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { getAccountData } from '../services/dataService';
 import { useAuth } from '../components/context/AuthContext';
 import MonthPicker from '../components/MonthPicker';
@@ -17,7 +18,7 @@ import { useTheme } from '../components/context/ThemeContext';
 import ExpensePieChart from '../components/ExpensePieChart';
 
 export default function AnalyzeScreen({ navigation }) {
-    const { userProfiles } = useAuth();
+    const { userProfiles, profile } = useAuth();
     const { theme } = useTheme();
     const colors = COLORS[theme];
 
@@ -103,6 +104,15 @@ export default function AnalyzeScreen({ navigation }) {
             limit = current.totalLimit;
         }
 
+        const netDiff = currentStats.net - prevStats.net;
+        const incomeDiff = currentStats.income - prevStats.income;
+        const expenseDiff = currentStats.expense - prevStats.expense;
+
+        const calculatePercent = (diff, prevVal) => {
+            if (prevVal === 0) return 0;
+            return Math.round((diff / Math.abs(prevVal)) * 100);
+        };
+
         return {
             ...current,
             transactions: currentStats.txs,
@@ -111,9 +121,12 @@ export default function AnalyzeScreen({ navigation }) {
             netCashflow: currentStats.net,
             totalLimit: limit,
             projectedSpend: (currentStats.expense / Math.max(new Date().getDate(), 1)) * 30,
-            incomeDiff: currentStats.income - prevStats.income,
-            expenseDiff: currentStats.expense - prevStats.expense,
-            netDiff: currentStats.net - prevStats.net
+            incomeDiff,
+            expenseDiff,
+            netDiff,
+            netDiffPercent: calculatePercent(netDiff, prevStats.net),
+            incomeDiffPercent: calculatePercent(incomeDiff, prevStats.income),
+            expenseDiffPercent: calculatePercent(expenseDiff, prevStats.expense)
         };
     }, [data, selectedProfileIds, selectedCategories]);
 
@@ -131,33 +144,30 @@ export default function AnalyzeScreen({ navigation }) {
 
 
                 {/* Page Title & Description (Restored) */}
-                <View style={{ paddingHorizontal: SPACING.screenPadding, paddingTop: SPACING.m, paddingBottom: SPACING.s }}>
-                    <Text style={{
-                        fontSize: TYPOGRAPHY.size.h1,
-                        fontWeight: TYPOGRAPHY.weight.bold,
-                        color: colors.primaryText,
-                        fontFamily: TYPOGRAPHY.fontFamily.bold,
-                        marginBottom: 4
+                {/* Header */}
+                <View style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    paddingHorizontal: SPACING.screenPadding,
+                    marginTop: SPACING.m,
+                    marginBottom: SPACING.m
+                }}>
+                    <View style={{
+                        width: 48, height: 48, borderRadius: 24,
+                        backgroundColor: colors.surface, justifyContent: 'center', alignItems: 'center', marginRight: SPACING.m
                     }}>
-                        Financial Insights
-                    </Text>
-                    <Text style={{
-                        fontSize: TYPOGRAPHY.size.body,
-                        color: colors.secondaryText,
-                        fontFamily: TYPOGRAPHY.fontFamily.regular,
-                        lineHeight: 22
-                    }}>
-                        Deep dive into your income, expenses, and budget health.
-                    </Text>
+                        <Text style={{ fontSize: 24 }}>{profile?.avatar || '👤'}</Text>
+                    </View>
+                    <Text style={{ fontSize: TYPOGRAPHY.size.h2, fontWeight: TYPOGRAPHY.weight.bold, color: colors.primaryText }}>Analysis</Text>
                 </View>
 
                 {/* Date Selector Header */}
-                <View style={[styles.header, { borderBottomColor: colors.divider }]}>
+                <View style={[styles.header, { borderBottomColor: colors.divider, justifyContent: 'center' }]}>
                     <TouchableOpacity onPress={() => setShowDateFilter(true)} style={styles.dateSelector}>
-                        <Text style={[styles.dateSelectorText, { color: colors.primaryAction }]}>
+                        <Text style={[styles.dateSelectorText, { color: colors.black }]}>
                             {filterMode === 'year' ? `Year ${startDate.getFullYear()}` : `Month ${startDate.getMonth() + 1}, ${startDate.getFullYear()}`}
                         </Text>
-                        <MaterialCommunityIcons name="chevron-down" size={20} color={colors.primaryAction} />
+                        <MaterialCommunityIcons name="chevron-down" size={20} color={colors.black} />
                     </TouchableOpacity>
                 </View>
 
@@ -174,86 +184,118 @@ export default function AnalyzeScreen({ navigation }) {
                     />
                 </View>
 
-                {/* Main Stats Card (B&W High Contrast) */}
-                <View style={[styles.summaryCard, { backgroundColor: colors.surface }]}>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <View>
-                            <Text style={[styles.cardLabel, { color: colors.secondaryText }]}>NET CASHFLOW</Text>
-                            <CurrencyText
-                                amount={viewData?.netCashflow}
-                                showSign={true}
-                                style={[styles.netText, { color: viewData?.netCashflow >= 0 ? colors.success : colors.primaryText }]}
-                            />
-                        </View>
+                {/* 1. Header Card: Net Cashflow (Biggest) */}
+                <LinearGradient
+                    colors={['#101828', '#1e3c72', '#2a5298']}
+                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                    style={[styles.summaryCard, { paddingVertical: 24, paddingHorizontal: SPACING.l, alignItems: 'center', justifyContent: 'center' }]}
+                >
+                    <View style={{ alignItems: 'center', width: '100%' }}>
+                        <Text style={[styles.cardLabel, { color: 'rgba(255,255,255,0.7)', fontSize: 13, marginBottom: 8, textAlign: 'center' }]}>NET CASHFLOW FOR FAMILY</Text>
+                        <CurrencyText
+                            amount={viewData?.netCashflow}
+                            showSign={false}
+                            style={[styles.netText, { color: '#FFFFFF', fontSize: 36, textAlign: 'center' }]}
+                        />
 
-                        {/* Health Status Badge */}
-                        {viewData && (
+                        {/* Comparison Pill */}
+                        {viewData?.netDiff !== 0 && (
                             <View style={{
-                                backgroundColor: (viewData.financialStatus?.includes('Healthy') ? colors.success : colors.error) + '20',
+                                backgroundColor: 'rgba(255,255,255,0.15)',
+                                alignSelf: 'center',
                                 paddingHorizontal: 12,
                                 paddingVertical: 6,
-                                borderRadius: 12
+                                borderRadius: 8,
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                marginTop: 12
                             }}>
-                                <Text style={{
-                                    color: viewData.financialStatus?.includes('Healthy') ? colors.success : colors.error,
-                                    fontWeight: 'bold',
-                                    fontSize: 12
-                                }}>
-                                    {viewData.financialStatus || (viewData.netCashflow >= 0 ? '🟢 Healthy' : '🟠 Deficit')}
+                                <Text style={{ color: viewData?.netDiff >= 0 ? '#A0E8AF' : '#FFCDD2', fontSize: 13, fontWeight: '600' }}>
+                                    {viewData?.netDiff >= 0 ? '▲' : '▼'} {Math.abs(viewData?.netDiff || 0).toLocaleString()} <Text style={{ color: 'rgba(255,255,255,0.7)', fontWeight: '400' }}>vs last {filterMode}</Text>
                                 </Text>
                             </View>
                         )}
                     </View>
+                </LinearGradient>
 
-                    <Text style={[styles.diffText, { color: viewData?.netDiff >= 0 ? colors.success : colors.error }]}>
-                        {viewData?.netDiff >= 0 ? '▲' : '▼'} <CurrencyText amount={Math.abs(viewData?.netDiff || 0)} /> vs last {filterMode}
-                    </Text>
+                {/* 2. Secondary Cards List */}
+                <View style={{ paddingHorizontal: SPACING.screenPadding, marginTop: -SPACING.s, gap: SPACING.m }}>
 
-                    <View style={[styles.divider, { backgroundColor: colors.divider }]} />
-
-                    <View style={styles.statsRow}>
-                        <View>
-                            <Text style={[styles.statLabel, { color: colors.secondaryText }]}>INCOME</Text>
+                    {/* Monthly Income */}
+                    <View style={styles.listCard}>
+                        <View style={{ flex: 1 }}>
+                            <Text style={styles.listCardLabel}>TOTAL INCOME</Text>
                             <CurrencyText
                                 amount={viewData?.totalIncome}
-                                showSign={true}
-                                style={[styles.statValue, { color: colors.success }]}
+                                showSign={false}
+                                style={styles.listCardValue}
                             />
+                            {viewData?.incomeDiffPercent !== 0 && (
+                                <Text style={{ fontSize: 13, fontWeight: '600', color: viewData?.incomeDiffPercent >= 0 ? '#2E7D32' : '#C62828', marginTop: 4 }}>
+                                    {viewData?.incomeDiffPercent >= 0 ? '▲' : '▼'} {Math.abs(viewData?.incomeDiffPercent || 0)}%
+                                </Text>
+                            )}
                         </View>
-                        <View style={{ alignItems: 'flex-end' }}>
-                            <Text style={[styles.statLabel, { color: colors.secondaryText }]}>EXPENSE</Text>
+                        <View style={[styles.iconBox, { backgroundColor: '#E8F5E9' }]}>
+                            <MaterialCommunityIcons name="currency-usd" size={24} color="#2E7D32" />
+                        </View>
+                    </View>
+
+                    {/* Expense */}
+                    <View style={styles.listCard}>
+                        <View style={{ flex: 1 }}>
+                            <Text style={styles.listCardLabel}>TOTAL EXPENSE</Text>
                             <CurrencyText
                                 amount={-viewData?.totalSpent}
-                                showSign={true}
-                                style={[styles.statValue, { color: colors.error }]}
+                                showSign={false}
+                                style={styles.listCardValue}
                             />
-                            <Text style={[styles.diffText, { color: viewData?.expenseDiff <= 0 ? colors.success : colors.error, textAlign: 'right', marginTop: 2 }]}>
-                                {viewData?.expenseDiff > 0 ? '▲' : '▼'} <CurrencyText amount={Math.abs(viewData?.expenseDiff || 0)} />
-                            </Text>
+                            {viewData?.expenseDiffPercent !== 0 && (
+                                <Text style={{ fontSize: 13, fontWeight: '600', color: viewData?.expenseDiffPercent > 0 ? '#C62828' : '#2E7D32', marginTop: 4 }}>
+                                    {viewData?.expenseDiffPercent > 0 ? '▲' : '▼'} {Math.abs(viewData?.expenseDiffPercent || 0)}%
+                                </Text>
+                            )}
+                        </View>
+                        <View style={[styles.iconBox, { backgroundColor: '#FFEBEE' }]}>
+                            <MaterialCommunityIcons name="chart-line-variant" size={24} color="#C62828" />
                         </View>
                     </View>
 
-                    <View style={[styles.divider, { backgroundColor: colors.divider }]} />
-
-                    {/* Analytics Section */}
-                    <View style={styles.statsRow}>
-                        <View>
-                            <Text style={[styles.statLabel, { color: colors.secondaryText }]}>🔥 BURN RATE</Text>
-                            <Text style={[styles.statValue, { color: '#F59E0B' }]}>
-                                <CurrencyText amount={Math.round((viewData?.totalSpent || 0) / Math.max(new Date().getDate(), 1))} /> /day
-                            </Text>
+                    {/* Burn Rate */}
+                    <View style={styles.listCard}>
+                        <View style={{ flex: 1 }}>
+                            <Text style={styles.listCardLabel}>DAILY BURN RATE</Text>
+                            {/* Fix: use style prop on CurrencyText directly if possible, or ensure wrapping Text doesn't constrain it unexpectedly. 
+                                 However, previous issue was CurrencyText inside Text inheriting styles but maybe CurrencyText default size overriding?
+                                 I'll just apply style directly to CurrencyText and remove wrapper if CurrencyText supports it (it does).
+                             */}
+                            <CurrencyText
+                                amount={Math.round((viewData?.totalSpent || 0) / Math.max(new Date().getDate(), 1))}
+                                style={styles.listCardValue}
+                            />
                         </View>
-                        <View style={{ alignItems: 'flex-end' }}>
-                            <Text style={[styles.statLabel, { color: colors.secondaryText }]}>🔮 FORECAST</Text>
+                        <View style={[styles.iconBox, { backgroundColor: '#FFF3E0' }]}>
+                            <MaterialCommunityIcons name="fire" size={24} color="#EF6C00" />
+                        </View>
+                    </View>
+
+                    {/* Forecast */}
+                    <View style={styles.listCard}>
+                        <View style={{ flex: 1 }}>
+                            <Text style={styles.listCardLabel}>MONTHLY FORECAST</Text>
                             <CurrencyText
                                 amount={viewData?.projectedSpend}
-                                style={[styles.statValue, {
-                                    color: (viewData?.projectedSpend > viewData?.totalLimit) ? colors.error : colors.success
-                                }]}
+                                style={styles.listCardValue}
                             />
                         </View>
+                        <View style={[styles.iconBox, { backgroundColor: '#EDE7F6' }]}>
+                            <MaterialCommunityIcons name="crystal-ball" size={24} color="#673AB7" />
+                        </View>
                     </View>
+
                 </View>
+
+                <View style={{ height: SPACING.l }} />
 
                 {/* Chart Section: Trends */}
                 <View style={styles.section}>
@@ -419,5 +461,45 @@ const styles = StyleSheet.create({
         fontWeight: TYPOGRAPHY.weight.bold,
         marginBottom: SPACING.m,
         letterSpacing: -0.5,
+    },
+    glassCard: {
+        backgroundColor: 'rgba(255, 255, 255, 0.15)',
+        borderRadius: 12,
+        padding: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+    },
+    listCard: {
+        backgroundColor: '#FFFFFF',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: SPACING.l,
+        borderRadius: 16,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 2,
+    },
+    listCardLabel: {
+        fontSize: TYPOGRAPHY.size.small,
+        color: '#9CA3AF',
+        fontWeight: 'bold',
+        marginBottom: 4,
+        letterSpacing: 0.5,
+        textTransform: 'uppercase',
+    },
+    listCardValue: {
+        fontSize: TYPOGRAPHY.size.h3,
+        fontWeight: 'bold',
+        color: '#111111',
+    },
+    iconBox: {
+        width: 48,
+        height: 48,
+        borderRadius: 12,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
 });

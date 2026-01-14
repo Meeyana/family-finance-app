@@ -7,6 +7,7 @@ import { auth } from '../services/firebase';
 import { useAuth } from '../components/context/AuthContext';
 import SwipeDateFilter from '../components/SwipeDateFilter';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../components/context/ThemeContext';
 import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
 import CurrencyText from '../components/CurrencyText';
@@ -228,69 +229,91 @@ export default function AccountDashboard({ navigation }) {
                     <SwipeDateFilter date={selectedDate} onMonthChange={setSelectedDate} />
                 </View>
 
-                {/* HERO: NET CASHFLOW */}
-                <View style={[styles.section, { marginTop: SPACING.xl }]}>
-                    <Text style={[styles.label, { color: colors.secondaryText }]}>Net Cashflow</Text>
-                    <View style={styles.heroRow}>
-                        <CurrencyText
-                            amount={viewData?.netCashflow}
-                            showSign={false}
-                            style={[styles.heroValue, { color: viewData?.netCashflow >= 0 ? colors.success : colors.error }]}
-                            symbolStyle={[styles.currency, { color: viewData?.netCashflow >= 0 ? colors.success : colors.error }]}
-                        />
-                    </View>
-                    <Text style={[styles.diffText, { color: colors.secondaryText }]}>
-                        {viewData?.netDiff >= 0 ? '▲ Better' : '▼ Worse'} than last month by <CurrencyText amount={Math.abs(viewData.netDiff)} />
-                    </Text>
-                </View>
+                {/* MONTHLY SNAPSHOT (UNIFIED - GRADIENT) */}
+                <View style={[styles.section, { marginTop: SPACING.m }]}>
 
-                {/* STATS GRID */}
-                <View style={styles.grid}>
-                    {/* Row 1: Income & Expense */}
-                    <View style={styles.row}>
-                        <View style={[styles.card, { backgroundColor: colors.surface, flex: 1 }]}>
-                            <View style={styles.cardHeader}>
-                                <MaterialCommunityIcons name="arrow-down-left" size={20} color={colors.success} />
-                                <Text style={[styles.cardLabel, { color: colors.secondaryText }]}>Income</Text>
-                            </View>
+                    <LinearGradient
+                        colors={['#101828', '#1e3c72', '#2a5298']} // Deep Dark Blue -> Blue Gradient
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={[styles.card, { padding: SPACING.l, borderRadius: 24 }]} // Increased radius
+                    >
+                        {/* 1. Net Cashflow (Top, Centered) */}
+                        <View style={{ alignItems: 'center', marginBottom: SPACING.l }}>
+                            <Text style={{ color: '#E0E0E0', fontSize: TYPOGRAPHY.size.body, marginBottom: 4 }}>Total Actual Balance</Text>
                             <CurrencyText
-                                amount={viewData?.totalIncome}
-                                showSign={true}
-                                style={[styles.cardValue, { color: colors.primaryText }]}
+                                amount={viewData?.netCashflow}
+                                showSign={false}
+                                style={{ color: '#FFFFFF', fontSize: 36, fontWeight: 'bold' }} // Big White Text
+                                symbolStyle={{ color: '#FFFFFF', fontSize: 28, textDecorationLine: 'underline' }}
                             />
-                            {/* Income Percent Diff */}
-                            {viewData?.incomeDiffPercent !== 0 && (
-                                <Text style={[styles.tinyLabel, { color: viewData?.incomeDiffPercent >= 0 ? colors.success : colors.error }]}>
-                                    {viewData?.incomeDiffPercent > 0 ? '▲' : '▼'} {Math.abs(viewData?.incomeDiffPercent || 0).toFixed(0)}% vs last month
-                                </Text>
-                            )}
+                            <Text style={{ color: '#B0BEC5', fontSize: TYPOGRAPHY.size.caption, marginTop: 4 }}>
+                                {viewData?.netDiff >= 0 ? '▲ Better' : '▼ Worse'} than last month by <CurrencyText amount={Math.abs(viewData.netDiff)} style={{ color: '#B0BEC5' }} symbolStyle={{ color: '#B0BEC5' }} />
+                            </Text>
                         </View>
 
-                        <View style={[styles.card, { backgroundColor: colors.surface, flex: 1 }]}>
-                            <View style={styles.cardHeader}>
-                                <MaterialCommunityIcons name="arrow-up-right" size={20} color={colors.error} />
-                                <Text style={[styles.cardLabel, { color: colors.secondaryText }]}>Expense</Text>
+                        {/* 2. Income & Expense Row (Glassmorphism) */}
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: SPACING.m }}>
+                            {/* Income */}
+                            <View style={{
+                                flex: 1,
+                                backgroundColor: 'rgba(255, 255, 255, 0.1)', // Glass effect
+                                borderRadius: 16,
+                                padding: SPACING.m,
+                                alignItems: 'flex-start'
+                            }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 6 }}>
+                                    <View style={{ backgroundColor: 'rgba(76, 175, 80, 0.2)', padding: 4, borderRadius: 8 }}>
+                                        {/* Green tint icon bg */}
+                                        <MaterialCommunityIcons name="arrow-down-left" size={16} color="#4CAF50" />
+                                    </View>
+                                    <Text style={{ color: '#A0E8AF', fontSize: TYPOGRAPHY.size.small, fontWeight: '600' }}>Income</Text>
+                                </View>
+                                <CurrencyText
+                                    amount={viewData?.totalIncome}
+                                    showSign={false}
+                                    style={{ color: '#FFFFFF', fontSize: 20, fontWeight: 'bold' }}
+                                />
+                                {viewData?.incomeDiffPercent !== 0 && (
+                                    <Text style={{ color: '#A0E8AF', fontSize: 11, marginTop: 4, fontWeight: '500' }}>
+                                        {viewData?.incomeDiffPercent > 0 ? '▲' : '▼'} {Math.abs(viewData?.incomeDiffPercent || 0).toFixed(0)}%
+                                    </Text>
+                                )}
                             </View>
-                            <CurrencyText
-                                amount={-viewData?.totalSpent}
-                                showSign={true}
-                                style={[styles.cardValue, { color: colors.primaryText }]}
-                            />
-                            {/* Expense Percent Diff */}
-                            {viewData?.expenseDiffPercent !== 0 && (
-                                <Text style={[styles.tinyLabel, { color: viewData?.expenseDiffPercent > 0 ? colors.error : colors.success }]}>
-                                    {viewData?.expenseDiffPercent > 0 ? '▲' : '▼'} {Math.abs(viewData?.expenseDiffPercent || 0).toFixed(0)}% vs last month
-                                </Text>
-                            )}
-                        </View>
-                    </View>
 
-                    {/* REMOVED: Forecast Row */}
+                            {/* Expense */}
+                            <View style={{
+                                flex: 1,
+                                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                borderRadius: 16,
+                                padding: SPACING.m,
+                                alignItems: 'flex-start'
+                            }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 6 }}>
+                                    <View style={{ backgroundColor: 'rgba(244, 67, 54, 0.2)', padding: 4, borderRadius: 8 }}>
+                                        {/* Red tint icon bg */}
+                                        <MaterialCommunityIcons name="arrow-up-right" size={16} color="#F44336" />
+                                    </View>
+                                    <Text style={{ color: '#FFCDD2', fontSize: TYPOGRAPHY.size.small, fontWeight: '600' }}>Expense</Text>
+                                </View>
+                                <CurrencyText
+                                    amount={-viewData?.totalSpent}
+                                    showSign={false}
+                                    style={{ color: '#FFFFFF', fontSize: 20, fontWeight: 'bold' }}
+                                />
+                                {viewData?.expenseDiffPercent !== 0 && (
+                                    <Text style={{ color: '#FFCDD2', fontSize: 11, marginTop: 4, fontWeight: '500' }}>
+                                        {viewData?.expenseDiffPercent > 0 ? '▲' : '▼'} {Math.abs(viewData?.expenseDiffPercent || 0).toFixed(0)}%
+                                    </Text>
+                                )}
+                            </View>
+                        </View>
+                    </LinearGradient>
                 </View>
 
                 {/* RECENT TRANSACTIONS (New Section) */}
                 <View style={styles.sectionHeaderRow}>
-                    <Text style={[styles.sectionTitle, { color: colors.secondaryText }]}>Recent Transactions</Text>
+                    <Text style={[styles.sectionTitle, { color: colors.primaryText }]}>Recent Transactions</Text>
                     <TouchableOpacity onPress={() => navigation.navigate('Transactions')}>
                         <Text style={[styles.seeAllText, { color: colors.primaryAction }]}>See all</Text>
                     </TouchableOpacity>
