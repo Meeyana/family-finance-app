@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../components/context/AuthContext';
 import { signOut } from 'firebase/auth';
 import { auth } from '../services/firebase';
@@ -53,7 +53,7 @@ export default function MoreMenuScreen({ navigation }) {
             <View style={styles.optionContent}>
                 <View style={styles.leftContent}>
                     <View style={[styles.iconBox, { backgroundColor: colors.surface }]}>
-                        <MaterialCommunityIcons
+                        <Ionicons
                             name={icon}
                             size={22}
                             color={isDestructive ? colors.error : colors.primaryText}
@@ -80,7 +80,7 @@ export default function MoreMenuScreen({ navigation }) {
                             <Text style={styles.badgeText}>{badge}</Text>
                         </View>
                     )}
-                    <MaterialCommunityIcons name="chevron-right" size={20} color={colors.secondaryText} />
+                    <Ionicons name="chevron-forward" size={20} color={colors.secondaryText} />
                 </View>
             </View>
         </TouchableOpacity>
@@ -117,7 +117,7 @@ export default function MoreMenuScreen({ navigation }) {
                     <SectionHeader title="Management" />
                     {profile?.role !== 'Child' && (
                         <MenuOption
-                            icon="hand-coin-outline"
+                            icon="cash-outline"
                             label="Money Requests"
                             subtext={pendingRequestCount > 0 ? "Pending approvals" : null}
                             badge={pendingRequestCount}
@@ -125,51 +125,80 @@ export default function MoreMenuScreen({ navigation }) {
                         />
                     )}
                     <MenuOption
-                        icon="calendar-sync-outline"
+                        icon="calendar-outline"
                         label="Recurring Transactions"
                         onPress={() => navigation.navigate('Recurring')}
                     />
                     <MenuOption
-                        icon="piggy-bank-outline"
+                        icon="wallet-outline"
                         label="Savings Goals"
                         onPress={() => navigation.navigate('Goals')}
                     />
                     <MenuOption
-                        icon="tag-multiple-outline"
+                        icon="pricetags-outline"
                         label="Categories"
                         onPress={() => navigation.navigate('ManageCategories')}
                     />
+                    {profile?.role === 'Owner' && (
+                        <MenuOption
+                            icon="people-outline"
+                            label="Manage Profiles"
+                            onPress={() => navigation.navigate('ManageProfiles')}
+                        />
+                    )}
                 </View>
 
                 <View style={styles.section}>
                     <SectionHeader title="App" />
                     <MenuOption
-                        icon="cog-outline"
+                        icon="settings-outline"
                         label="Settings"
                         onPress={() => navigation.navigate('Settings')}
                     />
-                    <MenuOption
-                        icon="account-switch-outline"
-                        label="Switch Profile"
+                </View>
+
+                {/* Footer Actions */}
+                <View style={styles.footer}>
+                    <TouchableOpacity
+                        style={[styles.footerButton, {
+                            backgroundColor: colors.surface,
+                            borderWidth: 1,
+                            borderColor: colors.primaryAction,
+                            flex: 1,
+                            marginRight: SPACING.s,
+                            borderRadius: 12
+                        }]}
                         onPress={handleSwitchUser}
-                    />
-                </View>
+                    >
+                        <Ionicons name="swap-horizontal-outline" size={20} color={colors.primaryAction} />
+                        <Text style={[styles.footerButtonText, { color: colors.primaryAction }]}>Switch Profile</Text>
+                    </TouchableOpacity>
 
-                <View style={[styles.section, { marginTop: SPACING.l }]}>
-                    <MenuOption
-                        icon="logout"
-                        label="Log Out"
-                        isDestructive
+                    <TouchableOpacity
+                        style={[styles.footerButton, {
+                            backgroundColor: colors.primaryAction,
+                            borderRadius: 12,
+                            flex: 1,
+                            marginLeft: SPACING.s,
+                            borderWidth: 1,
+                            borderColor: colors.primaryAction
+                        }]}
                         onPress={handleLogout}
-                    />
+                    >
+                        <Ionicons name="log-out-outline" size={20} color="#FFFFFF" />
+                        <Text style={[styles.footerButtonText, { color: '#FFFFFF' }]}>Log Out</Text>
+                    </TouchableOpacity>
                 </View>
 
-
+                <View style={{ height: 40 }} />
 
             </ScrollView>
         </SafeAreaView>
     );
 }
+
+
+
 
 const styles = StyleSheet.create({
     container: {
@@ -265,6 +294,23 @@ const styles = StyleSheet.create({
     },
     editLink: {
         fontSize: TYPOGRAPHY.size.caption,
+        fontWeight: TYPOGRAPHY.weight.semiBold,
+    },
+    footer: {
+        flexDirection: 'row',
+        marginTop: SPACING.xl,
+        gap: SPACING.m,
+    },
+    footerButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: SPACING.m,
+        borderRadius: 12,
+        gap: 8,
+    },
+    footerButtonText: {
+        fontSize: TYPOGRAPHY.size.body,
         fontWeight: TYPOGRAPHY.weight.semiBold,
     },
     version: {

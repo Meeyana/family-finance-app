@@ -110,8 +110,8 @@ export default function AccountDashboard({ navigation }) {
             let expense = 0;
 
             filteredTxs.forEach(t => {
-                const isGiven = (t.note && t.note.includes('Transfer to')) || t.category === 'Transfer Out' || t.categoryIcon === '💸';
-                const isReceived = (t.note && t.note.includes('Received from')) || t.category === 'Allowance' || t.categoryIcon === '💰';
+                const isGiven = (t.note && (t.note.includes('Transfer to') || t.note.startsWith('To '))) || t.category === 'Transfer Out' || t.categoryIcon === '💸';
+                const isReceived = (t.note && (t.note.includes('Received from') || t.note.startsWith('From '))) || t.category === 'Allowance' || t.categoryIcon === '💰';
 
                 // PRIORITY 1: Explicit Transfer Directions
                 if (isReceived) {
@@ -139,8 +139,8 @@ export default function AccountDashboard({ navigation }) {
             });
 
             const expenseTxs = filteredTxs.filter(t => {
-                const isGiven = (t.note && t.note.includes('Transfer to')) || t.category === 'Transfer Out' || t.categoryIcon === '💸';
-                const isReceived = (t.note && t.note.includes('Received from')) || t.category === 'Allowance' || t.categoryIcon === '💰';
+                const isGiven = (t.note && (t.note.includes('Transfer to') || t.note.startsWith('To '))) || t.category === 'Transfer Out' || t.categoryIcon === '💸';
+                const isReceived = (t.note && (t.note.includes('Received from') || t.note.startsWith('From '))) || t.category === 'Allowance' || t.categoryIcon === '💰';
 
                 if (isReceived) return false; // Counts as income
                 if (isGiven) return true; // Counts as expense
@@ -225,7 +225,7 @@ export default function AccountDashboard({ navigation }) {
                 </View>
 
                 {/* DATE FILTER */}
-                <View style={{ marginBottom: 0, width: '60%', alignSelf: 'center' }}>
+                <View style={{ marginBottom: 0 }}>
                     <SwipeDateFilter date={selectedDate} onMonthChange={setSelectedDate} />
                 </View>
 
@@ -329,6 +329,7 @@ export default function AccountDashboard({ navigation }) {
                                 }}
                                 iconBackgroundColor={colors.background}
                                 onPress={() => navigation.navigate('AddTransaction', { transaction: item })}
+                                showDate={true}
                             />
                         </View>
                     ))}

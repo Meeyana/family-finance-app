@@ -95,7 +95,7 @@ export default function GoalDetailScreen({ navigation, route }) {
             const val = Number(amount);
 
             if (actionType === 'deposit') {
-                await contributeToGoal(user.uid, goal.id, val, note, profile.id);
+                await contributeToGoal(user.uid, goal.id, val, note, profile.id, currentGoal.name);
                 // Optimistic update
                 setCurrentGoal(prev => ({ ...prev, currentAmount: prev.currentAmount + val }));
             } else {
@@ -104,7 +104,7 @@ export default function GoalDetailScreen({ navigation, route }) {
                     setActionLoading(false);
                     return;
                 }
-                await withdrawFromGoal(user.uid, goal.id, val, note, profile.id);
+                await withdrawFromGoal(user.uid, goal.id, val, note, profile.id, currentGoal.name);
                 // Optimistic update
                 setCurrentGoal(prev => ({ ...prev, currentAmount: prev.currentAmount - val }));
             }

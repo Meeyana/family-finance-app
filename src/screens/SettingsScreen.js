@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Share } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../components/context/AuthContext';
@@ -7,9 +7,37 @@ import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
 import { useTheme } from '../components/context/ThemeContext';
 
 export default function SettingsScreen({ navigation }) {
-    const { profile } = useAuth(); // Get current profile for role check
+    const { profile } = useAuth();
     const { theme, themeMode, setTheme } = useTheme();
     const colors = COLORS[theme];
+
+    const handleShare = async () => {
+        try {
+            await Share.share({
+                message: 'Check out this Family Finance App!',
+            });
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
+    const MenuItem = ({ icon, label, onPress, subtext, rightElement }) => (
+        <TouchableOpacity
+            style={[styles.menuItem, { borderBottomColor: colors.divider }]}
+            onPress={onPress}
+        >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACING.m }}>
+                <View style={[styles.iconBox, { backgroundColor: colors.surface }]}>
+                    <Ionicons name={icon} size={22} color={colors.primaryText} />
+                </View>
+                <View>
+                    <Text style={[styles.menuText, { color: colors.primaryText }]}>{label}</Text>
+                    {subtext && <Text style={{ fontSize: 12, color: colors.secondaryText }}>{subtext}</Text>}
+                </View>
+            </View>
+            {rightElement || <Ionicons name="chevron-forward" size={22} color={colors.divider} />}
+        </TouchableOpacity>
+    );
 
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -22,29 +50,34 @@ export default function SettingsScreen({ navigation }) {
                 <View style={{ width: 24 }} />
             </View>
 
-            <View style={styles.content}>
-                {profile?.role === 'Owner' && (
-                    <View>
-                        <Text style={[styles.sectionTitle, { color: colors.secondaryText }]}>FAMILY MANAGEMENT</Text>
+            <ScrollView contentContainerStyle={styles.content}>
 
-                        <TouchableOpacity
-                            style={[styles.menuItem, { borderBottomColor: colors.divider }]}
-                            onPress={() => navigation.navigate('ManageProfiles')}
-                        >
-                            <Text style={[styles.menuText, { color: colors.primaryText }]}>Manage Profiles</Text>
-                            <Ionicons name="chevron-forward" size={20} color={colors.divider} />
-                        </TouchableOpacity>
+                {/* Account Section */}
+                <Text style={[styles.sectionTitle, { color: colors.secondaryText }]}>ACCOUNT</Text>
+                <MenuItem
+                    icon="person-outline"
+                    label="My Profile"
+                    subtext="Edit personal details"
+                    onPress={() => navigation.navigate('ProfileDashboard', { profile })}
+                />
 
-                        <TouchableOpacity
-                            style={[styles.menuItem, { borderBottomColor: colors.divider }]}
-                            onPress={() => navigation.navigate('ManageCategories')}
-                        >
-                            <Text style={[styles.menuText, { color: colors.primaryText }]}>Manage Categories</Text>
-                            <Ionicons name="chevron-forward" size={20} color={colors.divider} />
-                        </TouchableOpacity>
-                    </View>
-                )}
+                {/* Preferences Section */}
+                <Text style={[styles.sectionTitle, { color: colors.secondaryText, marginTop: SPACING.xl }]}>PREFERENCES</Text>
 
+                <MenuItem
+                    icon="notifications-outline"
+                    label="Notifications"
+                    onPress={() => Alert.alert('Coming Soon', 'Notification settings are under development.')}
+                />
+
+                <MenuItem
+                    icon="language-outline"
+                    label="Language"
+                    subtext="English"
+                    onPress={() => Alert.alert('Coming Soon', 'Multi-language support is coming.')}
+                />
+
+                {/* Appearance (Theme) */}
                 <View style={{ marginTop: SPACING.xl }}>
                     <Text style={[styles.sectionTitle, { color: colors.secondaryText }]}>APPEARANCE</Text>
                     <View style={styles.themeContainer}>
@@ -74,13 +107,25 @@ export default function SettingsScreen({ navigation }) {
                     </View>
                 </View>
 
-                {/* Debug Info (Optional) */}
-                <View style={{ marginTop: SPACING.xl, paddingHorizontal: SPACING.screenPadding }}>
-                    <Text style={{ color: colors.secondaryText, fontSize: TYPOGRAPHY.size.caption }}>
-                        Version 1.1.0
-                    </Text>
-                </View>
-            </View>
+                {/* About Section */}
+                <Text style={[styles.sectionTitle, { color: colors.secondaryText, marginTop: SPACING.xl }]}>ABOUT</Text>
+
+                <MenuItem
+                    icon="share-social-outline"
+                    label="Share App"
+                    onPress={handleShare}
+                />
+
+                <MenuItem
+                    icon="information-circle-outline"
+                    label="Version"
+                    rightElement={<Text style={{ color: colors.secondaryText }}>1.1.0</Text>}
+                    onPress={() => { }} // No action
+                />
+
+                {/* Footer Padding */}
+                <View style={{ height: 40 }} />
+            </ScrollView>
         </SafeAreaView>
     );
 }
@@ -107,6 +152,7 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         marginBottom: SPACING.s,
         marginLeft: SPACING.screenPadding,
+        letterSpacing: 1,
     },
     menuItem: {
         flexDirection: 'row',
@@ -115,6 +161,13 @@ const styles = StyleSheet.create({
         paddingVertical: SPACING.m,
         paddingHorizontal: SPACING.screenPadding,
         borderBottomWidth: StyleSheet.hairlineWidth,
+    },
+    iconBox: {
+        width: 40,
+        height: 40,
+        borderRadius: 12,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     menuText: {
         fontSize: TYPOGRAPHY.size.body,

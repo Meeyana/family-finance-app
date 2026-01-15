@@ -3,25 +3,50 @@ import { View, Text, StyleSheet, TouchableOpacity, useColorScheme } from 'react-
 import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
 import CurrencyText from './CurrencyText';
 
-const TransactionRow = ({ item, onPress, iconBackgroundColor }) => {
+const TransactionRow = ({ item, onPress, iconBackgroundColor, showDate }) => {
     const theme = useColorScheme() || 'light';
     const colors = COLORS[theme];
 
     const isExpense = (item.type || 'expense') === 'expense';
     const isTransfer = item.type === 'transfer';
 
-    // Determine Color and Sign
-    let amountColor = isExpense ? colors.primaryText : colors.success;
-    if (isExpense) amountColor = colors.primaryText;
-    if (!isExpense) amountColor = colors.success;
-
-    let sign = isExpense ? '-' : '+';
+    // Transfer Direction Logic (Matches Dashboard Logic)
+    let isTransferOut = false;
+    let isTransferIn = false;
     if (isTransfer) {
-        amountColor = colors.secondaryText;
-        sign = '';
+        const n = item.note || '';
+        isTransferOut = n.startsWith('To ') || n.includes('Transfer to') || item.categoryIcon === '💸';
+        isTransferIn = n.startsWith('From ') || n.includes('Received from') || item.categoryIcon === '💰';
+
+        // Fallback checks if note is unclear but category implies direction
+        if (!isTransferOut && !isTransferIn) {
+            if (item.category === 'Transfer Out') isTransferOut = true;
+            if (item.category === 'Allowance') isTransferIn = true;
+        }
     }
 
-    const icon = item.icon || item.categoryIcon || (isExpense ? '💸' : '💰');
+    // Effective Type for Visuals
+    const visualIsExpense = isExpense || isTransferOut;
+    const visualIsIncome = (!isExpense && !isTransfer) || isTransferIn;
+
+    // Determine Color
+    let amountColor = colors.secondaryText; // Default for neutral transfers
+    if (visualIsExpense) amountColor = colors.primaryText;
+    if (visualIsIncome) amountColor = colors.success;
+
+    // Determine Amount to Display and Sign Logic
+    // Expense/TransferOut -> Negative
+    // Income/TransferIn -> Positive
+    const displayAmount = visualIsExpense ? -Math.abs(item.amount) : Math.abs(item.amount);
+
+    // showSign logic for CurrencyText: 
+    // If true, it adds '+' for positive numbers.
+    // Negative numbers always show '-' by default in CurrencyText usually, 
+    // but check CurrencyText implementation. Usually standard formatting.
+    // We want '+' for Income/TransferIn.
+    const showSign = visualIsIncome;
+
+    const icon = item.icon || item.categoryIcon || (visualIsExpense ? '💸' : '💰');
     return (
         <TouchableOpacity style={styles.container} onPress={onPress}>
             {/* Icon Circle */}
@@ -29,28 +54,31 @@ const TransactionRow = ({ item, onPress, iconBackgroundColor }) => {
                 <Text style={{ fontSize: 20 }}>{icon}</Text>
             </View>
 
-            {/* Content */}
-            <View style={styles.content}>
-                <View style={styles.row}>
-                    <Text style={[styles.title, { color: colors.primaryText }]}>
-                        {item.category || 'Uncategorized'}
-                    </Text>
-                    <CurrencyText
-                        amount={isExpense ? -item.amount : item.amount}
-                        showSign={!isExpense && !isTransfer}
-                        style={[styles.amount, { color: amountColor }]}
-                    />
-                </View>
+            {/* Center: Text Details (Title, Note, Date) */}
+            <View style={styles.textContainer}>
+                <Text style={[styles.title, { color: colors.primaryText }]}>
+                    {item.category || 'Uncategorized'}
+                </Text>
 
-                {/* Variable subtitle: Note or Time */}
-                <View style={styles.row}>
+                {item.note ? (
                     <Text style={[styles.subtitle, { color: colors.secondaryText }]} numberOfLines={1}>
-                        {item.note || 'No note'}
+                        {item.note}
                     </Text>
-                    {/* If we have time, show it. Else show date if needed, but usually grouped by date. */}
-                    {/* Assuming daily view, we might not need full date here if grouped. */}
-                </View>
+                ) : null}
+
+                {showDate && item.date && (
+                    <Text style={{ fontSize: 11, color: colors.secondaryText, marginTop: 2 }}>
+                        {new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </Text>
+                )}
             </View>
+
+            {/* Right: Amount (Vertically Centered) */}
+            <CurrencyText
+                amount={displayAmount}
+                showSign={showSign}
+                style={[styles.amount, { color: amountColor }]}
+            />
         </TouchableOpacity>
     );
 };
@@ -70,15 +98,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginRight: SPACING.m,
     },
-    content: {
+    textContainer: {
         flex: 1,
         justifyContent: 'center',
-        gap: 2, // Tiny gap between title/subtitle
-    },
-    row: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
+        paddingRight: 8,
     },
     title: {
         fontSize: TYPOGRAPHY.size.body,

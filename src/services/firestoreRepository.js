@@ -540,7 +540,7 @@ export const processTransfer = async (uid, fromProfileId, toProfileId, amount, c
         categoryId: categoryData.id || 'transfer_out',
         categoryIcon: categoryData.icon || '💸',
         date: dateOnly,
-        note: `(Granted) Transfer to ${toProfileId}: ${reason}`,
+        note: `To ${toProfileId}: ${reason}`,
         isTransfer: true,
         linkedTransferId: incomeRef.id,
         createdAt: timestamp
@@ -555,7 +555,7 @@ export const processTransfer = async (uid, fromProfileId, toProfileId, amount, c
         categoryId: categoryData.id || 'allowance',
         categoryIcon: categoryData.icon || '💰',
         date: dateOnly,
-        note: `(Granted) Received from ${fromProfileId}: ${reason}`,
+        note: `From ${fromProfileId}: ${reason}`,
         isTransfer: true,
         linkedTransferId: expenseRef.id,
         createdAt: timestamp
@@ -846,8 +846,8 @@ export const getGoal = async (uid, goalId) => {
     const snap = await getDoc(goalRef);
     return snap.exists() ? { id: snap.id, ...snap.data() } : null;
 };
-export const contributeToGoal = async (uid, goalId, amount, note, profileId) => {
-    console.log(`Goals: Contributing ${amount} to ${goalId}`);
+export const contributeToGoal = async (uid, goalId, amount, note, profileId, goalName) => {
+    console.log(`Goals: Contributing ${amount} to ${goalId} (${goalName})`);
     const familyRef = getFamilyRef(uid);
     const goalRef = doc(familyRef, 'goals', goalId);
     const batch = writeBatch(db);
@@ -864,7 +864,7 @@ export const contributeToGoal = async (uid, goalId, amount, note, profileId) => 
         categoryId: 'savings',
         categoryIcon: '🐷', // Piggy bank
         date: timestamp.split('T')[0],
-        note: `Contributed to goal: ${note}`,
+        note: `${goalName}: ${note}`,
         isGoalContribution: true,
         goalId: goalId,
         createdAt: timestamp
@@ -889,8 +889,8 @@ export const contributeToGoal = async (uid, goalId, amount, note, profileId) => 
  * 1. Creates an Income Transaction (Money returns to wallet)
  * 2. Updates Goal currentAmount (Money leaves goal)
  */
-export const withdrawFromGoal = async (uid, goalId, amount, note, profileId) => {
-    console.log(`Goals: Withdrawing ${amount} from ${goalId}`);
+export const withdrawFromGoal = async (uid, goalId, amount, note, profileId, goalName) => {
+    console.log(`Goals: Withdrawing ${amount} from ${goalId} (${goalName})`);
     const familyRef = getFamilyRef(uid);
     const goalRef = doc(familyRef, 'goals', goalId);
     const batch = writeBatch(db);
@@ -903,11 +903,11 @@ export const withdrawFromGoal = async (uid, goalId, amount, note, profileId) => 
         profileId,
         amount: Number(amount),
         type: 'income',
-        category: 'Savings Withdrawal',
+        category: 'Savings',
         categoryId: 'savings_withdrawal',
-        categoryIcon: '💰',
+        categoryIcon: '🐷',
         date: timestamp.split('T')[0],
-        note: `Withdrew from goal: ${note}`,
+        note: `Withdraw from ${goalName}: ${note}`,
         isGoalWithdrawal: true,
         goalId: goalId,
         createdAt: timestamp
