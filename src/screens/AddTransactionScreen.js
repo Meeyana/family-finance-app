@@ -8,6 +8,7 @@ import { addTransaction, updateTransaction, deleteTransaction, getFamilyCategori
 import { validateTransaction } from '../services/transactionService';
 import { useAuth } from '../components/context/AuthContext';
 import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
+import { formatMoney, parseMoney } from '../utils/formatting';
 
 export default function AddTransactionScreen({ route, navigation }) {
     const { profile: authProfile } = useAuth();
@@ -22,7 +23,7 @@ export default function AddTransactionScreen({ route, navigation }) {
 
     // STATE: Form Fields
     const [type, setType] = useState(transaction?.type || 'expense');
-    const [amount, setAmount] = useState(transaction ? transaction.amount.toString() : '');
+    const [amount, setAmount] = useState(transaction ? formatMoney(transaction.amount) : '');
     const [category, setCategory] = useState(transaction ? transaction.category : '');
     const [note, setNote] = useState(transaction ? transaction.note : '');
     const [date, setDate] = useState(transaction ? transaction.date : new Date().toISOString().split('T')[0]);
@@ -68,11 +69,12 @@ export default function AddTransactionScreen({ route, navigation }) {
     };
 
     const handleSave = async () => {
-        if (!amount || isNaN(amount)) {
+        const rawAmount = parseMoney(amount);
+        if (!rawAmount || isNaN(rawAmount)) {
             Alert.alert('Error', 'Invalid amount');
             return;
         }
-        const numAmount = Math.round(parseFloat(amount));
+        const numAmount = Math.round(rawAmount);
         setLoading(true);
 
         try {
@@ -202,7 +204,7 @@ export default function AddTransactionScreen({ route, navigation }) {
                                 placeholderTextColor={colors.divider}
                                 keyboardType="numeric"
                                 value={amount}
-                                onChangeText={setAmount}
+                                onChangeText={(text) => setAmount(formatMoney(text))}
                                 autoFocus={!isEditing}
                             />
                         </View>

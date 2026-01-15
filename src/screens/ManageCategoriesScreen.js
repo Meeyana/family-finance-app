@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useLayoutEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput, Alert, ActivityIndicator, Modal, ScrollView, Switch, TouchableWithoutFeedback, Keyboard, useColorScheme, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput, Alert, ActivityIndicator, Modal, ScrollView, Switch, TouchableWithoutFeedback, Keyboard, useColorScheme, Platform, DeviceEventEmitter } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { auth } from '../services/firebase';
@@ -129,6 +129,7 @@ export default function ManageCategoriesScreen({ navigation }) {
             } else {
                 await addCategory(auth.currentUser.uid, newCategoryName.trim(), newCategoryIcon, formType, profile.id, sharedWith);
             }
+            DeviceEventEmitter.emit('refresh_profile_dashboard');
             setModalVisible(false);
             loadCategories();
         } catch (error) {
@@ -152,6 +153,7 @@ export default function ManageCategoriesScreen({ navigation }) {
                         try {
                             setLoading(true);
                             await deleteCategory(auth.currentUser.uid, category.id);
+                            DeviceEventEmitter.emit('refresh_profile_dashboard');
                             setModalVisible(false); // Close if open
                             await loadCategories();
                         } catch (error) {

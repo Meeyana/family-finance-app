@@ -46,7 +46,7 @@ export default function TransactionListScreen({ navigation }) {
 
     const loadTransactions = async () => {
         if (!user || !profile) return;
-        if (transactions.length === 0) setLoading(true);
+        setLoading(true);
 
         const year = selectedDate.getFullYear();
         const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
@@ -56,13 +56,18 @@ export default function TransactionListScreen({ navigation }) {
         const endDate = `${year}-${month}-${endDay}`;
 
         try {
-            const data = await getTransactions(user.uid, profile.id, startDate, endDate);
-            setTransactions(data);
+            const [txs, cats] = await Promise.all([
+                getTransactions(user.uid, profile.id, startDate, endDate),
+                getFamilyCategories(user.uid, profile.id, profile.role)
+            ]);
+            setTransactions(txs);
+            setCategories(cats);
         } catch (error) {
             console.error("Failed to load transactions", error);
+        } finally {
+            setLoading(false);
+            setIsRefreshing(false);
         }
-        setLoading(false);
-        setIsRefreshing(false);
     };
 
     const onRefresh = () => {

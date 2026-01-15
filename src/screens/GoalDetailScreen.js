@@ -1,15 +1,24 @@
 import React, { useState, useEffect, useLayoutEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, TextInput, Modal, KeyboardAvoidingView, Platform, FlatList, DeviceEventEmitter } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, TextInput, Modal, KeyboardAvoidingView, Platform, FlatList, DeviceEventEmitter, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../components/context/AuthContext';
 import { getTransactions, contributeToGoal, withdrawFromGoal, getFamilyProfiles, updateGoal, deleteGoal, getGoal, updateTransaction } from '../services/firestoreRepository';
 import MultiSelectDropdown from '../components/MultiSelectDropdown';
 import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
+import { formatMoney, parseMoney } from '../utils/formatting';
 import CurrencyText from '../components/CurrencyText';
 import { useColorScheme } from 'react-native';
 
-const COMMON_EMOJIS = ['🎯', '🏡', '🚗', '✈️', '🎓', '💍', '💻', '🚲', '🐶', '👶', '🏥', '💰'];
+const COMMON_EMOJIS = [
+    '💰', '💵', '💳', '🏦', '🪙', '🧧',
+    '🏡', '🚗', '✈️', '💍', '💻', '🚲',
+    '👶', '🎓', '🎁', '🐶', '🐱', '🏥',
+    '🍔', '🍕', '🍣', '🍱', '🍜', '☕',
+    '👕', '👗', '👟', '💊', '💇', '💅',
+    '🎬', '🎮', '🎫', '🎵', '🎲', '📚',
+    '🎯', '🏆', '⭐', '🔥', '💧', '⚡'
+];
 
 export default function GoalDetailScreen({ navigation, route }) {
     const { goal } = route.params; // Initial goal data
@@ -31,6 +40,7 @@ export default function GoalDetailScreen({ navigation, route }) {
 
     // Edit Modal State
     const [editModalVisible, setEditModalVisible] = useState(false);
+    const [editEmojiPickerVisible, setEditEmojiPickerVisible] = useState(false);
     const [editName, setEditName] = useState('');
     const [editTarget, setEditTarget] = useState('');
     const [editIcon, setEditIcon] = useState('🎯');
@@ -85,14 +95,15 @@ export default function GoalDetailScreen({ navigation, route }) {
     };
 
     const submitAction = async () => {
-        if (!amount || isNaN(amount) || Number(amount) <= 0) {
+        const numericAmount = parseMoney(amount);
+        if (!numericAmount || isNaN(numericAmount) || numericAmount <= 0) {
             Alert.alert('Invalid Amount', 'Please enter a valid positive amount');
             return;
         }
 
         try {
             setActionLoading(true);
-            const val = Number(amount);
+            const val = numericAmount;
 
             if (actionType === 'deposit') {
                 await contributeToGoal(user.uid, goal.id, val, note, profile.id, currentGoal.name);
@@ -126,7 +137,7 @@ export default function GoalDetailScreen({ navigation, route }) {
 
     const handleEdit = () => {
         setEditName(currentGoal.name);
-        setEditTarget(String(currentGoal.targetAmount));
+        setEditTarget(formatMoney(currentGoal.targetAmount));
         setEditIcon(currentGoal.icon || '🎯');
         setEditSharedWith(currentGoal.sharedWith || []);
         setEditModalVisible(true);
@@ -137,7 +148,8 @@ export default function GoalDetailScreen({ navigation, route }) {
             Alert.alert('Required', 'Goal name is required');
             return;
         }
-        if (!editTarget || isNaN(editTarget) || Number(editTarget) <= 0) {
+        const numericTarget = parseMoney(editTarget);
+        if (!numericTarget || isNaN(numericTarget) || numericTarget <= 0) {
             Alert.alert('Required', 'Valid target amount is required');
             return;
         }
@@ -146,7 +158,7 @@ export default function GoalDetailScreen({ navigation, route }) {
             setUpdating(true);
             const updatedData = {
                 name: editName.trim(),
-                targetAmount: Number(editTarget),
+                targetAmount: numericTarget,
                 icon: editIcon,
                 sharedWith: editSharedWith
             };
@@ -192,19 +204,20 @@ export default function GoalDetailScreen({ navigation, route }) {
     // --- Transaction Edit Logic ---
     const handleEditTx = (tx) => {
         setEditingTx(tx);
-        setEditTxAmount(String(tx.amount));
+        setEditTxAmount(formatMoney(tx.amount));
         setTxEditModalVisible(true);
     };
 
     const submitTxEdit = async () => {
-        if (!editTxAmount || isNaN(editTxAmount) || Number(editTxAmount) <= 0) {
+        const numericAmount = parseMoney(editTxAmount);
+        if (!numericAmount || isNaN(numericAmount) || numericAmount <= 0) {
             Alert.alert('Invalid Amount', 'Please enter a valid amount');
             return;
         }
 
         try {
             setUpdating(true);
-            const newAmount = Number(editTxAmount);
+            const newAmount = numericAmount;
 
             // Call generic updateTransaction (which now handles goal updates)
             await updateTransaction(user.uid, editingTx.id, editingTx, {
@@ -407,7 +420,7 @@ export default function GoalDetailScreen({ navigation, route }) {
                             placeholderTextColor={colors.secondaryText}
                             keyboardType="numeric"
                             value={amount}
-                            onChangeText={setAmount}
+                            onChangeText={(text) => setAmount(formatMoney(text))}
                             autoFocus
                         />
                         <TextInput
@@ -443,78 +456,132 @@ export default function GoalDetailScreen({ navigation, route }) {
                 presentationStyle="pageSheet"
                 onRequestClose={() => setEditModalVisible(false)}
             >
-                <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
-                    <View style={[styles.modalHeader, { borderBottomColor: colors.divider }]}>
-                        <TouchableOpacity onPress={() => setEditModalVisible(false)}>
+                <SafeAreaView style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+                    <View style={[styles.modalHeader, { borderBottomColor: colors.divider, backgroundColor: colors.background }]}>
+                        <TouchableOpacity onPress={() => setEditModalVisible(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                             <Text style={{ color: colors.primaryAction, fontSize: 17 }}>Cancel</Text>
                         </TouchableOpacity>
                         <Text style={[styles.modalTitle, { color: colors.primaryText }]}>Edit Goal</Text>
-                        <TouchableOpacity onPress={submitEdit} disabled={updating}>
-                            <Text style={{ color: updating ? colors.secondaryText : colors.primaryAction, fontWeight: 'bold', fontSize: 17 }}>Save</Text>
-                        </TouchableOpacity>
+                        <View style={{ width: 50 }} />
                     </View>
 
-                    <ScrollView contentContainerStyle={styles.form}>
-                        {/* Icon Picker */}
-                        <View style={styles.emojiRow}>
-                            {COMMON_EMOJIS.map(e => (
+                    <KeyboardAvoidingView
+                        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                        style={{ flex: 1 }}
+                    >
+                        <ScrollView contentContainerStyle={styles.form}>
+                            {/* Icon Picker (Round) */}
+                            <View style={{ alignItems: 'center', marginVertical: SPACING.m }}>
                                 <TouchableOpacity
-                                    key={e}
-                                    style={[styles.emojiBtn, editIcon === e && { backgroundColor: colors.surface, borderColor: colors.primaryAction, borderWidth: 1 }]}
-                                    onPress={() => setEditIcon(e)}
+                                    style={[styles.iconPickerBtn, { borderColor: colors.primaryAction, backgroundColor: colors.surface }]}
+                                    onPress={() => setEditEmojiPickerVisible(true)}
                                 >
-                                    <Text style={{ fontSize: 28 }}>{e}</Text>
+                                    <Text style={{ fontSize: 40 }}>{editIcon}</Text>
                                 </TouchableOpacity>
-                            ))}
-                        </View>
+                                <Text style={[styles.itemSub, { marginTop: 8, color: colors.secondaryText }]}>Tap to change icon</Text>
+                            </View>
 
-                        <View style={styles.inputGroup}>
-                            <Text style={[styles.label, { color: colors.secondaryText }]}>GOAL NAME</Text>
-                            <TextInput
-                                style={[styles.input, { color: colors.primaryText, backgroundColor: colors.surface }]}
-                                value={editName}
-                                onChangeText={setEditName}
-                                placeholderTextColor={colors.secondaryText}
-                            />
-                        </View>
+                            {/* Hero Input for Target Amount */}
+                            <View style={styles.heroInputContainer}>
+                                <Text style={[styles.currencySymbol, { color: colors.primaryAction }]}>₫</Text>
+                                <TextInput
+                                    style={[styles.heroInput, { color: colors.primaryAction }]}
+                                    placeholder="0"
+                                    placeholderTextColor={colors.divider}
+                                    keyboardType="numeric"
+                                    value={editTarget}
+                                    onChangeText={(text) => setEditTarget(formatMoney(text))}
+                                    autoFocus={false}
+                                />
+                            </View>
 
-                        <View style={styles.inputGroup}>
-                            <Text style={[styles.label, { color: colors.secondaryText }]}>TARGET AMOUNT</Text>
-                            <TextInput
-                                style={[styles.input, { color: colors.primaryText, backgroundColor: colors.surface }]}
-                                value={editTarget}
-                                onChangeText={setEditTarget}
-                                keyboardType="numeric"
-                            />
-                        </View>
+                            <View style={styles.inputGroup}>
+                                <Text style={[styles.label, { color: colors.secondaryText }]}>GOAL NAME</Text>
+                                <TextInput
+                                    style={[styles.input, { color: colors.primaryText, backgroundColor: colors.surface }]}
+                                    value={editName}
+                                    onChangeText={setEditName}
+                                    placeholderTextColor={colors.secondaryText}
+                                />
+                            </View>
 
-                        <View style={styles.inputGroup}>
-                            <Text style={[styles.label, { color: colors.secondaryText }]}>SHARE WITH (OPTIONAL)</Text>
-                            <MultiSelectDropdown
-                                label="Select Family Members"
-                                options={profiles.filter(p => p.id !== profile.id).map(p => ({ id: p.id, name: p.name }))}
-                                selectedValues={editSharedWith}
-                                onSelectionChange={setEditSharedWith}
-                                emptyLabel="Only Me (Private)"
-                            />
-                        </View>
+                            <View style={styles.inputGroup}>
+                                <Text style={[styles.label, { color: colors.secondaryText }]}>SHARE WITH (OPTIONAL)</Text>
+                                <MultiSelectDropdown
+                                    label="Select Family Members"
+                                    options={profiles.filter(p => p.id !== profile.id).map(p => ({ id: p.id, name: p.name }))}
+                                    selectedValues={editSharedWith}
+                                    onSelectionChange={setEditSharedWith}
+                                    emptyLabel="Only Me (Private)"
+                                />
+                            </View>
 
-                        <TouchableOpacity
-                            style={{
-                                marginTop: 20,
-                                padding: 16,
-                                backgroundColor: colors.error + '15',
-                                borderRadius: 12,
-                                alignItems: 'center',
-                                borderWidth: 1,
-                                borderColor: colors.error + '50'
-                            }}
-                            onPress={confirmDelete}
-                        >
-                            <Text style={{ color: colors.error, fontWeight: 'bold', fontSize: 16 }}>Delete Goal</Text>
-                        </TouchableOpacity>
-                    </ScrollView>
-                </View>
+                            <TouchableOpacity
+                                style={{
+                                    marginTop: 20,
+                                    padding: 16,
+                                    backgroundColor: colors.error + '15',
+                                    borderRadius: 12,
+                                    alignItems: 'center',
+                                    borderWidth: 1,
+                                    borderColor: colors.error + '50'
+                                }}
+                                onPress={confirmDelete}
+                            >
+                                <Text style={{ color: colors.error, fontWeight: 'bold', fontSize: 16 }}>Delete Goal</Text>
+                            </TouchableOpacity>
+                        </ScrollView>
+
+                        {/* Footer CTA */}
+                        <View style={[styles.footer, { borderTopColor: colors.divider }]}>
+                            <TouchableOpacity
+                                style={[styles.saveButton, { backgroundColor: colors.primaryAction, opacity: updating ? 0.7 : 1 }]}
+                                onPress={submitEdit}
+                                disabled={updating}
+                            >
+                                <Text style={styles.saveButtonText}>
+                                    {updating ? 'Saving...' : 'Save Changes'}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    </KeyboardAvoidingView>
+
+                    {/* Emoji Picker Modal */}
+                    <Modal
+                        visible={editEmojiPickerVisible}
+                        transparent={true}
+                        animationType="slide"
+                        onRequestClose={() => setEditEmojiPickerVisible(false)}
+                    >
+                        <View style={styles.modalOverlay}>
+                            <TouchableWithoutFeedback onPress={() => setEditEmojiPickerVisible(false)}>
+                                <View style={{ flex: 1 }} />
+                            </TouchableWithoutFeedback>
+                            <View style={[styles.emojiContent, { backgroundColor: colors.background }]}>
+                                <View style={[styles.modalHeader, { borderBottomColor: colors.divider }]}>
+                                    <Text style={[styles.modalTitle, { color: colors.primaryText }]}>Choose Icon</Text>
+                                    <TouchableOpacity onPress={() => setEditEmojiPickerVisible(false)}>
+                                        <Ionicons name="close" size={24} color={colors.primaryText} />
+                                    </TouchableOpacity>
+                                </View>
+                                <ScrollView contentContainerStyle={styles.emojiGrid}>
+                                    {COMMON_EMOJIS.map((e, index) => (
+                                        <TouchableOpacity
+                                            key={index}
+                                            style={styles.emojiItem}
+                                            onPress={() => {
+                                                setEditIcon(e);
+                                                setEditEmojiPickerVisible(false);
+                                            }}
+                                        >
+                                            <Text style={{ fontSize: 32 }}>{e}</Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </ScrollView>
+                            </View>
+                        </View>
+                    </Modal>
+                </SafeAreaView>
             </Modal>
 
             {/* Edit Transaction Modal */}
@@ -538,7 +605,7 @@ export default function GoalDetailScreen({ navigation, route }) {
                             placeholderTextColor={colors.secondaryText}
                             keyboardType="numeric"
                             value={editTxAmount}
-                            onChangeText={setEditTxAmount}
+                            onChangeText={(text) => setEditTxAmount(formatMoney(text))}
                             autoFocus
                         />
 
@@ -708,7 +775,7 @@ const styles = StyleSheet.create({
         borderRadius: 12,
     },
 
-    // Edit Modal Styles (Copied from GoalScreen)
+    // Edit Modal Styles
     modalContainer: { flex: 1 },
     modalHeader: {
         flexDirection: 'row',
@@ -728,6 +795,19 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         marginBottom: 8,
     },
+    itemSub: {
+        fontSize: TYPOGRAPHY.size.caption,
+    },
+
+    // Icon Picker
+    iconPickerBtn: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 2,
+    },
     emojiRow: {
         flexDirection: 'row',
         flexWrap: 'wrap',
@@ -738,5 +818,63 @@ const styles = StyleSheet.create({
     emojiBtn: {
         padding: 10,
         borderRadius: 24,
+    },
+
+    // Hero Input
+    heroInputContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexDirection: 'row',
+        marginBottom: SPACING.xl,
+        marginTop: SPACING.m,
+    },
+    currencySymbol: {
+        fontSize: TYPOGRAPHY.size.h2,
+        fontWeight: TYPOGRAPHY.weight.regular,
+        marginRight: 4,
+        marginTop: 8,
+    },
+    heroInput: {
+        fontSize: 48,
+        fontWeight: TYPOGRAPHY.weight.bold,
+        minWidth: 100,
+        textAlign: 'center',
+    },
+
+    // Footer
+    footer: {
+        padding: SPACING.screenPadding,
+        borderTopWidth: 1,
+    },
+    saveButton: {
+        paddingVertical: 16,
+        borderRadius: 16,
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 2,
+    },
+    saveButtonText: {
+        color: 'white',
+        fontSize: TYPOGRAPHY.size.body,
+        fontWeight: TYPOGRAPHY.weight.bold,
+    },
+
+    // Emoji Modal
+    emojiContent: {
+        height: '50%',
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+    },
+    emojiGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'space-around',
+        padding: 16,
+    },
+    emojiItem: {
+        padding: 10,
     },
 });

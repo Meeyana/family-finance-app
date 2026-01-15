@@ -1,15 +1,24 @@
 import React, { useState, useEffect, useLayoutEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, RefreshControl, Alert, Modal, TextInput, KeyboardAvoidingView, Platform, ScrollView, DeviceEventEmitter } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, RefreshControl, Alert, Modal, TextInput, KeyboardAvoidingView, Platform, ScrollView, DeviceEventEmitter, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../components/context/AuthContext';
 import { getGoals, addGoal, getFamilyProfiles } from '../services/firestoreRepository';
 import MultiSelectDropdown from '../components/MultiSelectDropdown';
 import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
+import { formatMoney, parseMoney } from '../utils/formatting';
 import CurrencyText from '../components/CurrencyText';
 import { useColorScheme } from 'react-native';
 
-const COMMON_EMOJIS = ['🎯', '🏡', '🚗', '✈️', '🎓', '💍', '💻', '🚲', '🐶', '👶', '🏥', '💰'];
+const COMMON_EMOJIS = [
+    '💰', '💵', '💳', '🏦', '🪙', '🧧',
+    '🏡', '🚗', '✈️', '💍', '💻', '🚲',
+    '👶', '🎓', '🎁', '🐶', '🐱', '🏥',
+    '🍔', '🍕', '🍣', '🍱', '🍜', '☕',
+    '👕', '👗', '👟', '💊', '💇', '💅',
+    '🎬', '🎮', '🎫', '🎵', '🎲', '📚',
+    '🎯', '🏆', '⭐', '🔥', '💧', '⚡'
+];
 
 export default function GoalScreen({ navigation }) {
     const { user, profile } = useAuth();
@@ -21,6 +30,7 @@ export default function GoalScreen({ navigation }) {
 
     // Modal State
     const [modalVisible, setModalVisible] = useState(false);
+    const [emojiPickerVisible, setEmojiPickerVisible] = useState(false);
     const [name, setName] = useState('');
     const [target, setTarget] = useState('');
     const [icon, setIcon] = useState('🎯');
@@ -67,7 +77,8 @@ export default function GoalScreen({ navigation }) {
             Alert.alert('Required', 'Please enter a goal name');
             return;
         }
-        if (!target || isNaN(target) || Number(target) <= 0) {
+        const numericTarget = parseMoney(target);
+        if (!numericTarget || isNaN(numericTarget) || numericTarget <= 0) {
             Alert.alert('Required', 'Please enter a valid target amount');
             return;
         }
@@ -76,7 +87,7 @@ export default function GoalScreen({ navigation }) {
             setCreating(true);
             await addGoal(user.uid, {
                 name: name.trim(),
-                targetAmount: Number(target),
+                targetAmount: numericTarget,
                 icon,
                 ownerId: profile.id, // Private by default in this version
                 sharedWith
@@ -181,66 +192,120 @@ export default function GoalScreen({ navigation }) {
                 presentationStyle="pageSheet"
                 onRequestClose={() => setModalVisible(false)}
             >
-                <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
-                    <View style={[styles.modalHeader, { borderBottomColor: colors.divider }]}>
-                        <TouchableOpacity onPress={() => setModalVisible(false)}>
+                <SafeAreaView style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+                    <View style={[styles.modalHeader, { borderBottomColor: colors.divider, backgroundColor: colors.background }]}>
+                        <TouchableOpacity onPress={() => setModalVisible(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                             <Text style={{ color: colors.primaryAction, fontSize: 17 }}>Cancel</Text>
                         </TouchableOpacity>
                         <Text style={[styles.modalTitle, { color: colors.primaryText }]}>New Goal</Text>
-                        <TouchableOpacity onPress={handleCreate} disabled={creating}>
-                            <Text style={{ color: creating ? colors.secondaryText : colors.primaryAction, fontWeight: 'bold', fontSize: 17 }}>Create</Text>
-                        </TouchableOpacity>
+                        <View style={{ width: 50 }} />
                     </View>
 
-                    <ScrollView contentContainerStyle={styles.form}>
-                        {/* Icon Picker */}
-                        <View style={styles.emojiRow}>
-                            {COMMON_EMOJIS.map(e => (
+                    <KeyboardAvoidingView
+                        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                        style={{ flex: 1 }}
+                    >
+                        <ScrollView contentContainerStyle={styles.form}>
+
+                            {/* Icon Picker (Round) */}
+                            <View style={{ alignItems: 'center', marginVertical: SPACING.m }}>
                                 <TouchableOpacity
-                                    key={e}
-                                    style={[styles.emojiBtn, icon === e && { backgroundColor: colors.surface, borderColor: colors.primaryAction, borderWidth: 1 }]}
-                                    onPress={() => setIcon(e)}
+                                    style={[styles.iconPickerBtn, { borderColor: colors.primaryAction, backgroundColor: colors.surface }]}
+                                    onPress={() => setEmojiPickerVisible(true)}
                                 >
-                                    <Text style={{ fontSize: 28 }}>{e}</Text>
+                                    <Text style={{ fontSize: 40 }}>{icon}</Text>
                                 </TouchableOpacity>
-                            ))}
-                        </View>
+                                <Text style={[styles.itemSub, { marginTop: 8, color: colors.secondaryText }]}>Tap to change icon</Text>
+                            </View>
 
-                        <View style={styles.inputGroup}>
-                            <Text style={[styles.label, { color: colors.secondaryText }]}>GOAL NAME</Text>
-                            <TextInput
-                                style={[styles.input, { color: colors.primaryText, backgroundColor: colors.surface }]}
-                                value={name}
-                                onChangeText={setName}
-                                placeholder="e.g. New Bike"
-                                placeholderTextColor={colors.secondaryText}
-                            />
-                        </View>
+                            {/* Hero Input for Target Amount */}
+                            <View style={styles.heroInputContainer}>
+                                <Text style={[styles.currencySymbol, { color: colors.primaryAction }]}>₫</Text>
+                                <TextInput
+                                    style={[styles.heroInput, { color: colors.primaryAction }]}
+                                    placeholder="0"
+                                    placeholderTextColor={colors.divider}
+                                    keyboardType="numeric"
+                                    value={target}
+                                    onChangeText={(text) => setTarget(formatMoney(text))}
+                                    autoFocus={false}
+                                />
+                            </View>
 
-                        <View style={styles.inputGroup}>
-                            <Text style={[styles.label, { color: colors.secondaryText }]}>TARGET AMOUNT</Text>
-                            <TextInput
-                                style={[styles.input, { color: colors.primaryText, backgroundColor: colors.surface }]}
-                                value={target}
-                                onChangeText={setTarget}
-                                placeholder="0"
-                                placeholderTextColor={colors.secondaryText}
-                                keyboardType="numeric"
-                            />
-                        </View>
+                            <View style={styles.inputGroup}>
+                                <Text style={[styles.label, { color: colors.secondaryText }]}>GOAL NAME</Text>
+                                <TextInput
+                                    style={[styles.input, { color: colors.primaryText, backgroundColor: colors.surface }]}
+                                    value={name}
+                                    onChangeText={setName}
+                                    placeholder="e.g. New Bike"
+                                    placeholderTextColor={colors.secondaryText}
+                                />
+                            </View>
 
-                        <View style={styles.inputGroup}>
-                            <Text style={[styles.label, { color: colors.secondaryText }]}>SHARE WITH (OPTIONAL)</Text>
-                            <MultiSelectDropdown
-                                label="Select Family Members"
-                                options={profiles.filter(p => p.id !== profile.id).map(p => ({ id: p.id, name: p.name }))}
-                                selectedValues={sharedWith}
-                                onSelectionChange={setSharedWith}
-                                emptyLabel="Only Me (Private)"
-                            />
+                            <View style={styles.inputGroup}>
+                                <Text style={[styles.label, { color: colors.secondaryText }]}>SHARE WITH (OPTIONAL)</Text>
+                                <MultiSelectDropdown
+                                    label="Select Family Members"
+                                    options={profiles.filter(p => p.id !== profile.id).map(p => ({ id: p.id, name: p.name }))}
+                                    selectedValues={sharedWith}
+                                    onSelectionChange={setSharedWith}
+                                    emptyLabel="Only Me (Private)"
+                                />
+                            </View>
+                        </ScrollView>
+
+                        {/* Footer CTA */}
+                        <View style={[styles.footer, { borderTopColor: colors.divider }]}>
+                            <TouchableOpacity
+                                style={[styles.saveButton, { backgroundColor: colors.primaryAction, opacity: creating ? 0.7 : 1 }]}
+                                onPress={handleCreate}
+                                disabled={creating}
+                            >
+                                <Text style={styles.saveButtonText}>
+                                    {creating ? 'Creating...' : 'Create Goal'}
+                                </Text>
+                            </TouchableOpacity>
                         </View>
-                    </ScrollView>
-                </View>
+                    </KeyboardAvoidingView>
+
+                    {/* Emoji Picker Modal */}
+                    <Modal
+                        visible={emojiPickerVisible}
+                        transparent={true}
+                        animationType="slide"
+                        onRequestClose={() => setEmojiPickerVisible(false)}
+                    >
+                        <View style={styles.modalOverlay}>
+                            <TouchableWithoutFeedback onPress={() => setEmojiPickerVisible(false)}>
+                                <View style={{ flex: 1 }} />
+                            </TouchableWithoutFeedback>
+                            <View style={[styles.emojiContent, { backgroundColor: colors.background }]}>
+                                <View style={[styles.modalHeader, { borderBottomColor: colors.divider }]}>
+                                    <Text style={[styles.modalTitle, { color: colors.primaryText }]}>Choose Icon</Text>
+                                    <TouchableOpacity onPress={() => setEmojiPickerVisible(false)}>
+                                        <Ionicons name="close" size={24} color={colors.primaryText} />
+                                    </TouchableOpacity>
+                                </View>
+                                <ScrollView contentContainerStyle={styles.emojiGrid}>
+                                    {COMMON_EMOJIS.map((e, index) => (
+                                        <TouchableOpacity
+                                            key={index}
+                                            style={styles.emojiItem}
+                                            onPress={() => {
+                                                setIcon(e);
+                                                setEmojiPickerVisible(false);
+                                            }}
+                                        >
+                                            <Text style={{ fontSize: 32 }}>{e}</Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </ScrollView>
+                            </View>
+                        </View>
+                    </Modal>
+
+                </SafeAreaView>
             </Modal>
         </SafeAreaView>
     );
@@ -292,7 +357,7 @@ const styles = StyleSheet.create({
         marginTop: 2,
     },
     currentAmount: {
-        fontSize: TYPOGRAPHY.size.h3,
+        fontSize: TYPOGRAPHY.size.body,
         fontWeight: TYPOGRAPHY.weight.bold,
     },
     percentText: {
@@ -347,6 +412,19 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         fontSize: TYPOGRAPHY.size.body,
     },
+    itemSub: {
+        fontSize: TYPOGRAPHY.size.caption,
+    },
+
+    // Icon Picker
+    iconPickerBtn: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 2,
+    },
     emojiRow: {
         flexDirection: 'row',
         flexWrap: 'wrap',
@@ -357,5 +435,68 @@ const styles = StyleSheet.create({
     emojiBtn: {
         padding: 10,
         borderRadius: 24,
+    },
+
+    // Hero Input
+    heroInputContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexDirection: 'row',
+        marginBottom: SPACING.xl,
+        marginTop: SPACING.m,
+    },
+    currencySymbol: {
+        fontSize: TYPOGRAPHY.size.h2,
+        fontWeight: TYPOGRAPHY.weight.regular,
+        marginRight: 4,
+        marginTop: 8,
+    },
+    heroInput: {
+        fontSize: 48,
+        fontWeight: TYPOGRAPHY.weight.bold,
+        minWidth: 100,
+        textAlign: 'center',
+    },
+
+    // Footer
+    footer: {
+        padding: SPACING.screenPadding,
+        borderTopWidth: 1,
+    },
+    saveButton: {
+        paddingVertical: 16,
+        borderRadius: 16,
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 2,
+    },
+    saveButtonText: {
+        color: 'white',
+        fontSize: TYPOGRAPHY.size.body,
+        fontWeight: TYPOGRAPHY.weight.bold,
+    },
+
+    // Emoji Modal
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'flex-end',
+    },
+    emojiContent: {
+        height: '50%',
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+    },
+    emojiGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'space-around',
+        padding: 16,
+    },
+    emojiItem: {
+        padding: 10,
     },
 });

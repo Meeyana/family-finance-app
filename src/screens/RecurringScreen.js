@@ -5,6 +5,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../components/context/AuthContext';
 import { getRecurring, addRecurring, deleteRecurring, updateRecurring, getFamilyCategories, checkAndProcessRecurring } from '../services/firestoreRepository';
 import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
+import { formatMoney, parseMoney } from '../utils/formatting';
 import CurrencyText from '../components/CurrencyText';
 
 export default function RecurringScreen({ navigation }) {
@@ -66,7 +67,7 @@ export default function RecurringScreen({ navigation }) {
     const handleEdit = (item) => {
         setName(item.name);
         setDescription(item.description || '');
-        setAmount(item.amount.toString());
+        setAmount(formatMoney(item.amount));
         setType(item.type);
         setUnit(item.frequency === 'YEARLY' ? 'YEARLY' : 'MONTHLY');
         setStartDate(item.startDate);
@@ -78,7 +79,8 @@ export default function RecurringScreen({ navigation }) {
     };
 
     const handleSave = async () => {
-        if (!name || !amount || !selectedCategory) {
+        const rawAmount = parseMoney(amount);
+        if (!name || !rawAmount || !selectedCategory) {
             Alert.alert('Missing Info', 'Please fill name, amount and category');
             return;
         }
@@ -111,7 +113,7 @@ export default function RecurringScreen({ navigation }) {
             const payload = {
                 name,
                 description,
-                amount: Number(amount),
+                amount: rawAmount,
                 type,
                 frequency: unit,
                 startDate,
@@ -282,7 +284,7 @@ export default function RecurringScreen({ navigation }) {
                                 placeholderTextColor={colors.divider}
                                 keyboardType="numeric"
                                 value={amount}
-                                onChangeText={setAmount}
+                                onChangeText={(text) => setAmount(formatMoney(text))}
                             />
                         </View>
 
