@@ -62,16 +62,10 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingVertical: 6, // Reduced from 12
         paddingHorizontal: SPACING.m,
         borderRadius: 16,
-        borderWidth: 1,
-        // Shadow for depth (optional, keeping minimal as per guidelines)
-        // shadowColor: "#000",
-        // shadowOffset: { width: 0, height: 2 },
-        // shadowOpacity: 0.05,
-        // shadowRadius: 3.84,
-        // elevation: 2,
+        backgroundColor: '#F3F4F6', // Match Analysis Date Button
+        height: 48, // Fixed height to match Filter Button
     },
     button: {
         padding: 4,

@@ -26,6 +26,7 @@ export default function TransactionListScreen({ navigation }) {
     const [categories, setCategories] = useState([]);
     const [selectedCategoryIds, setSelectedCategoryIds] = useState([]);
     const [searchText, setSearchText] = useState('');
+    const [showFilters, setShowFilters] = useState(false);
 
     useEffect(() => {
         if (profile) {
@@ -133,8 +134,8 @@ export default function TransactionListScreen({ navigation }) {
         </View>
     );
 
-    return (
-        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'left', 'right']}>
+    const renderHeader = () => (
+        <View style={{ backgroundColor: colors.background }}>
             {/* Header */}
             <View style={[styles.header, { borderBottomColor: colors.divider }]}>
                 {/* Standard App Header */}
@@ -148,57 +149,109 @@ export default function TransactionListScreen({ navigation }) {
                     <Text style={{ fontSize: TYPOGRAPHY.size.h2, fontWeight: TYPOGRAPHY.weight.bold, color: colors.primaryText }}>Transactions</Text>
                 </View>
 
-                {/* DATE FILTER */}
-                <View style={{ marginBottom: SPACING.m, width: '60%', alignSelf: 'center' }}>
-                    <SwipeDateFilter date={selectedDate} onMonthChange={setSelectedDate} />
-                </View>
-
-                {/* Search / Filter Row */}
-                <View style={styles.filterRow}>
-                    <View style={[styles.searchContainer, { backgroundColor: colors.surface, borderColor: colors.divider }]}>
-                        <Ionicons name="search" size={16} color={colors.secondaryText} />
-                        <TextInput
-                            style={[styles.searchInput, { color: colors.primaryText }]}
-                            placeholder="Search..."
-                            placeholderTextColor={colors.secondaryText}
-                            value={searchText}
-                            onChangeText={setSearchText}
-                        />
-                        {searchText.length > 0 && (
-                            <TouchableOpacity onPress={() => setSearchText('')}>
-                                <Ionicons name="close-circle" size={16} color={colors.secondaryText} />
-                            </TouchableOpacity>
-                        )}
+                {/* Date Filter & Toggle Row */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: SPACING.s }}>
+                    {/* Swipe Date Filter (Flex 1) */}
+                    <View style={{ flex: 1 }}>
+                        <SwipeDateFilter date={selectedDate} onMonthChange={setSelectedDate} />
                     </View>
-                    <View style={{ flex: 1, marginLeft: 8 }}>
+
+                    {/* Filter Toggle Button */}
+                    <TouchableOpacity
+                        onPress={() => setShowFilters(!showFilters)}
+                        style={{
+                            width: 48, height: 48,
+                            borderRadius: 16,
+                            backgroundColor: showFilters ? '#6ca749' : '#F3F4F6', // Active Green, Inactive Light Gray
+                            justifyContent: 'center', alignItems: 'center',
+                        }}
+                    >
+                        <MaterialCommunityIcons name="tune" size={24} color={showFilters ? "#FFFFFF" : colors.black} />
+                    </TouchableOpacity>
+                </View>
+            </View>
+
+            {/* Collapsible Filter Panel - Sibling */}
+            {showFilters && (
+                <View style={{
+                    marginHorizontal: SPACING.screenPadding,
+                    marginBottom: SPACING.m,
+                    padding: SPACING.m,
+                    backgroundColor: colors.surface,
+                    borderRadius: 16,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.1,
+                    shadowRadius: 8,
+                    elevation: 3
+                }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.m }}>
+                        <Text style={{ fontSize: TYPOGRAPHY.size.h4, fontWeight: 'bold', color: colors.primaryText }}>Filters</Text>
+                        <TouchableOpacity onPress={() => setShowFilters(false)}>
+                            <MaterialCommunityIcons name="close" size={20} color="#9CA3AF" />
+                        </TouchableOpacity>
+                    </View>
+
+                    <View style={{ gap: SPACING.m }}>
                         <MultiSelectDropdown
-                            label="Filter"
+                            label="Category"
                             options={categories.map(c => ({ id: c.name, name: c.name }))}
                             selectedValues={selectedCategoryIds}
                             onSelectionChange={setSelectedCategoryIds}
-                            compact={true} // New prop hint
+                            compact={false}
                         />
                     </View>
                 </View>
+            )}
 
-                {/* 1. Add Transaction Button (In-Page) - MOVED BELOW */}
-                <TouchableOpacity
-                    style={[styles.addButton, { backgroundColor: colors.primaryAction, marginTop: 12, marginBottom: 0 }]}
-                    onPress={() => navigation.navigate('AddTransaction')}
-                >
-                    <Ionicons name="add" size={20} color={colors.background} style={{ marginRight: 8 }} />
-                    <Text style={[styles.addButtonText, { color: colors.background }]}>Add New Transaction</Text>
-                </TouchableOpacity>
+            {/* Search Box - Sibling */}
+            <View style={[styles.searchContainer, {
+                backgroundColor: '#F3F4F6',
+                borderColor: 'transparent',
+                marginBottom: SPACING.s,
+                marginHorizontal: SPACING.screenPadding,
+            }]}>
+                <Ionicons name="search" size={16} color={colors.secondaryText} />
+                <TextInput
+                    style={[styles.searchInput, { color: colors.primaryText }]}
+                    placeholder="Search transactions..."
+                    placeholderTextColor={colors.secondaryText}
+                    value={searchText}
+                    onChangeText={setSearchText}
+                />
+                {searchText.length > 0 && (
+                    <TouchableOpacity onPress={() => setSearchText('')}>
+                        <Ionicons name="close-circle" size={16} color={colors.secondaryText} />
+                    </TouchableOpacity>
+                )}
             </View>
 
-            {/* List */}
+            {/* Add Transaction Button - Sibling */}
+            <TouchableOpacity
+                style={[styles.addButton, {
+                    backgroundColor: colors.primaryAction,
+                    marginTop: 12,
+                    marginBottom: SPACING.m,
+                    marginHorizontal: SPACING.screenPadding
+                }]}
+                onPress={() => navigation.navigate('AddTransaction')}
+            >
+                <Ionicons name="add" size={20} color={colors.background} style={{ marginRight: 8 }} />
+                <Text style={[styles.addButtonText, { color: colors.background }]}>Add New Transaction</Text>
+            </TouchableOpacity>
+        </View>
+    );
+
+    return (
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'left', 'right']}>
             <SectionList
                 sections={sections}
                 keyExtractor={item => item.id}
                 renderItem={renderItem}
                 renderSectionHeader={renderSectionHeader}
+                ListHeaderComponent={renderHeader}
                 stickySectionHeadersEnabled={true}
-                contentContainerStyle={{ paddingBottom: 100 }} // Space for TabBar
+                contentContainerStyle={{ paddingBottom: 100 }}
                 refreshControl={
                     <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={colors.primaryAction} />
                 }
@@ -210,11 +263,6 @@ export default function TransactionListScreen({ navigation }) {
                     </View>
                 }
             />
-
-            {/* FAB for Add is NOT needed because it is in the Tab Bar. 
-                However, if user scrolls down, maybe we want one? 
-                For now, rely on Tab Bar "+" button.
-            */}
         </SafeAreaView>
     );
 }
@@ -222,12 +270,11 @@ export default function TransactionListScreen({ navigation }) {
 const styles = StyleSheet.create({
     container: { flex: 1 },
     header: {
-        paddingTop: SPACING.m, // Added padding top
+        paddingTop: SPACING.m,
         paddingHorizontal: SPACING.screenPadding,
         paddingBottom: SPACING.m,
         borderBottomWidth: 1,
     },
-
     filterRow: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -235,18 +282,17 @@ const styles = StyleSheet.create({
     searchContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        borderRadius: 8,
-        paddingHorizontal: 8,
-        paddingVertical: 8, // Increased against 6 to match Dropdown
+        borderRadius: 16,
+        paddingHorizontal: 16,
+        height: 48,
         borderWidth: 1,
-        flex: 1.5,
     },
     searchInput: {
         flex: 1,
         marginLeft: 8,
         fontSize: TYPOGRAPHY.size.body,
         paddingVertical: 0,
-        letterSpacing: -0.5, // Tighten font on iOS to match Android
+        letterSpacing: -0.5,
     },
     sectionHeader: {
         paddingVertical: 6,

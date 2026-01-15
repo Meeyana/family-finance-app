@@ -62,8 +62,7 @@ export default function MultiSelectDropdown({ label, options, selectedValues, on
             >
                 <Text style={[
                     styles.dropdownText,
-                    { color: selectedValues.length > 0 ? colors.primaryText : colors.secondaryText },
-                    selectedValues.length > 0 && { fontWeight: 'bold' }
+                    { color: colors.primaryText }, // Always use primary text color for visibility
                 ]}>
                     {getDisplayText()}
                 </Text>

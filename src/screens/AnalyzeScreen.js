@@ -36,6 +36,7 @@ export default function AnalyzeScreen({ navigation }) {
     // Filters
     const [selectedCategories, setSelectedCategories] = useState([]);
     const [selectedProfileIds, setSelectedProfileIds] = useState([]);
+    const [showFilters, setShowFilters] = useState(false);
 
     useEffect(() => {
         loadData();
@@ -161,28 +162,67 @@ export default function AnalyzeScreen({ navigation }) {
                     <Text style={{ fontSize: TYPOGRAPHY.size.h2, fontWeight: TYPOGRAPHY.weight.bold, color: colors.primaryText }}>Analysis</Text>
                 </View>
 
-                {/* Date Selector Header */}
-                <View style={[styles.header, { borderBottomColor: colors.divider, justifyContent: 'center' }]}>
-                    <TouchableOpacity onPress={() => setShowDateFilter(true)} style={styles.dateSelector}>
-                        <Text style={[styles.dateSelectorText, { color: colors.black }]}>
+                {/* Date Selector & Filter Toggle Row */}
+                <View style={[styles.header, { borderBottomColor: 'transparent', paddingVertical: 0, paddingBottom: SPACING.m, gap: 12 }]}>
+                    {/* Date Selector (Flex 1) */}
+                    <TouchableOpacity
+                        onPress={() => setShowDateFilter(true)}
+                        style={[styles.dateSelector, { flex: 1, marginVertical: 0, height: 48, justifyContent: 'center' }]}
+                    >
+                        <MaterialCommunityIcons name="calendar" size={20} color={colors.black} style={{ position: 'absolute', left: 16 }} />
+                        <Text style={[styles.dateSelectorText, { color: colors.black, textAlign: 'center', flex: 1 }]}>
                             {filterMode === 'year' ? `Year ${startDate.getFullYear()}` : `Month ${startDate.getMonth() + 1}, ${startDate.getFullYear()}`}
                         </Text>
-                        <MaterialCommunityIcons name="chevron-down" size={20} color={colors.black} />
+                        <MaterialCommunityIcons name="chevron-down" size={20} color={colors.black} style={{ position: 'absolute', right: 16 }} />
+                    </TouchableOpacity>
+
+                    {/* Filter Toggle Button */}
+                    <TouchableOpacity
+                        onPress={() => setShowFilters(!showFilters)}
+                        style={{
+                            width: 48, height: 48,
+                            borderRadius: 16,
+                            backgroundColor: showFilters ? '#6ca749' : '#F3F4F6', // Active Green, Inactive Light Gray
+                            justifyContent: 'center', alignItems: 'center',
+                        }}
+                    >
+                        <MaterialCommunityIcons name="tune" size={24} color={showFilters ? "#FFFFFF" : colors.black} />
                     </TouchableOpacity>
                 </View>
 
-                {/* Filters */}
-                <View style={styles.filterRow}>
-                    <MultiSelectDropdown
-                        label="Profile" options={profileOptions}
-                        selectedValues={selectedProfileIds} onSelectionChange={setSelectedProfileIds} compact={true}
-                    />
-                    <View style={{ width: 12 }} />
-                    <MultiSelectDropdown
-                        label="Category" options={categoryOptions}
-                        selectedValues={selectedCategories} onSelectionChange={setSelectedCategories} compact={true}
-                    />
-                </View>
+                {/* Collapsible Filter Panel */}
+                {showFilters && (
+                    <View style={{
+                        marginHorizontal: SPACING.screenPadding,
+                        marginBottom: SPACING.m,
+                        padding: SPACING.m,
+                        backgroundColor: colors.surface,
+                        borderRadius: 16,
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.1,
+                        shadowRadius: 8,
+                        elevation: 3
+                    }}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.m }}>
+                            <Text style={{ fontSize: TYPOGRAPHY.size.h4, fontWeight: 'bold', color: colors.primaryText }}>Filters</Text>
+                            <TouchableOpacity onPress={() => setShowFilters(false)}>
+                                <MaterialCommunityIcons name="close" size={20} color="#9CA3AF" />
+                            </TouchableOpacity>
+                        </View>
+
+                        <View style={{ gap: SPACING.m }}>
+                            <MultiSelectDropdown
+                                label="Profile" options={profileOptions}
+                                selectedValues={selectedProfileIds} onSelectionChange={setSelectedProfileIds} compact={false}
+                            />
+                            <MultiSelectDropdown
+                                label="Category" options={categoryOptions}
+                                selectedValues={selectedCategories} onSelectionChange={setSelectedCategories} compact={false}
+                            />
+                        </View>
+                    </View>
+                )}
 
                 {/* 1. Header Card: Net Cashflow (Biggest) */}
                 <LinearGradient
@@ -392,16 +432,14 @@ const styles = StyleSheet.create({
     dateSelector: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: 'rgba(0,0,0,0.05)', // Subtle background like MonthPicker button?
+        backgroundColor: '#F3F4F6', // Match inactive button
         paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 20, // Rounded pill shape
+        borderRadius: 16, // Match button
     },
     dateSelectorText: {
         fontSize: TYPOGRAPHY.size.body,
-        fontWeight: TYPOGRAPHY.weight.medium,
-        marginRight: 4,
-        fontFamily: TYPOGRAPHY.fontFamily.medium,
+        fontWeight: '400', // Not bold
+        fontFamily: TYPOGRAPHY.fontFamily.regular,
     },
     filterRow: {
         flexDirection: 'row',
