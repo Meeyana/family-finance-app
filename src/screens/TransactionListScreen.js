@@ -8,6 +8,7 @@ import { getTransactions, getFamilyCategories } from '../services/firestoreRepos
 import MultiSelectDropdown from '../components/MultiSelectDropdown';
 import { useTheme } from '../components/context/ThemeContext';
 import SwipeDateFilter from '../components/SwipeDateFilter';
+import SimpleDateFilterModal from '../components/SimpleDateFilterModal';
 import TransactionRow from '../components/TransactionRow';
 import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
 
@@ -21,6 +22,7 @@ export default function TransactionListScreen({ navigation }) {
     const [loading, setLoading] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [selectedDate, setSelectedDate] = useState(new Date());
+    const [showDateFilter, setShowDateFilter] = useState(false);
 
     // Filter State
     const [categories, setCategories] = useState([]);
@@ -139,42 +141,67 @@ export default function TransactionListScreen({ navigation }) {
         </View>
     );
 
+    const handleDateApply = (start, end, mode) => {
+        setSelectedDate(start);
+        setShowDateFilter(false);
+    };
+
+    const formatDateButton = (date) => {
+        return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    };
+
     const renderHeader = () => (
-        <View style={{ backgroundColor: colors.background }}>
-            {/* Header */}
-            <View style={[styles.header, { borderBottomColor: colors.divider }]}>
-                {/* Standard App Header */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.m }}>
+        <View style={{ backgroundColor: '#f7ede2', borderBottomLeftRadius: 24, borderBottomRightRadius: 24, paddingBottom: 16 }}>
+            {/* Header Row */}
+            <View style={[styles.header, { borderBottomWidth: 0, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
+                {/* Left: Avatar + Title */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                     <View style={{
-                        width: 48, height: 48, borderRadius: 24,
-                        backgroundColor: colors.surface, justifyContent: 'center', alignItems: 'center', marginRight: SPACING.m
+                        width: 44, height: 44, borderRadius: 22,
+                        backgroundColor: '#ffffff', justifyContent: 'center', alignItems: 'center'
                     }}>
                         <Text style={{ fontSize: 24 }}>{profile?.avatar || '👤'}</Text>
                     </View>
-                    <Text style={{ fontSize: TYPOGRAPHY.size.h2, fontWeight: TYPOGRAPHY.weight.bold, color: colors.primaryText }}>Transactions</Text>
+                    <Text style={{ fontSize: 18, fontWeight: '900', color: '#3e2723' }}>Transactions</Text>
                 </View>
 
-                {/* Date Filter & Toggle Row */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: SPACING.s }}>
-                    {/* Swipe Date Filter (Flex 1) */}
-                    <View style={{ flex: 1 }}>
-                        <SwipeDateFilter date={selectedDate} onMonthChange={setSelectedDate} />
-                    </View>
-
-                    {/* Filter Toggle Button */}
+                {/* Right: Actions */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    {/* Date Filter Icon */}
                     <TouchableOpacity
-                        onPress={() => setShowFilters(!showFilters)}
+                        onPress={() => setShowDateFilter(true)}
                         style={{
-                            width: 48, height: 48,
-                            borderRadius: 16,
-                            backgroundColor: showFilters ? '#6ca749' : '#F3F4F6', // Active Green, Inactive Light Gray
+                            width: 36, height: 36,
+                            borderRadius: 12,
+                            backgroundColor: 'rgba(255,255,255,0.6)',
                             justifyContent: 'center', alignItems: 'center',
                         }}
                     >
-                        <MaterialCommunityIcons name="tune" size={24} color={showFilters ? "#FFFFFF" : colors.black} />
+                        <MaterialCommunityIcons name="calendar" size={18} color="#8d6e63" />
+                    </TouchableOpacity>
+
+                    {/* Filter Icon */}
+                    <TouchableOpacity
+                        onPress={() => setShowFilters(!showFilters)}
+                        style={{
+                            width: 36, height: 36,
+                            borderRadius: 12,
+                            backgroundColor: 'rgba(255,255,255,0.6)',
+                            justifyContent: 'center', alignItems: 'center',
+                        }}
+                    >
+                        <MaterialCommunityIcons name="tune" size={18} color={showFilters ? "#6ca749" : "#8d6e63"} />
                     </TouchableOpacity>
                 </View>
             </View>
+
+            {/* Simple Date Modal */}
+            <SimpleDateFilterModal
+                visible={showDateFilter}
+                onClose={() => setShowDateFilter(false)}
+                onApply={handleDateApply}
+                initialDate={selectedDate}
+            />
 
             {/* Collapsible Filter Panel - Sibling */}
             {showFilters && (
@@ -184,11 +211,6 @@ export default function TransactionListScreen({ navigation }) {
                     padding: SPACING.m,
                     backgroundColor: colors.surface,
                     borderRadius: 16,
-                    shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.1,
-                    shadowRadius: 8,
-                    elevation: 3
                 }}>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.m }}>
                         <Text style={{ fontSize: TYPOGRAPHY.size.h4, fontWeight: 'bold', color: colors.primaryText }}>Filters</Text>
@@ -209,46 +231,49 @@ export default function TransactionListScreen({ navigation }) {
                 </View>
             )}
 
-            {/* Search Box - Sibling */}
+            {/* Search Box */}
             <View style={[styles.searchContainer, {
-                backgroundColor: '#F3F4F6',
+                backgroundColor: '#ffffff',
                 borderColor: 'transparent',
                 marginBottom: SPACING.s,
                 marginHorizontal: SPACING.screenPadding,
             }]}>
-                <Ionicons name="search" size={16} color={colors.secondaryText} />
+                <Ionicons name="search" size={18} color="#8d6e63" />
                 <TextInput
-                    style={[styles.searchInput, { color: colors.primaryText }]}
+                    style={[styles.searchInput, { color: '#3e2723' }]}
                     placeholder="Search transactions..."
-                    placeholderTextColor={colors.secondaryText}
+                    placeholderTextColor="#bcaaa4"
                     value={searchText}
                     onChangeText={setSearchText}
                 />
                 {searchText.length > 0 && (
                     <TouchableOpacity onPress={() => setSearchText('')}>
-                        <Ionicons name="close-circle" size={16} color={colors.secondaryText} />
+                        <Ionicons name="close-circle" size={16} color="#8d6e63" />
                     </TouchableOpacity>
                 )}
             </View>
 
-            {/* Add Transaction Button - Sibling */}
+            {/* Add Transaction Button */}
             <TouchableOpacity
                 style={[styles.addButton, {
-                    backgroundColor: colors.primaryAction,
-                    marginTop: 12,
-                    marginBottom: SPACING.m,
+                    backgroundColor: '#6ca749',
+                    marginTop: 8,
+                    marginBottom: 0,
                     marginHorizontal: SPACING.screenPadding
                 }]}
                 onPress={() => navigation.navigate('AddTransaction')}
             >
-                <Ionicons name="add" size={20} color={colors.background} style={{ marginRight: 8 }} />
-                <Text style={[styles.addButtonText, { color: colors.background }]}>Add New Transaction</Text>
+                <Ionicons name="add" size={20} color="#ffffff" style={{ marginRight: 8 }} />
+                <Text style={[styles.addButtonText, { color: '#ffffff' }]}>Add New Transaction</Text>
             </TouchableOpacity>
         </View>
     );
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'left', 'right']}>
+        <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
+            <View style={{ backgroundColor: '#f7ede2' }}>
+                <SafeAreaView edges={['top', 'left', 'right']} />
+            </View>
             <SectionList
                 sections={sections}
                 keyExtractor={item => item.id}
@@ -257,6 +282,9 @@ export default function TransactionListScreen({ navigation }) {
                 ListHeaderComponent={renderHeader}
                 stickySectionHeadersEnabled={true}
                 contentContainerStyle={{ paddingBottom: 100 }}
+                overScrollMode="never"
+                showsVerticalScrollIndicator={false}
+                bounces={false}
                 refreshControl={
                     <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={colors.primaryAction} />
                 }
@@ -268,7 +296,7 @@ export default function TransactionListScreen({ navigation }) {
                     </View>
                 }
             />
-        </SafeAreaView>
+        </View>
     );
 }
 

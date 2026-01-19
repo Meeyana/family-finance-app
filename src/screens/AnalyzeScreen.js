@@ -1,11 +1,9 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, DeviceEventEmitter } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, DeviceEventEmitter, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { MaterialCommunityIcons, Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { getAccountData } from '../services/dataService';
 import { useAuth } from '../components/context/AuthContext';
-import MonthPicker from '../components/MonthPicker';
 import BudgetProgressBar from '../components/BudgetProgressBar';
 import MultiSelectDropdown from '../components/MultiSelectDropdown';
 import IncomeExpenseBarChart from '../components/IncomeExpenseBarChart';
@@ -14,7 +12,6 @@ import CustomDateFilterModal from '../components/CustomDateFilterModal';
 import CurrencyText from '../components/CurrencyText';
 import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
 import { useTheme } from '../components/context/ThemeContext';
-
 import ExpensePieChart from '../components/ExpensePieChart';
 
 export default function AnalyzeScreen({ navigation }) {
@@ -47,7 +44,6 @@ export default function AnalyzeScreen({ navigation }) {
     const loadData = async () => {
         try {
             setLoading(true);
-            // Previous Range Logic
             let prevStart, prevEnd;
             if (filterMode === 'year') {
                 prevStart = new Date(startDate);
@@ -95,7 +91,16 @@ export default function AnalyzeScreen({ navigation }) {
         const currentStats = processDataset(current);
         const prevStats = processDataset(prev);
 
-        // Limit Logic
+        const calculatePercent = (curr, previous) => {
+            if (!previous || previous === 0) return curr === 0 ? 0 : 100;
+            return ((curr - previous) / previous) * 100;
+        };
+
+        const incomeDiffPercent = calculatePercent(currentStats.income, prevStats.income);
+        const expenseDiffPercent = calculatePercent(currentStats.expense, prevStats.expense);
+        const netDiff = currentStats.net - prevStats.net;
+        const netDiffPercent = calculatePercent(currentStats.net, prevStats.net);
+
         let limit = 0;
         if (selectedProfileIds.length > 0) {
             selectedProfileIds.forEach(pid => {
@@ -105,33 +110,22 @@ export default function AnalyzeScreen({ navigation }) {
             limit = current.totalLimit;
         }
 
-        const netDiff = currentStats.net - prevStats.net;
-        const incomeDiff = currentStats.income - prevStats.income;
-        const expenseDiff = currentStats.expense - prevStats.expense;
-
-        const calculatePercent = (diff, prevVal) => {
-            if (prevVal === 0) return 0;
-            return Math.round((diff / Math.abs(prevVal)) * 100);
-        };
-
         return {
             ...current,
             transactions: currentStats.txs,
             totalIncome: currentStats.income,
             totalSpent: currentStats.expense,
             netCashflow: currentStats.net,
+            netDiff,
+            netDiffPercent,
+            incomeDiffPercent,
+            expenseDiffPercent,
             totalLimit: limit,
             projectedSpend: (currentStats.expense / Math.max(new Date().getDate(), 1)) * 30,
-            incomeDiff,
-            expenseDiff,
-            netDiff,
-            netDiffPercent: calculatePercent(netDiff, prevStats.net),
-            incomeDiffPercent: calculatePercent(incomeDiff, prevStats.income),
-            expenseDiffPercent: calculatePercent(expenseDiff, prevStats.expense)
         };
     }, [data, selectedProfileIds, selectedCategories]);
 
-    if (loading) return <View style={styles.center}><ActivityIndicator size="large" color={colors.primaryAction} /></View>;
+    if (loading) return <View style={styles.center}><ActivityIndicator size="large" color="#6ca749" /></View>;
     if (error) return <View style={styles.center}><Text style={{ color: colors.error }}>{error}</Text></View>;
 
     const allCategories = (data?.current) ? [...new Set(data.current.transactions.filter(t => (t.type || 'expense') === 'expense').map(t => t.category))] : [];
@@ -139,262 +133,227 @@ export default function AnalyzeScreen({ navigation }) {
     const profileOptions = userProfiles.map(p => ({ id: p.id, name: p.name }));
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'left', 'right']}>
-            <ScrollView showsVerticalScrollIndicator={false}>
+        <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
+            <View style={{ backgroundColor: '#f7ede2' }}>
+                <SafeAreaView edges={['top', 'left', 'right']} style={{ backgroundColor: '#f7ede2' }} />
+            </View>
 
+            <ScrollView
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.scrollContent}
+                bounces={false}
+                overScrollMode="never"
+            >
 
+                {/* TOP SECTION (Beige) */}
+                <View style={styles.topSection}>
 
-                {/* Page Title & Description (Restored) */}
-                {/* Header */}
-                <View style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    paddingHorizontal: SPACING.screenPadding,
-                    marginTop: SPACING.m,
-                    marginBottom: SPACING.m
-                }}>
-                    <View style={{
-                        width: 48, height: 48, borderRadius: 24,
-                        backgroundColor: colors.surface, justifyContent: 'center', alignItems: 'center', marginRight: SPACING.m
-                    }}>
-                        <Text style={{ fontSize: 24 }}>{profile?.avatar || '👤'}</Text>
-                    </View>
-                    <Text style={{ fontSize: TYPOGRAPHY.size.h2, fontWeight: TYPOGRAPHY.weight.bold, color: colors.primaryText }}>Analysis</Text>
-                </View>
+                    {/* Header Row - Matching Overview Structure */}
+                    <View style={[styles.header, { marginTop: 10 }]}>
+                        <View style={styles.headerLeft}>
+                            <View style={[styles.avatarContainer, { backgroundColor: '#ffffff' }]}>
+                                <Text style={{ fontSize: 24 }}>{profile?.avatar || '👤'}</Text>
+                            </View>
+                            <View>
+                                <Text style={[styles.screenTitle, { color: '#3e2723' }]}>Analysis</Text>
+                            </View>
+                        </View>
 
-                {/* Date Selector & Filter Toggle Row */}
-                <View style={[styles.header, { borderBottomColor: 'transparent', paddingVertical: 0, paddingBottom: SPACING.m, gap: 12 }]}>
-                    {/* Date Selector (Flex 1) */}
-                    <TouchableOpacity
-                        onPress={() => setShowDateFilter(true)}
-                        style={[styles.dateSelector, { flex: 1, marginVertical: 0, height: 48, justifyContent: 'center' }]}
-                    >
-                        <MaterialCommunityIcons name="calendar" size={20} color={colors.black} style={{ position: 'absolute', left: 16 }} />
-                        <Text style={[styles.dateSelectorText, { color: colors.black, textAlign: 'center', flex: 1 }]}>
-                            {filterMode === 'year' ? `Year ${startDate.getFullYear()}` : `Month ${startDate.getMonth() + 1}, ${startDate.getFullYear()}`}
-                        </Text>
-                        <MaterialCommunityIcons name="chevron-down" size={20} color={colors.black} style={{ position: 'absolute', right: 16 }} />
-                    </TouchableOpacity>
-
-                    {/* Filter Toggle Button */}
-                    <TouchableOpacity
-                        onPress={() => setShowFilters(!showFilters)}
-                        style={{
-                            width: 48, height: 48,
-                            borderRadius: 16,
-                            backgroundColor: showFilters ? '#6ca749' : '#F3F4F6', // Active Green, Inactive Light Gray
-                            justifyContent: 'center', alignItems: 'center',
-                        }}
-                    >
-                        <MaterialCommunityIcons name="tune" size={24} color={showFilters ? "#FFFFFF" : colors.black} />
-                    </TouchableOpacity>
-                </View>
-
-                {/* Collapsible Filter Panel */}
-                {showFilters && (
-                    <View style={{
-                        marginHorizontal: SPACING.screenPadding,
-                        marginBottom: SPACING.m,
-                        padding: SPACING.m,
-                        backgroundColor: colors.surface,
-                        borderRadius: 16,
-                        shadowColor: '#000',
-                        shadowOffset: { width: 0, height: 2 },
-                        shadowOpacity: 0.1,
-                        shadowRadius: 8,
-                        elevation: 3
-                    }}>
-                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.m }}>
-                            <Text style={{ fontSize: TYPOGRAPHY.size.h4, fontWeight: 'bold', color: colors.primaryText }}>Filters</Text>
-                            <TouchableOpacity onPress={() => setShowFilters(false)}>
-                                <MaterialCommunityIcons name="close" size={20} color="#9CA3AF" />
+                        {/* Filter & Date Row */}
+                        <View style={{ flexDirection: 'row', gap: 8 }}>
+                            <TouchableOpacity onPress={() => setShowDateFilter(true)} style={styles.headerButton}>
+                                <MaterialCommunityIcons name="calendar" size={18} color="#8d6e63" />
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={() => setShowFilters(!showFilters)} style={styles.headerButton}>
+                                <MaterialCommunityIcons name="tune" size={18} color={showFilters ? "#6ca749" : "#8d6e63"} />
                             </TouchableOpacity>
                         </View>
+                    </View>
 
-                        <View style={{ gap: SPACING.m }}>
+                    {/* Hero Title */}
+                    <View style={{ marginBottom: 20 }}>
+                        <Text style={{ fontSize: 28, fontWeight: '900', color: '#5d4037', lineHeight: 40 }}>
+                            My <Text style={{ color: '#6ca749' }}>Family</Text> Financial
+                        </Text>
+                    </View>
+
+                    <View style={{ height: 10 }} />
+                </View>
+
+                {/* FLOATING MAIN CARD */}
+                <View style={styles.mainCardContainer}>
+                    {/* Filter Panel - MOVED HERE */}
+                    {showFilters && (
+                        <View style={styles.filterPanel}>
                             <MultiSelectDropdown
-                                label="Profile" options={profileOptions}
-                                selectedValues={selectedProfileIds} onSelectionChange={setSelectedProfileIds} compact={false}
+                                label="Profile"
+                                options={profileOptions}
+                                selectedValues={selectedProfileIds}
+                                onSelectionChange={setSelectedProfileIds}
+                                compact={false}
                             />
+                            <View style={{ height: 12 }} />
                             <MultiSelectDropdown
-                                label="Category" options={categoryOptions}
-                                selectedValues={selectedCategories} onSelectionChange={setSelectedCategories} compact={false}
+                                label="Category"
+                                options={categoryOptions}
+                                selectedValues={selectedCategories}
+                                onSelectionChange={setSelectedCategories}
+                                compact={false}
                             />
                         </View>
-                    </View>
-                )}
+                    )}
 
-                {/* 1. Header Card: Net Cashflow (Biggest) */}
-                <LinearGradient
-                    colors={['#101828', '#1e3c72', '#2a5298']}
-                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                    style={[styles.summaryCard, { paddingVertical: 24, paddingHorizontal: SPACING.l, alignItems: 'center', justifyContent: 'center' }]}
-                >
-                    <View style={{ alignItems: 'center', width: '100%' }}>
-                        <Text style={[styles.cardLabel, { color: 'rgba(255,255,255,0.7)', fontSize: 13, marginBottom: 8, textAlign: 'center' }]}>NET CASHFLOW FOR FAMILY</Text>
-                        <CurrencyText
-                            amount={viewData?.netCashflow}
-                            showSign={false}
-                            style={[styles.netText, { color: '#FFFFFF', fontSize: 36, textAlign: 'center' }]}
-                        />
-
-                        {/* Comparison Pill */}
-                        {viewData?.netDiff !== 0 && (
-                            <View style={{
-                                backgroundColor: 'rgba(255,255,255,0.15)',
-                                alignSelf: 'center',
-                                paddingHorizontal: 12,
-                                paddingVertical: 6,
-                                borderRadius: 8,
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                marginTop: 12
-                            }}>
-                                <Text style={{ color: viewData?.netDiff >= 0 ? '#A0E8AF' : '#FFCDD2', fontSize: 13, fontWeight: '600' }}>
-                                    {viewData?.netDiff >= 0 ? '▲' : '▼'} {Math.abs(viewData?.netDiff || 0).toLocaleString()} <Text style={{ color: 'rgba(255,255,255,0.7)', fontWeight: '400' }}>vs last {filterMode}</Text>
-                                </Text>
+                    <View style={styles.mainCard}>
+                        {/* Top: Net Cashflow */}
+                        <View style={{ padding: 14, paddingBottom: 10 }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                                <View style={{ backgroundColor: '#E8F5E9', padding: 4, borderRadius: 6 }}>
+                                    <Ionicons name="wallet-outline" size={14} color="#4CAF50" />
+                                </View>
+                                <Text style={{ color: '#8d6e63', fontSize: 14, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>NET CASHFLOW</Text>
                             </View>
-                        )}
-                    </View>
-                </LinearGradient>
 
-                {/* 2. Secondary Cards List */}
-                <View style={{ paddingHorizontal: SPACING.screenPadding, marginTop: -SPACING.s, gap: SPACING.m }}>
-
-                    {/* Monthly Income */}
-                    <View style={styles.listCard}>
-                        <View style={{ flex: 1 }}>
-                            <Text style={styles.listCardLabel}>TOTAL INCOME</Text>
                             <CurrencyText
-                                amount={viewData?.totalIncome}
+                                amount={viewData?.netCashflow}
                                 showSign={false}
-                                style={styles.listCardValue}
+                                style={{ fontSize: 26, fontWeight: '700', color: '#6ca749', marginVertical: 4 }}
+                                symbolStyle={{ fontSize: 26, fontWeight: '700', color: '#6ca749' }}
                             />
-                            {viewData?.incomeDiffPercent !== 0 && (
-                                <Text style={{ fontSize: 13, fontWeight: '600', color: viewData?.incomeDiffPercent >= 0 ? '#2E7D32' : '#C62828', marginTop: 4 }}>
-                                    {viewData?.incomeDiffPercent >= 0 ? '▲' : '▼'} {Math.abs(viewData?.incomeDiffPercent || 0)}%
+                            {/* Comparison Text */}
+                            {viewData?.netDiff !== undefined && (
+                                <Text style={{ fontSize: 12, color: '#9e9e9e', fontWeight: '500' }}>
+                                    {viewData.netDiff > 0 ? '+' : ''}
+                                    <CurrencyText amount={viewData.netDiff} showSign={false} style={{ color: viewData.netDiff >= 0 ? '#4CAF50' : '#F44336' }} />
+                                    {' '}vs previous {filterMode}
                                 </Text>
                             )}
                         </View>
-                        <View style={[styles.iconBox, { backgroundColor: '#E8F5E9' }]}>
-                            <MaterialCommunityIcons name="currency-usd" size={24} color="#2E7D32" />
+
+                        <View style={styles.divider} />
+
+                        {/* Bottom: Income vs Expense */}
+                        <View style={{ flexDirection: 'row', padding: 14, paddingTop: 10 }}>
+                            <View style={{ flex: 1 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 2 }}>
+                                    <Text style={{ fontSize: 14, color: '#9e9e9e' }}>Total Income</Text>
+                                    <View style={{ backgroundColor: '#e8f5e9', padding: 2, borderRadius: 8 }}>
+                                        <Ionicons name="trending-up" size={12} color="#4CAF50" />
+                                    </View>
+                                </View>
+                                <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
+                                    <CurrencyText amount={viewData?.totalIncome} showSign={false} style={{ fontSize: 18, fontWeight: '600', color: '#111111' }} />
+                                    {viewData?.incomeDiffPercent !== undefined && viewData.incomeDiffPercent !== 0 && (
+                                        <Text style={{ fontSize: 11, fontWeight: '600', color: viewData.incomeDiffPercent >= 0 ? '#4CAF50' : '#F44336' }}>
+                                            {viewData.incomeDiffPercent > 0 ? '▲' : '▼'}{Math.abs(viewData.incomeDiffPercent).toFixed(0)}%
+                                        </Text>
+                                    )}
+                                </View>
+                            </View>
+                            <View style={{ width: 1, backgroundColor: '#f5f5f5', marginHorizontal: 16 }} />
+                            <View style={{ flex: 1, alignItems: 'flex-end' }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 2 }}>
+                                    <Text style={{ fontSize: 14, color: '#9e9e9e' }}>Total Expense</Text>
+                                    <View style={{ backgroundColor: '#ffebee', padding: 2, borderRadius: 8 }}>
+                                        <Ionicons name="trending-down" size={12} color="#f44336" />
+                                    </View>
+                                </View>
+                                <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6, justifyContent: 'flex-end' }}>
+                                    <CurrencyText amount={Math.abs(viewData?.totalSpent || 0)} showSign={false} style={{ fontSize: 18, fontWeight: '600', color: '#111111' }} />
+                                    {viewData?.expenseDiffPercent !== undefined && viewData.expenseDiffPercent !== 0 && (
+                                        <Text style={{ fontSize: 11, fontWeight: '600', color: viewData.expenseDiffPercent <= 0 ? '#4CAF50' : '#F44336' }}>
+                                            {viewData.expenseDiffPercent > 0 ? '▲' : '▼'}{Math.abs(viewData.expenseDiffPercent).toFixed(0)}%
+                                        </Text>
+                                    )}
+                                </View>
+                            </View>
                         </View>
                     </View>
+                </View>
 
-                    {/* Expense */}
-                    <View style={styles.listCard}>
-                        <View style={{ flex: 1 }}>
-                            <Text style={styles.listCardLabel}>TOTAL EXPENSE</Text>
-                            <CurrencyText
-                                amount={-viewData?.totalSpent}
-                                showSign={false}
-                                style={styles.listCardValue}
-                            />
-                            {viewData?.expenseDiffPercent !== 0 && (
-                                <Text style={{ fontSize: 13, fontWeight: '600', color: viewData?.expenseDiffPercent > 0 ? '#C62828' : '#2E7D32', marginTop: 4 }}>
-                                    {viewData?.expenseDiffPercent > 0 ? '▲' : '▼'} {Math.abs(viewData?.expenseDiffPercent || 0)}%
-                                </Text>
-                            )}
-                        </View>
-                        <View style={[styles.iconBox, { backgroundColor: '#FFEBEE' }]}>
-                            <MaterialCommunityIcons name="chart-line-variant" size={24} color="#C62828" />
-                        </View>
-                    </View>
+                {/* BOTTOM CONTENT */}
+                <View style={styles.bottomSection}>
 
-                    {/* Burn Rate */}
-                    <View style={styles.listCard}>
-                        <View style={{ flex: 1 }}>
-                            <Text style={styles.listCardLabel}>DAILY BURN RATE</Text>
-                            {/* Fix: use style prop on CurrencyText directly if possible, or ensure wrapping Text doesn't constrain it unexpectedly. 
-                                 However, previous issue was CurrencyText inside Text inheriting styles but maybe CurrencyText default size overriding?
-                                 I'll just apply style directly to CurrencyText and remove wrapper if CurrencyText supports it (it does).
-                             */}
+
+
+                    {/* SECONDARY CARDS (Compact) */}
+                    <View style={{ flexDirection: 'row', gap: 10, marginBottom: 24, marginTop: 8 }}>
+                        <View style={styles.secondaryCard}>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                <Text style={styles.secondaryLabel}>DAILY AVG</Text>
+                                <View style={styles.miniIconBox}><MaterialCommunityIcons name="chart-timeline-variant" size={12} color="#6ca749" /></View>
+                            </View>
                             <CurrencyText
                                 amount={Math.round((viewData?.totalSpent || 0) / Math.max(new Date().getDate(), 1))}
-                                style={styles.listCardValue}
+                                style={{ fontSize: 18, fontWeight: '600', color: '#111111' }}
+                                symbolStyle={{ fontSize: 12, color: '#111111', verticalAlign: 'top', lineHeight: 22 }}
                             />
+                            <View style={styles.decorativeCurve} />
                         </View>
-                        <View style={[styles.iconBox, { backgroundColor: '#FFF3E0' }]}>
-                            <MaterialCommunityIcons name="fire" size={24} color="#EF6C00" />
-                        </View>
-                    </View>
 
-                    {/* Forecast */}
-                    <View style={styles.listCard}>
-                        <View style={{ flex: 1 }}>
-                            <Text style={styles.listCardLabel}>MONTHLY FORECAST</Text>
+                        <View style={styles.secondaryCard}>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                <Text style={styles.secondaryLabel}>FORECAST</Text>
+                                <View style={styles.miniIconBox}><MaterialCommunityIcons name="flash" size={12} color="#FF9800" /></View>
+                            </View>
                             <CurrencyText
                                 amount={viewData?.projectedSpend}
-                                style={styles.listCardValue}
+                                style={{ fontSize: 18, fontWeight: '600', color: '#111111' }}
+                                symbolStyle={{ fontSize: 12, color: '#111111', verticalAlign: 'top', lineHeight: 22 }}
                             />
-                        </View>
-                        <View style={[styles.iconBox, { backgroundColor: '#EDE7F6' }]}>
-                            <MaterialCommunityIcons name="crystal-ball" size={24} color="#673AB7" />
+                            <View style={styles.decorativeCurve} />
                         </View>
                     </View>
 
-                </View>
-
-                <View style={{ height: SPACING.l }} />
-
-                {/* Chart Section: Trends */}
-                <View style={styles.section}>
-                    <Text style={[styles.sectionTitle, { color: colors.primaryText }]}>Monthly Trend</Text>
-                    {viewData && (
-                        <MonthlyTrendLineChart
-                            data={viewData.transactions}
-                            startDate={startDate}
-                            endDate={endDate}
-                            filterCategory={selectedCategories.length === 1 ? selectedCategories[0] : null}
-                        />
-                    )}
-                </View>
-
-                {/* Chart Section: Income vs Expense */}
-                {selectedCategories.length === 0 && (
+                    {/* Charts */}
                     <View style={styles.section}>
-                        <Text style={[styles.sectionTitle, { color: colors.primaryText }]}>Income vs Expense</Text>
+                        <Text style={[styles.sectionTitle, { color: '#111111' }]}>Monthly Trend</Text>
                         {viewData && (
-                            <IncomeExpenseBarChart
-                                income={viewData.totalIncome}
-                                expense={viewData.totalSpent}
+                            <MonthlyTrendLineChart
+                                data={viewData.transactions}
+                                startDate={startDate}
+                                endDate={endDate}
+                                filterCategory={selectedCategories.length === 1 ? selectedCategories[0] : null}
                             />
                         )}
                     </View>
-                )}
 
-                {/* RESTORED: Pie Chart */}
-                {selectedCategories.length === 0 && (
+                    {selectedCategories.length === 0 && (
+                        <View style={styles.section}>
+                            <Text style={[styles.sectionTitle, { color: '#111111' }]}>Income vs Expense</Text>
+                            {viewData && <IncomeExpenseBarChart income={viewData.totalIncome} expense={viewData.totalSpent} />}
+                        </View>
+                    )}
+
+                    {selectedCategories.length === 0 && (
+                        <View style={styles.section}>
+                            <Text style={[styles.sectionTitle, { color: '#111111' }]}>Expense By Category</Text>
+                            {viewData && <ExpensePieChart data={viewData} />}
+                        </View>
+                    )}
+
+                    {/* Budgets */}
                     <View style={styles.section}>
-                        <Text style={[styles.sectionTitle, { color: colors.primaryText }]}>Expense By Category</Text>
-                        {viewData && <ExpensePieChart data={viewData} />}
+                        <Text style={[styles.sectionTitle, { color: '#111111' }]}>Budgets</Text>
+                        {data && data.current && data.current.budgets && Object.keys(data.current.budgets.profiles)
+                            .filter(pid => selectedProfileIds.length === 0 || selectedProfileIds.includes(pid))
+                            .map(pid => {
+                                const pName = userProfiles.find(p => p.id === pid)?.name || `Profile ${pid}`;
+                                const pBudget = data.current.budgets.profiles[pid];
+                                return (
+                                    <BudgetProgressBar
+                                        key={pid}
+                                        label={pName}
+                                        spent={pBudget.spent}
+                                        limit={pBudget.limit}
+                                        boxed={true}
+                                    />
+                                );
+                            })
+                        }
                     </View>
-                )}
 
-                {/* Budget Section */}
-                <View style={styles.section}>
-                    <Text style={[styles.sectionTitle, { color: colors.primaryText }]}>Budgets</Text>
-                    {data && data.current && data.current.budgets && Object.keys(data.current.budgets.profiles)
-                        .filter(pid => selectedProfileIds.length === 0 || selectedProfileIds.includes(pid))
-                        .map(pid => {
-                            const pBudget = data.current.budgets.profiles[pid];
-                            const pName = userProfiles.find(p => p.id === pid)?.name || `Profile ${pid}`;
-
-                            return (
-                                <BudgetProgressBar
-                                    key={pid}
-                                    label={pName}
-                                    spent={pBudget.spent}
-                                    limit={pBudget.limit}
-                                    boxed={true}
-                                />
-                            );
-                        })
-                    }
+                    <View style={{ height: 40 }} />
                 </View>
-
-                <View style={{ height: 40 }} />
-
             </ScrollView>
 
             <CustomDateFilterModal
@@ -409,135 +368,102 @@ export default function AnalyzeScreen({ navigation }) {
                     setShowDateFilter(false);
                 }}
             />
-        </SafeAreaView>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
     center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    scrollContent: { paddingBottom: 40 },
+
+    topSection: {
+        backgroundColor: '#f7ede2',
+        paddingHorizontal: SPACING.screenPadding,
+        paddingBottom: 60,
+        borderBottomLeftRadius: 36,
+        borderBottomRightRadius: 36,
+        paddingTop: 4,
+        zIndex: 1,
+    },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingVertical: 12,
+        marginBottom: SPACING.l,
+        marginTop: 10,
+    },
+    headerLeft: {
+        flexDirection: 'row', alignItems: 'center', gap: 12
+    },
+    avatarContainer: {
+        width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center'
+    },
+    greeting: { fontSize: 13, fontWeight: '500' },
+    screenTitle: { fontSize: 18, fontWeight: '900' },
+    headerButton: {
+        width: 36, height: 36, borderRadius: 12,
+        backgroundColor: 'rgba(255,255,255,0.6)',
+        justifyContent: 'center', alignItems: 'center'
+    },
+
+    // Main Card
+    mainCardContainer: {
         paddingHorizontal: SPACING.screenPadding,
-        borderBottomWidth: 1,
+        marginTop: -60, // Overlap
+        marginBottom: 20,
+        zIndex: 2,
     },
-    screenTitle: {
-        fontSize: TYPOGRAPHY.size.h2,
-        fontWeight: TYPOGRAPHY.weight.bold,
-        fontFamily: TYPOGRAPHY.fontFamily.bold,
-    },
-    dateSelector: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#F3F4F6', // Match inactive button
-        paddingHorizontal: 12,
-        borderRadius: 16, // Match button
-    },
-    dateSelectorText: {
-        fontSize: TYPOGRAPHY.size.body,
-        fontWeight: '400', // Not bold
-        fontFamily: TYPOGRAPHY.fontFamily.regular,
-    },
-    filterRow: {
-        flexDirection: 'row',
-        paddingHorizontal: SPACING.screenPadding,
-        paddingTop: SPACING.m,
-        paddingBottom: SPACING.s,
-    },
-    summaryCard: {
-        margin: SPACING.screenPadding,
-        padding: SPACING.l,
-        borderRadius: SPACING.cardBorderRadius,
-    },
-    cardLabel: {
-        fontSize: TYPOGRAPHY.size.small,
-        fontWeight: TYPOGRAPHY.weight.bold,
-        letterSpacing: 0.5,
-        marginBottom: 4,
-    },
-    netText: {
-        fontSize: TYPOGRAPHY.size.h1,
-        fontWeight: TYPOGRAPHY.weight.bold,
-        letterSpacing: -1,
-        marginBottom: 4,
-    },
-    diffText: {
-        fontSize: TYPOGRAPHY.size.caption,
-        fontWeight: TYPOGRAPHY.weight.medium,
-        marginBottom: SPACING.m,
+    mainCard: {
+        backgroundColor: '#ffffff',
+        borderRadius: 20,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.06,
+        shadowRadius: 12,
+        elevation: 4,
     },
     divider: {
-        height: 1,
-        width: '100%',
-        marginVertical: SPACING.m,
+        height: 1, backgroundColor: '#f5f5f5', width: '100%'
     },
-    statsRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
+
+    // Secondary Cards
+    secondaryCard: {
+        flex: 1,
+        backgroundColor: '#e5ece4', // Light Green
+        borderRadius: 18,
+        padding: 12,
+        height: 74, // Reduced from 80
+        // justifyContent: 'space-between', // Removed
+        gap: 4,
+        overflow: 'hidden'
     },
-    statLabel: {
-        fontSize: TYPOGRAPHY.size.small,
-        fontWeight: TYPOGRAPHY.weight.bold,
-        letterSpacing: 0.5,
-        marginBottom: 4,
-        textTransform: 'uppercase',
+    secondaryLabel: {
+        fontSize: 14, fontWeight: '700', color: '#546E7A', textTransform: 'uppercase'
     },
-    statValue: {
-        fontSize: TYPOGRAPHY.size.h3,
-        fontWeight: TYPOGRAPHY.weight.semiBold,
-        fontVariant: ['tabular-nums'],
+    miniIconBox: {
+        backgroundColor: '#ffffff', borderRadius: 10, width: 20, height: 20, justifyContent: 'center', alignItems: 'center'
     },
-    section: {
+    decorativeCurve: {
+        position: 'absolute', bottom: 0, right: 0, left: 0, height: 16, backgroundColor: 'rgba(255,255,255,0.3)', borderTopLeftRadius: 20, borderTopRightRadius: 20
+    },
+
+    bottomSection: {
         paddingHorizontal: SPACING.screenPadding,
+        backgroundColor: '#ffffff',
+        minHeight: 500,
+    },
+    filterPanel: {
+        marginBottom: 20, backgroundColor: '#ffffff', padding: 16, borderRadius: 20,
+        shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 2
+    },
+
+    section: {
         marginBottom: SPACING.xl,
     },
     sectionTitle: {
-        fontSize: TYPOGRAPHY.size.h3,
-        fontWeight: TYPOGRAPHY.weight.bold,
+        fontSize: 18,
+        fontWeight: 'bold',
         marginBottom: SPACING.m,
-        letterSpacing: -0.5,
-    },
-    glassCard: {
-        backgroundColor: 'rgba(255, 255, 255, 0.15)',
-        borderRadius: 12,
-        padding: 12,
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
-    },
-    listCard: {
-        backgroundColor: '#FFFFFF',
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: SPACING.l,
-        borderRadius: 16,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 8,
-        elevation: 2,
-    },
-    listCardLabel: {
-        fontSize: TYPOGRAPHY.size.small,
-        color: '#9CA3AF',
-        fontWeight: 'bold',
-        marginBottom: 4,
-        letterSpacing: 0.5,
-        textTransform: 'uppercase',
-    },
-    listCardValue: {
-        fontSize: TYPOGRAPHY.size.h3,
-        fontWeight: 'bold',
-        color: '#111111',
-    },
-    iconBox: {
-        width: 48,
-        height: 48,
-        borderRadius: 12,
-        justifyContent: 'center',
-        alignItems: 'center',
     },
 });

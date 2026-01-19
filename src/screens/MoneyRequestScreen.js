@@ -6,6 +6,7 @@ import { useAuth } from '../components/context/AuthContext';
 import { addRequest, getFamilyCategories } from '../services/firestoreRepository';
 import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
 import { CurrencyText } from '../components/CurrencyText';
+import { formatMoney, parseMoney } from '../utils/formatting';
 
 export default function MoneyRequestScreen({ navigation }) {
     const { user, profile } = useAuth();
@@ -31,14 +32,13 @@ export default function MoneyRequestScreen({ navigation }) {
     }, [user, profile]);
 
     const handleSubmit = async () => {
-        if (!amount || !reason) {
-            Alert.alert('Missing Info', 'Please enter an amount and a reason.');
+        const numAmount = parseMoney(amount);
+        if (!numAmount || isNaN(numAmount) || numAmount <= 0) {
+            Alert.alert('Invalid Amount', 'Please enter a valid amount.');
             return;
         }
-
-        const numAmount = parseInt(amount.replace(/[^0-9]/g, ''));
-        if (isNaN(numAmount) || numAmount <= 0) {
-            Alert.alert('Invalid Amount', 'Please enter a valid amount.');
+        if (!reason.trim()) {
+            Alert.alert('Missing Info', 'Please enter a reason.');
             return;
         }
 
@@ -63,21 +63,10 @@ export default function MoneyRequestScreen({ navigation }) {
         }
     };
 
-    const formatCurrencyInput = (value) => {
-        // Remove non-digits
-        const number = value.replace(/[^0-9]/g, '');
-        // Format with thousand separators
-        return number.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-    };
-
-    const handleAmountChange = (text) => {
-        setAmount(formatCurrencyInput(text));
-    };
-
     return (
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
             <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-                <View style={[styles.header, { borderBottomColor: colors.divider }]}>
+                <View style={styles.header}>
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                         <Ionicons name="arrow-back" size={24} color={colors.primaryText} />
                     </TouchableOpacity>
@@ -86,20 +75,18 @@ export default function MoneyRequestScreen({ navigation }) {
                 </View>
 
                 <View style={styles.content}>
-                    <View style={styles.inputSection}>
-                        <Text style={[styles.label, { color: colors.secondaryText }]}>AMOUNT</Text>
-                        <View style={[styles.amountWrapper, { borderBottomColor: colors.primaryAction }]}>
-                            <Text style={[styles.currency, { color: colors.primaryText }]}>₫</Text>
-                            <TextInput
-                                style={[styles.amountInput, { color: colors.primaryText }]}
-                                value={amount}
-                                onChangeText={handleAmountChange}
-                                placeholder="0"
-                                placeholderTextColor={colors.secondaryText}
-                                keyboardType="numeric"
-                                autoFocus
-                            />
-                        </View>
+                    {/* Hero Input Section */}
+                    <View style={styles.heroInputContainer}>
+                        <Text style={[styles.currency, { color: colors.primaryAction }]}>₫</Text>
+                        <TextInput
+                            style={[styles.heroInput, { color: colors.primaryAction }]}
+                            value={amount}
+                            onChangeText={(text) => setAmount(formatMoney(text))}
+                            placeholder="0"
+                            placeholderTextColor={colors.divider}
+                            keyboardType="numeric"
+                            autoFocus
+                        />
                     </View>
 
                     <View style={styles.inputSection}>
@@ -164,33 +151,37 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingHorizontal: SPACING.screenPadding,
         paddingVertical: SPACING.m,
-        borderBottomWidth: StyleSheet.hairlineWidth,
     },
     backButton: { padding: 4 },
     title: { fontSize: TYPOGRAPHY.size.h3, fontWeight: '600' },
     content: { padding: SPACING.screenPadding, flex: 1 },
+
+    // Hero Input Styles
+    heroInputContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginVertical: SPACING.xl * 1.5,
+    },
+    currency: {
+        fontSize: 32,
+        fontWeight: 'bold',
+        marginRight: 4,
+        alignSelf: 'center',
+    },
+    heroInput: {
+        fontSize: 48, // HUGE like AddTransaction
+        fontWeight: 'bold',
+        minWidth: 100,
+        textAlign: 'center',
+    },
+
     inputSection: { marginBottom: SPACING.xl },
     label: {
         fontSize: TYPOGRAPHY.size.caption,
         marginBottom: SPACING.s,
         fontWeight: '600',
         letterSpacing: 1
-    },
-    amountWrapper: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        borderBottomWidth: 2,
-        paddingBottom: SPACING.xs
-    },
-    currency: {
-        fontSize: TYPOGRAPHY.size.h1,
-        fontWeight: 'bold',
-        marginRight: SPACING.xs
-    },
-    amountInput: {
-        flex: 1,
-        fontSize: TYPOGRAPHY.size.h1,
-        fontWeight: 'bold',
     },
     categoryRow: {
         gap: SPACING.s

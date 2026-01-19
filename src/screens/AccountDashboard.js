@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, DeviceEventEmitter, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, DeviceEventEmitter, TouchableOpacity, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getProfileData } from '../services/dataService';
 import { getTransactions, getFamilyCategories, getLatestTransactions } from '../services/firestoreRepository';
@@ -7,11 +7,14 @@ import { auth } from '../services/firebase';
 import { useAuth } from '../components/context/AuthContext';
 import SwipeDateFilter from '../components/SwipeDateFilter';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../components/context/ThemeContext';
 import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
 import CurrencyText from '../components/CurrencyText';
 import TransactionRow from '../components/TransactionRow';
+
+const { width } = Dimensions.get('window');
+
+
 
 export default function AccountDashboard({ navigation }) {
     const { user, profile } = useAuth();
@@ -51,38 +54,21 @@ export default function AccountDashboard({ navigation }) {
 
         const year = selectedDate.getFullYear();
         const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
-        const startDate = `${year}-${month}-01`;
-
-        // Calculate end date based on actual days in month
-        const lastDayNode = new Date(year, selectedDate.getMonth() + 1, 0);
-        const endDay = String(lastDayNode.getDate()).padStart(2, '0');
-        const endDate = `${year}-${month}-${endDay}`;
 
         try {
-            // 1. Fetch Month Data for Stats (Implicitly fetched via getProfileData below)
-            // const txs = await getTransactions(user.uid, profile.id, startDate, endDate);
-            // setTransactions(txs); 
-
-
             const cats = await getFamilyCategories(user.uid, profile.id, profile.role);
             setCategories(cats);
 
-            // 2. Fetch Latest 4 (Global) for New Section - IGNORING DATE FILTER
+            // Fetch Latest 4 (Global)
             const latestTxs = await getLatestTransactions(user.uid, profile.id, 4);
             setRecentTransactions(latestTxs);
 
             // Existing logic for prev month data for comparison
             const prevMonthDate = new Date(selectedDate);
             prevMonthDate.setMonth(prevMonthDate.getMonth() - 1);
-            const prevMonthYear = prevMonthDate.getFullYear();
-            const prevMonth = String(prevMonthDate.getMonth() + 1).padStart(2, '0');
-            const prevMonthStartDate = `${prevMonthYear}-${prevMonth}-01`;
-            const prevMonthLastDayNode = new Date(prevMonthYear, prevMonthDate.getMonth() + 1, 0);
-            const prevMonthEndDay = String(prevMonthLastDayNode.getDate()).padStart(2, '0');
-            const prevMonthEndDate = `${prevMonthYear}-${prevMonth}-${prevMonthEndDay}`;
 
             const [currentResult, prevResult] = await Promise.all([
-                getProfileData(profile.id, selectedDate), // This still uses dataService, which might be different from getTransactions
+                getProfileData(profile.id, selectedDate),
                 getProfileData(profile.id, prevMonthDate)
             ]);
             setData({ current: currentResult, prev: prevResult });
@@ -103,7 +89,6 @@ export default function AccountDashboard({ navigation }) {
             if (!dataset) return { income: 0, expense: 0, given: 0, received: 0, net: 0, categoryMap: {}, txs: [] };
             const filteredTxs = dataset.transactions || [];
 
-            // MODIFIED LOGIC: Merge Received into Income, Given into Expense
             const isInternalTransfer = (t) => t.isTransfer || t.type === 'transfer' || t.category === 'Granted' || t.category === 'Present' || (t.note && t.note.includes('(Granted)'));
 
             let income = 0;
@@ -113,27 +98,21 @@ export default function AccountDashboard({ navigation }) {
                 const isGiven = (t.note && (t.note.includes('Transfer to') || t.note.startsWith('To '))) || t.category === 'Transfer Out' || t.categoryIcon === '💸';
                 const isReceived = (t.note && (t.note.includes('Received from') || t.note.startsWith('From '))) || t.category === 'Allowance' || t.categoryIcon === '💰';
 
-                // PRIORITY 1: Explicit Transfer Directions
                 if (isReceived) {
                     income += t.amount;
                 } else if (isGiven) {
                     expense += t.amount;
                 }
-                // PRIORITY 2: Explicit Types
                 else if (t.type === 'income') {
                     income += t.amount;
                 }
                 else if ((t.type || 'expense') === 'expense' && !isInternalTransfer(t)) {
-                    // Normal expense
                     expense += t.amount;
                 }
-                // PRIORITY 3: Fallback for other Internal Transfers (Default to Expense/Given)
                 else if (isInternalTransfer(t)) {
-                    // If it's internal but not caught by isReceived (which is above), it treats as Given (Expense)
                     expense += t.amount;
                 }
                 else {
-                    // Default uncategorized to expense
                     expense += t.amount;
                 }
             });
@@ -142,18 +121,11 @@ export default function AccountDashboard({ navigation }) {
                 const isGiven = (t.note && (t.note.includes('Transfer to') || t.note.startsWith('To '))) || t.category === 'Transfer Out' || t.categoryIcon === '💸';
                 const isReceived = (t.note && (t.note.includes('Received from') || t.note.startsWith('From '))) || t.category === 'Allowance' || t.categoryIcon === '💰';
 
-                if (isReceived) return false; // Counts as income
-                if (isGiven) return true; // Counts as expense
+                if (isReceived) return false;
+                if (isGiven) return true;
                 if (t.type === 'income') return false;
-                return true; // Catch-all expense
+                return true;
             });
-
-            // DEBUG LOGS
-            console.log('--- DASHBOARD CALC DEBUG (STRICT) ---');
-            console.log(`Total Txs: ${filteredTxs.length}`);
-            console.log(`Final Income: ${income}`);
-            console.log(`Final Expense: ${expense}`);
-            console.log(`Net: ${income - expense}`);
 
             const categoryMap = {};
             expenseTxs.forEach(t => {
@@ -192,207 +164,205 @@ export default function AccountDashboard({ navigation }) {
             incomeDiff: currentStats.income - prevStats.income,
             expenseDiff: currentStats.expense - prevStats.expense,
             netDiff: currentStats.net - prevStats.net,
-
-            // PERCENTAGES
             incomeDiffPercent: prevStats.income > 0 ? ((currentStats.income - prevStats.income) / prevStats.income) * 100 : 0,
             expenseDiffPercent: prevStats.expense > 0 ? ((currentStats.expense - prevStats.expense) / prevStats.expense) * 100 : 0
         };
     }, [data, categories]);
 
-    if (loading) return <SafeAreaView style={[styles.center, { backgroundColor: colors.background }]}><ActivityIndicator size="large" color={colors.primaryAction} /></SafeAreaView>;
-    if (error) return <SafeAreaView style={[styles.center, { backgroundColor: colors.background }]}><Text style={{ color: colors.error }}>Could not load data</Text></SafeAreaView>;
 
+
+    if (loading) return <View style={[styles.center, { backgroundColor: '#f7ede2' }]}><ActivityIndicator size="large" color={colors.primaryAction} /></View>;
+    if (error) return <View style={[styles.center, { backgroundColor: '#f7ede2' }]}><Text style={{ color: colors.error }}>Could not load data</Text></View>;
+
+    // Dynamic Safe Area Background
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
+            <View style={{ backgroundColor: '#f7ede2' }}>
+                <SafeAreaView edges={['top', 'left', 'right']} />
+            </View>
 
-                {/* HEADER */}
-                <View style={styles.header}>
-                    <View style={styles.headerLeft}>
-                        <View style={[styles.avatarContainer, { backgroundColor: colors.surface }]}>
-                            <Text style={{ fontSize: 24 }}>{profile?.avatar || '👤'}</Text>
+            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} bounces={false}>
+
+                {/* TOP SECTION: BEIGE BACKGROUND */}
+                <View style={styles.topSection}>
+                    {/* HEADER */}
+                    <View style={[styles.header, { marginTop: 10 }]}>
+                        <View style={styles.headerLeft}>
+                            <View style={[styles.avatarContainer, { backgroundColor: '#ffffff' }]}>
+                                <Text style={{ fontSize: 24 }}>{profile?.avatar || '👤'}</Text>
+                            </View>
+                            <View>
+                                {/* Greeting */}
+                                <Text style={[styles.greeting, { color: '#8d6e63' }]}>Hello,</Text>
+                                <Text style={[styles.username, { color: '#3e2723' }]}>{profile?.name || 'User'}</Text>
+                            </View>
                         </View>
-                        <View>
-                            <Text style={[styles.greeting, { color: colors.secondaryText }]}>{getGreeting()}</Text>
-                            <Text style={[styles.username, { color: colors.primaryText }]}>{profile?.name || 'User'}</Text>
-                        </View>
+
+                        <TouchableOpacity style={[styles.iconButton, { backgroundColor: 'rgba(255,255,255,0.6)' }]}>
+                            <Ionicons name="search-outline" size={18} color="#8d6e63" />
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[styles.iconButton, { backgroundColor: 'rgba(255,255,255,0.6)', marginLeft: 8 }]}>
+                            <Ionicons name="notifications-outline" size={18} color="#8d6e63" />
+                            <View style={[styles.notificationBadge, { backgroundColor: '#ef5350' }]} />
+                        </TouchableOpacity>
                     </View>
 
-                    <TouchableOpacity style={[styles.iconButton, { backgroundColor: colors.surface }]}>
-                        <Ionicons name="notifications-outline" size={24} color={colors.primaryText} />
-                        <View style={[styles.notificationBadge, { backgroundColor: colors.error }]} />
-                    </TouchableOpacity>
-                </View>
+                    <View style={styles.balanceContainer}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                            <Ionicons name="wallet-outline" size={14} color="#8d6e63" />
+                            <Text style={{ color: '#8d6e63', fontSize: 11, letterSpacing: 1, fontWeight: '800', textTransform: 'uppercase' }}>Total Assets</Text>
+                        </View>
 
-                {/* DATE FILTER */}
-                <View style={{ marginBottom: 0 }}>
-                    <SwipeDateFilter date={selectedDate} onMonthChange={setSelectedDate} />
-                </View>
-
-                {/* MONTHLY SNAPSHOT (UNIFIED - GRADIENT) */}
-                <View style={[styles.section, { marginTop: SPACING.m }]}>
-
-                    <LinearGradient
-                        colors={['#101828', '#1e3c72', '#2a5298']} // Deep Dark Blue -> Blue Gradient
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={[styles.card, { padding: SPACING.l, borderRadius: 24 }]} // Increased radius
-                    >
-                        {/* 1. Net Cashflow (Top, Centered) */}
-                        <View style={{ alignItems: 'center', marginBottom: SPACING.l }}>
-                            <Text style={{ color: '#E0E0E0', fontSize: TYPOGRAPHY.size.body, marginBottom: 4 }}>Total Actual Balance</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                             <CurrencyText
                                 amount={viewData?.netCashflow}
                                 showSign={false}
-                                style={{ color: '#FFFFFF', fontSize: 36, fontWeight: 'bold' }} // Big White Text
-                                symbolStyle={{ color: '#FFFFFF', fontSize: 28, textDecorationLine: 'underline' }}
+                                style={{ color: '#6ca749', fontSize: 30, fontWeight: 'bold' }}
+                                symbolStyle={{ color: '#6ca749', fontSize: 30, fontWeight: 'bold', textDecorationLine: 'none' }}
                             />
-                            <Text style={{ color: '#B0BEC5', fontSize: TYPOGRAPHY.size.caption, marginTop: 4 }}>
-                                {viewData?.netDiff >= 0 ? '▲ Better' : '▼ Worse'} than last month by <CurrencyText amount={Math.abs(viewData.netDiff)} style={{ color: '#B0BEC5' }} symbolStyle={{ color: '#B0BEC5' }} />
-                            </Text>
+                            <Ionicons name="eye-outline" size={18} color="#8d6e63" />
                         </View>
 
-                        {/* 2. Income & Expense Row (Glassmorphism) */}
-                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: SPACING.m }}>
-                            {/* Income */}
-                            <View style={{
-                                flex: 1,
-                                backgroundColor: 'rgba(255, 255, 255, 0.1)', // Glass effect
-                                borderRadius: 16,
-                                padding: SPACING.m,
-                                alignItems: 'flex-start'
-                            }}>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 6 }}>
-                                    <View style={{ backgroundColor: 'rgba(76, 175, 80, 0.2)', padding: 4, borderRadius: 8 }}>
-                                        {/* Green tint icon bg */}
-                                        <MaterialCommunityIcons name="arrow-down-left" size={16} color="#4CAF50" />
-                                    </View>
-                                    <Text style={{ color: '#A0E8AF', fontSize: TYPOGRAPHY.size.small, fontWeight: '600' }}>Income</Text>
-                                </View>
-                                <CurrencyText
-                                    amount={viewData?.totalIncome}
-                                    showSign={false}
-                                    style={{ color: '#FFFFFF', fontSize: 20, fontWeight: 'bold' }}
-                                />
-                                {viewData?.incomeDiffPercent !== 0 && (
-                                    <Text style={{ color: '#A0E8AF', fontSize: 11, marginTop: 4, fontWeight: '500' }}>
-                                        {viewData?.incomeDiffPercent > 0 ? '▲' : '▼'} {Math.abs(viewData?.incomeDiffPercent || 0).toFixed(0)}%
-                                    </Text>
-                                )}
-                            </View>
-
-                            {/* Expense */}
-                            <View style={{
-                                flex: 1,
-                                backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                                borderRadius: 16,
-                                padding: SPACING.m,
-                                alignItems: 'flex-start'
-                            }}>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 6 }}>
-                                    <View style={{ backgroundColor: 'rgba(244, 67, 54, 0.2)', padding: 4, borderRadius: 8 }}>
-                                        {/* Red tint icon bg */}
-                                        <MaterialCommunityIcons name="arrow-up-right" size={16} color="#F44336" />
-                                    </View>
-                                    <Text style={{ color: '#FFCDD2', fontSize: TYPOGRAPHY.size.small, fontWeight: '600' }}>Expense</Text>
-                                </View>
-                                <CurrencyText
-                                    amount={-viewData?.totalSpent}
-                                    showSign={false}
-                                    style={{ color: '#FFFFFF', fontSize: 20, fontWeight: 'bold' }}
-                                />
-                                {viewData?.expenseDiffPercent !== 0 && (
-                                    <Text style={{ color: '#FFCDD2', fontSize: 11, marginTop: 4, fontWeight: '500' }}>
-                                        {viewData?.expenseDiffPercent > 0 ? '▲' : '▼'} {Math.abs(viewData?.expenseDiffPercent || 0).toFixed(0)}%
-                                    </Text>
-                                )}
-                            </View>
-                        </View>
-                    </LinearGradient>
-                </View>
-
-                {/* RECENT TRANSACTIONS (New Section) */}
-                <View style={styles.sectionHeaderRow}>
-                    <Text style={[styles.sectionTitle, { color: colors.primaryText }]}>Recent Transactions</Text>
-                    <TouchableOpacity onPress={() => navigation.navigate('Transactions')}>
-                        <Text style={[styles.seeAllText, { color: colors.primaryAction }]}>See all</Text>
-                    </TouchableOpacity>
-                </View>
-
-                <View style={styles.section}>
-                    {recentTransactions.map((item, index) => (
-                        <View key={item.id} style={[styles.transactionCard, { backgroundColor: colors.surface }]}>
-                            <TransactionRow
-                                item={{
-                                    ...item,
-                                    icon: categories ? categories.find(c => c.name === item.category)?.icon : (item.category === 'Savings' ? '🐷' : item.categoryIcon)
-                                }}
-                                iconBackgroundColor={colors.background}
-                                onPress={() => navigation.navigate('AddTransaction', { transaction: item })}
-                                showDate={true}
+                        <View style={{ opacity: 0.8, transform: [{ scale: 0.85 }], marginBottom: 12 }}>
+                            <SwipeDateFilter
+                                date={selectedDate}
+                                onMonthChange={setSelectedDate}
+                                themeColor="#8d6e63"
                             />
                         </View>
-                    ))}
-                    {recentTransactions.length === 0 && (
-                        <Text style={[styles.emptyText, { color: colors.secondaryText, padding: SPACING.m, textAlign: 'center' }]}>
-                            No recent activity
-                        </Text>
-                    )}
-                </View>
+                    </View>
 
-                {/* SPENDING BREAKDOWN */}
-                <View style={[styles.section, { marginTop: SPACING.xl }]}>
-                    <Text style={[styles.sectionTitle, { color: colors.primaryText, marginBottom: SPACING.m }]}>Spending Breakdown</Text>
+                    {/* MERGED UNIFIED CARD */}
+                    <View style={styles.statsRow}>
+                        <View style={styles.unifiedCard}>
 
-                    {viewData?.categoryBreakdown?.map((cat, index) => (
-                        <View key={index} style={[styles.categoryRow, { backgroundColor: colors.surface }]}>
-                            <View style={styles.categoryHeader}>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACING.s }}>
-                                    <View style={[styles.iconBox, { backgroundColor: colors.background }]}>
-                                        <Text style={{ fontSize: 20 }}>{cat.emoji}</Text>
+                            {/* TOP HALF: STATS */}
+                            <View style={styles.statsContent}>
+                                {/* Income */}
+                                <View style={styles.statItem}>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6, gap: 4 }}>
+                                        <Text style={{ color: '#9e9e9e', fontSize: 12, fontWeight: '700', textTransform: 'uppercase' }}>Income</Text>
+                                        <View style={{ backgroundColor: '#e8f5e9', padding: 2, borderRadius: 8 }}>
+                                            <Ionicons name="trending-up" size={12} color="#4CAF50" />
+                                        </View>
                                     </View>
-                                    <Text style={[styles.categoryName, { color: colors.primaryText }]}>
-                                        {cat.name}
-                                    </Text>
+                                    <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+                                        <CurrencyText
+                                            amount={viewData?.totalIncome}
+                                            showSign={false}
+                                            style={{ color: '#263238', fontSize: 18, fontWeight: 'bold' }}
+                                        />
+                                        {viewData?.incomeDiffPercent !== 0 && (
+                                            <Text style={{ color: viewData?.incomeDiffPercent > 0 ? '#4CAF50' : '#F44336', fontSize: 11, marginLeft: 4, fontWeight: '500' }}>
+                                                {viewData?.incomeDiffPercent > 0 ? '▲' : '▼'} {Math.abs(viewData?.incomeDiffPercent || 0).toFixed(0)}%
+                                            </Text>
+                                        )}
+                                    </View>
                                 </View>
-                                <CurrencyText
-                                    amount={cat.amount}
-                                    style={[styles.categoryAmount, { color: colors.primaryText }]}
-                                />
-                            </View>
-                            <View style={styles.progressContainer}>
-                                <View
-                                    style={[
-                                        styles.progressBar,
-                                        {
-                                            width: `${cat.percent}%`,
-                                            backgroundColor: colors.primaryAction
-                                        }
-                                    ]}
-                                />
-                                <View
-                                    style={[
-                                        styles.progressBarTrack,
-                                        {
-                                            flex: 1,
-                                            backgroundColor: colors.background
-                                        }
-                                    ]}
-                                />
-                            </View>
-                            <Text style={[styles.categoryPercent, { color: colors.secondaryText }]}>
-                                {cat.percent.toFixed(1)}%
-                            </Text>
-                        </View>
-                    ))}
 
-                    {(!viewData?.categoryBreakdown || viewData.categoryBreakdown.length === 0) && (
-                        <Text style={[styles.emptyText, { color: colors.secondaryText }]}>No spending data to analyze.</Text>
-                    )}
+                                {/* Divider */}
+                                <View style={styles.verticalDivider} />
+
+                                {/* Expense */}
+                                <View style={styles.statItem}>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6, gap: 4 }}>
+                                        <Text style={{ color: '#9e9e9e', fontSize: 12, fontWeight: '700', textTransform: 'uppercase' }}>Expense</Text>
+                                        <View style={{ backgroundColor: '#ffebee', padding: 2, borderRadius: 8 }}>
+                                            <Ionicons name="trending-down" size={12} color="#f44336" />
+                                        </View>
+                                    </View>
+                                    <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+                                        <CurrencyText
+                                            amount={-viewData?.totalSpent}
+                                            showSign={false}
+                                            style={{ color: '#263238', fontSize: 18, fontWeight: 'bold' }}
+                                        />
+                                        {viewData?.expenseDiffPercent !== 0 && (
+                                            <Text style={{ color: viewData?.expenseDiffPercent > 0 ? '#F44336' : '#4CAF50', fontSize: 11, marginLeft: 4, fontWeight: '500' }}>
+                                                {viewData?.expenseDiffPercent > 0 ? '▲' : '▼'} {Math.abs(viewData?.expenseDiffPercent || 0).toFixed(0)}%
+                                            </Text>
+                                        )}
+                                    </View>
+                                </View>
+                            </View>
+
+                            {/* BOTTOM HALF: LINK */}
+                            <TouchableOpacity style={styles.financeCenterButton} onPress={() => navigation.navigate('Analysis')}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                    <MaterialCommunityIcons name="finance" size={20} color="#6ca749" />
+                                    <Text style={styles.financeCenterText}>Your family financial center</Text>
+                                </View>
+                                <Ionicons name="chevron-forward" size={18} color="#6ca749" />
+                            </TouchableOpacity>
+
+                        </View>
+                    </View>
                 </View>
 
+                {/* BOTTOM SECTION: WHITE/CONTENT */}
+                <View style={styles.bottomSection}>
+
+
+
+                    {/* RECENT TRANSACTIONS */}
+                    <View style={[styles.sectionHeaderRow, { marginTop: SPACING.xl, paddingHorizontal: 0, marginBottom: 8 }]}>
+                        <Text style={[styles.sectionTitle, { color: colors.primaryText }]}>Recent Transactions</Text>
+                        <TouchableOpacity onPress={() => navigation.navigate('Transactions')}>
+                            <Text style={[styles.seeAllText, { color: colors.primaryAction }]}>See all</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    <View style={styles.section}>
+                        {recentTransactions.map((item, index) => (
+                            <View key={item.id} style={[styles.transactionCard, { backgroundColor: colors.surface, borderRadius: 16, marginBottom: 12, elevation: 1, shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } }]}>
+                                <TransactionRow
+                                    item={{
+                                        ...item,
+                                        icon: categories ? categories.find(c => c.name === item.category)?.icon : (item.category === 'Savings' ? '🐷' : item.categoryIcon)
+                                    }}
+                                    iconBackgroundColor={colors.background}
+                                    onPress={() => navigation.navigate('AddTransaction', { transaction: item })}
+                                    showDate={true}
+                                />
+                            </View>
+                        ))}
+                        {recentTransactions.length === 0 && (
+                            <Text style={[styles.emptyText, { color: colors.secondaryText, padding: SPACING.m, textAlign: 'center' }]}>
+                                No recent activity
+                            </Text>
+                        )}
+                    </View>
+
+                    {/* SPENDING BREAKDOWN */}
+                    <View style={[styles.section, { marginTop: SPACING.l }]}>
+                        <Text style={[styles.sectionTitle, { color: colors.primaryText, marginBottom: SPACING.m }]}>Spending Breakdown</Text>
+                        {viewData?.categoryBreakdown?.map((cat, index) => (
+                            <View key={index} style={[styles.categoryRow, { backgroundColor: colors.surface }]}>
+                                <View style={styles.categoryHeader}>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACING.s }}>
+                                        <View style={[styles.iconBox, { backgroundColor: colors.background }]}>
+                                            <Text style={{ fontSize: 20 }}>{cat.emoji}</Text>
+                                        </View>
+                                        <Text style={[styles.categoryName, { color: colors.primaryText }]}>
+                                            {cat.name}
+                                        </Text>
+                                    </View>
+                                    <CurrencyText
+                                        amount={cat.amount}
+                                        style={[styles.categoryAmount, { color: colors.primaryText }]}
+                                    />
+                                </View>
+                                <View style={styles.progressContainer}>
+                                    <View style={[styles.progressBar, { width: `${cat.percent}%`, backgroundColor: colors.primaryAction }]} />
+                                    <View style={[styles.progressBarTrack, { flex: 1, backgroundColor: colors.background }]} />
+                                </View>
+                            </View>
+                        ))}
+                    </View>
+
+                </View>
             </ScrollView>
-        </SafeAreaView >
+        </View>
     );
 }
 
@@ -406,146 +376,142 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     scrollContent: {
-        padding: SPACING.screenPadding,
         paddingBottom: 40,
+    },
+    topSection: {
+        backgroundColor: '#f7ede2',
+        paddingHorizontal: SPACING.screenPadding,
+        paddingBottom: 50, // Reduced from 60
+        borderBottomLeftRadius: 36,
+        borderBottomRightRadius: 36,
+        paddingTop: 4, // Reduced from 10
+        zIndex: 1,
     },
     header: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: SPACING.m, // Reduced margin since filter is below
+        marginBottom: SPACING.l, // Reduced from xl
     },
     headerLeft: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: SPACING.m,
+        flex: 1,
     },
     avatarContainer: {
-        width: 48,
-        height: 48,
-        borderRadius: 24, // Circle
+        width: 44,
+        height: 44,
+        borderRadius: 22,
         justifyContent: 'center',
         alignItems: 'center',
     },
     iconButton: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
+        width: 36,
+        height: 36,
+        borderRadius: 12,
         justifyContent: 'center',
         alignItems: 'center',
     },
     notificationBadge: {
         position: 'absolute',
-        top: 12,
-        right: 14,
+        top: 10,
+        right: 12,
         width: 8,
         height: 8,
         borderRadius: 4,
         borderWidth: 1,
-        borderColor: '#FFFFFF', // White border to separate from icon
+        borderColor: '#FFFFFF',
     },
     greeting: {
-        fontSize: TYPOGRAPHY.size.caption,
-        fontWeight: TYPOGRAPHY.weight.medium,
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
+        fontSize: 13,
+        fontWeight: '500',
     },
     username: {
-        fontSize: TYPOGRAPHY.size.h3,
-        fontWeight: TYPOGRAPHY.weight.bold,
+        fontSize: 18,
+        fontWeight: '900',
     },
-    section: {
-        marginBottom: SPACING.l,
-    },
-    label: {
-        fontSize: TYPOGRAPHY.size.caption,
-        textTransform: 'uppercase',
-        letterSpacing: 1,
-        fontWeight: TYPOGRAPHY.weight.medium,
-        marginBottom: SPACING.xs,
-    },
-    heroRow: {
-        flexDirection: 'row',
-        alignItems: 'baseline',
-    },
-    heroValue: {
-        fontSize: TYPOGRAPHY.size.hero,
-        fontWeight: TYPOGRAPHY.weight.bold,
-        letterSpacing: -1,
-    },
-    currency: {
-        fontSize: TYPOGRAPHY.size.h3,
-        fontWeight: TYPOGRAPHY.weight.medium,
-        marginLeft: 4,
-    },
-    diffText: {
-        fontSize: TYPOGRAPHY.size.caption,
-        marginTop: SPACING.s,
-    },
-    grid: {
-        gap: SPACING.m,
-    },
-    row: {
-        flexDirection: 'row',
-        gap: SPACING.m,
-    },
-    card: {
-        padding: SPACING.l,
-        borderRadius: SPACING.cardBorderRadius,
-    },
-    cardHeader: {
-        flexDirection: 'row',
+    balanceContainer: {
         alignItems: 'center',
-        marginBottom: SPACING.s,
-        gap: SPACING.xs,
+        marginBottom: 10, // Reduced from 20
     },
-    iconBox: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        justifyContent: 'center',
+
+    // NEW UNIFIED CARD STYLES
+    statsRow: {
+        position: 'absolute',
+        bottom: -50, // Floating position
+        left: SPACING.screenPadding,
+        right: SPACING.screenPadding,
+    },
+    unifiedCard: {
+        backgroundColor: '#ffffff',
+        borderRadius: 20,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.08,
+        shadowRadius: 10,
+        elevation: 6,
+    },
+    statsContent: {
+        flexDirection: 'row',
+        paddingVertical: 12, // Reduced padding
+        paddingHorizontal: 16,
         alignItems: 'center',
     },
-    cardLabel: {
-        fontSize: TYPOGRAPHY.size.caption,
-        fontWeight: TYPOGRAPHY.weight.medium,
+    statItem: {
+        flex: 1,
+        alignItems: 'center',
     },
-    cardValue: {
-        fontSize: TYPOGRAPHY.size.h3,
-        fontWeight: TYPOGRAPHY.weight.semiBold,
-        letterSpacing: -0.5,
+    verticalDivider: {
+        width: 1,
+        height: '80%', // Not full height
+        backgroundColor: '#EEEEEE',
+        marginHorizontal: 12,
     },
-    tinyLabel: {
-        fontSize: 10,
-        marginTop: 4
+    financeCenterButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        backgroundColor: '#E8F5E9', // Light Green
+        paddingVertical: 14,
+        paddingHorizontal: 16,
+        borderBottomLeftRadius: 20,
+        borderBottomRightRadius: 20,
     },
-    // New Styles
+    financeCenterText: {
+        color: '#6ca749',
+        fontSize: 14,
+        fontWeight: '600',
+    },
+
+    bottomSection: {
+        paddingTop: 80, // Increased to clear the taller card
+        paddingHorizontal: SPACING.screenPadding,
+        backgroundColor: '#ffffff',
+        minHeight: 500,
+    },
+
     sectionHeaderRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginTop: SPACING.xl,
-        marginBottom: SPACING.s,
+        marginBottom: SPACING.m,
     },
-    seeAllText: {
-        fontSize: TYPOGRAPHY.size.caption,
+    sectionTitle: {
+        fontSize: 18,
         fontWeight: 'bold',
     },
-    transactionCard: {
-        marginBottom: SPACING.m,
-        borderRadius: SPACING.cardBorderRadius,
-        overflow: 'hidden', // Ensures ripple effect stays inside
+    seeAllText: {
+        fontSize: 14,
+        fontWeight: '600',
     },
-    recentTxContainer: {
-        // borderRadius: 16,
-        // paddingVertical: 4, 
-        // overflow: 'hidden'
+    transactionCard: {
+        marginVertical: 4,
     },
     categoryRow: {
         marginBottom: SPACING.m,
-        paddingVertical: 12, // Matches TransactionRow
-        paddingHorizontal: SPACING.screenPadding, // Matches TransactionRow (16)
-        borderRadius: SPACING.cardBorderRadius,
+        paddingVertical: 12,
+        paddingHorizontal: SPACING.screenPadding,
+        borderRadius: 16,
     },
     categoryHeader: {
         flexDirection: 'row',
@@ -553,79 +519,40 @@ const styles = StyleSheet.create({
         marginBottom: SPACING.xs,
     },
     categoryName: {
-        fontSize: TYPOGRAPHY.size.body,
-        fontWeight: TYPOGRAPHY.weight.medium,
+        fontSize: 15,
+        fontWeight: '600',
     },
     categoryAmount: {
-        fontSize: TYPOGRAPHY.size.body,
-        fontWeight: TYPOGRAPHY.weight.semiBold,
+        fontSize: 15,
+        fontWeight: '600',
         fontVariant: ['tabular-nums'],
     },
     progressContainer: {
         flexDirection: 'row',
-        height: 4,
-        borderRadius: 2,
+        height: 6,
+        borderRadius: 3,
         overflow: 'hidden',
-        marginBottom: 2,
+        marginTop: 4,
     },
     progressBar: {
         height: '100%',
+        borderRadius: 3,
     },
     progressBarTrack: {
         height: '100%',
     },
-    categoryPercent: {
-        fontSize: TYPOGRAPHY.size.small,
-        textAlign: 'right',
-    },
-    sectionHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'baseline',
-        marginBottom: SPACING.m,
-    },
-    sectionTitle: {
-        fontSize: TYPOGRAPHY.size.h3,
-        fontWeight: TYPOGRAPHY.weight.bold,
-    },
-    linkText: {
-        fontSize: TYPOGRAPHY.size.caption,
-        fontWeight: TYPOGRAPHY.weight.medium,
-    },
-    list: {
-        // No background for list in minimal style, just clean rows
-    },
-    listItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: SPACING.m,
-    },
-    categoryIcon: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
+    iconBox: {
+        width: 36,
+        height: 36,
+        borderRadius: 10,
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: SPACING.m,
-    },
-    listContent: {
-        flex: 1,
-    },
-    listTitle: {
-        fontSize: TYPOGRAPHY.size.body,
-        fontWeight: TYPOGRAPHY.weight.medium,
-    },
-    listSubtitle: {
-        fontSize: TYPOGRAPHY.size.caption,
-        marginTop: 2,
-    },
-    listAmount: {
-        fontSize: TYPOGRAPHY.size.body,
-        fontWeight: TYPOGRAPHY.weight.semiBold,
-        fontVariant: ['tabular-nums'], // Tabular numbers rule
     },
     emptyText: {
+        marginTop: 20,
         textAlign: 'center',
-        marginTop: SPACING.xl,
     },
+    section: {
+        marginBottom: SPACING.l,
+    }
 });

@@ -63,6 +63,7 @@ Every design decision must be justified by **usability, readability, or trust**.
 ```text
 Background        #FFFFFF
 Surface           #F7F7F7
+Header (First Page) #f7ede2  <-- UNIQUE EXCEPTION
 Primary Text      #111111
 Secondary Text    #6B6B6B
 Divider / Border  #E5E5E5
@@ -71,6 +72,12 @@ Primary Action    #6ca749
 Secondary Action  #111111
 Success (Increase) #2da249
 Error (Decrease)   #DC2626
+
+Finance Center Btn Background: #E8F5E9
+Finance Center Btn Text:       #6ca749
+Assets Label Text:             #8d6e63
+Assets Value Text:             #6ca749
+Assets Currency Symbol:        #3e2723
 ```
 
 ### 4.2 Dark Mode
@@ -93,8 +100,9 @@ Error (Decrease)   #EF4444
 * Black & white are default
 * Green ONLY for positive values
 * Red ONLY for negative values
-* Never use green/red as primary buttons
-* No more than 1 accent color besides green/red
+* Never use green/red as primary buttons EXCEPT for specific action areas like "Finance Center"
+* **Header Exception**: The first page (Overview) header uses Beige `#f7ede2` and Brown accents (`#8d6e63`, `#3e2723`, `#4E342E`) to create a distinct, warm, premium feel. All other screens should remain Neutral/White.
+* **Unified Card**: Income is Green on increase, Red on decrease. Expenses are Red on increase, Green on decrease.
 
 ---
 
@@ -110,10 +118,12 @@ Error (Decrease)   #EF4444
 ### 5.2 Type Scale
 
 ```text
-Key Balance / Main Number: 28–32  SemiBold
+Key Balance / Main Number: 28–32  Bold (700) or Extra Bold (800)
 Section Title:            18–20  Medium
 Body Text:                14–16  Regular
 Caption / Meta:           12–13  Regular
+
+Note: "Total Assets" label uses Extra Bold (800). Value uses Bold (700).
 ```
 
 ### 5.3 Typography Rules
