@@ -52,11 +52,11 @@ export default function MoreMenuScreen({ navigation }) {
         >
             <View style={styles.optionContent}>
                 <View style={styles.leftContent}>
-                    <View style={[styles.iconBox, { backgroundColor: colors.surface }]}>
+                    <View style={[styles.iconBox, { backgroundColor: '#f7f7f7' }]}>
                         <Ionicons
                             name={icon}
                             size={22}
-                            color={isDestructive ? colors.error : colors.primaryText}
+                            color={isDestructive ? colors.error : '#3e2723'}
                         />
                     </View>
                     <View>
@@ -87,26 +87,31 @@ export default function MoreMenuScreen({ navigation }) {
     );
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'left', 'right']}>
-
-            {/* Header */}
-            <View style={[styles.header, { borderBottomColor: colors.divider }]}>
-                <Text style={[styles.headerTitle, { color: colors.primaryText }]}>More</Text>
+        <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
+            <View style={{ backgroundColor: '#f7ede2' }}>
+                <SafeAreaView edges={['top', 'left', 'right']} />
             </View>
 
-            <ScrollView contentContainerStyle={styles.content}>
+            {/* Header */}
+            <View style={[styles.header, { backgroundColor: '#f7ede2', borderBottomLeftRadius: 24, borderBottomRightRadius: 24, borderBottomColor: 'transparent' }]}>
+                <Text style={[styles.headerTitle, { color: '#3e2723' }]}>More</Text>
+            </View>
+
+            <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} bounces={false}>
 
                 {/* Profile Summary Card */}
                 <TouchableOpacity
-                    style={[styles.profileCard, { backgroundColor: colors.surface }]}
+                    style={[styles.profileCard, { backgroundColor: '#e8f5e9', elevation: 1, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, shadowOffset: { width: 0, height: 2 } }]}
                     onPress={() => navigation.navigate('ProfileDashboard', { profile })}
                 >
-                    <View style={[styles.avatar, { backgroundColor: colors.primaryAction }]}>
+                    {/* Ensure Avatar is Circle */}
+                    <View style={{ width: 48, height: 48, borderRadius: 24, overflow: 'hidden', backgroundColor: '#ffffff', justifyContent: 'center', alignItems: 'center' }}>
                         <Text style={{ fontSize: 24 }}>{profile?.avatar || '👤'}</Text>
                     </View>
+
                     <View>
-                        <Text style={[styles.profileName, { color: colors.primaryText }]}>{profile?.name}</Text>
-                        <Text style={[styles.profileRole, { color: colors.secondaryText }]}>{profile?.role}</Text>
+                        <Text style={[styles.profileName, { color: '#111111' }]}>{profile?.name}</Text>
+                        <Text style={[styles.profileRole, { color: '#9e9e9e' }]}>{profile?.role}</Text>
                     </View>
                     <View style={{ flex: 1, alignItems: 'flex-end' }}>
                         <Text style={[styles.editLink, { color: colors.primaryAction }]}>Edit</Text>
@@ -193,7 +198,7 @@ export default function MoreMenuScreen({ navigation }) {
                 <View style={{ height: 40 }} />
 
             </ScrollView>
-        </SafeAreaView>
+        </View>
     );
 }
 
