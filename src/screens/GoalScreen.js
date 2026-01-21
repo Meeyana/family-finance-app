@@ -195,7 +195,7 @@ export default function GoalScreen({ navigation }) {
                 <SafeAreaView style={[styles.modalContainer, { backgroundColor: colors.background }]}>
                     <View style={[styles.modalHeader, { borderBottomColor: colors.divider, backgroundColor: colors.background }]}>
                         <TouchableOpacity onPress={() => setModalVisible(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                            <Text style={{ color: colors.primaryAction, fontSize: 17 }}>Cancel</Text>
+                            <Ionicons name="close" size={28} color={colors.primaryAction} />
                         </TouchableOpacity>
                         <Text style={[styles.modalTitle, { color: colors.primaryText }]}>New Goal</Text>
                         <View style={{ width: 50 }} />
@@ -411,6 +411,7 @@ const styles = StyleSheet.create({
         padding: 16,
         borderRadius: 12,
         fontSize: TYPOGRAPHY.size.body,
+        letterSpacing: 0,
     },
     itemSub: {
         fontSize: TYPOGRAPHY.size.caption,

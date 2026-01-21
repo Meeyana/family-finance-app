@@ -3,8 +3,9 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ActivityInd
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../components/context/AuthContext';
-import { processTransfer, getFamilyProfiles } from '../services/firestoreRepository';
+import { processTransfer, getFamilyProfiles, addRequest } from '../services/firestoreRepository';
 import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
+import Avatar from '../components/Avatar';
 
 export default function GrantMoneyScreen({ navigation }) {
     const { user, profile } = useAuth();
@@ -56,6 +57,18 @@ export default function GrantMoneyScreen({ navigation }) {
                 reason,
                 null // No linked request
             );
+
+            // LOG THE REQUEST HISTORY (As "Sent")
+            await addRequest(user.uid, {
+                createdByProfileId: profile.id, // Admin
+                createdByName: profile.name,
+                toProfileId: selectedReceiver.id, // Receiver
+                amount: numAmount,
+                reason: reason,
+                categoryData: { name: 'Present', icon: '🎁', id: 'present' },
+                category: 'Present',
+                status: 'SENT'
+            });
 
             // Trigger Dashboard Update
             DeviceEventEmitter.emit('refresh_profile_dashboard');
@@ -109,8 +122,15 @@ export default function GrantMoneyScreen({ navigation }) {
                                     ]}
                                     onPress={() => setSelectedReceiver(p)}
                                 >
-                                    <View style={[styles.avatar, { backgroundColor: colors.background }]}>
-                                        <Text style={[styles.avatarText, { color: colors.primaryText }]}>{p.name[0]}</Text>
+                                    <View style={{ marginRight: SPACING.xs }}>
+                                        <Avatar
+                                            name={p.name}
+                                            avatarId={p.avatarId}
+                                            size={32}
+                                            backgroundColor={colors.background}
+                                            textColor={colors.primaryText}
+                                            fontSize={14}
+                                        />
                                     </View>
                                     <Text style={[
                                         styles.receiverName,

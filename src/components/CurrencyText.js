@@ -12,8 +12,8 @@ const CURRENCIES = {
 export default function CurrencyText({ amount, currency = 'VND', style, symbolStyle, showSign = false, hideable = false }) {
     const config = CURRENCIES[currency] || CURRENCIES.VND;
 
-    // Ensure amount is a number
-    const numValue = Number(amount) || 0;
+    // Ensure amount is a number and Round for global consistency (VND usually no decimals)
+    const numValue = Math.round(Number(amount) || 0);
     const absValue = Math.abs(numValue);
     const formattedValue = absValue.toLocaleString();
 

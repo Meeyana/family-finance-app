@@ -15,7 +15,7 @@
 // ------------------------------------------------------------------
 
 import { db } from './firebase';
-import { doc, getDoc, setDoc, collection, getDocs, addDoc, updateDoc, increment, deleteDoc, writeBatch, query, orderBy, where } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, getDocs, addDoc, updateDoc, increment, deleteDoc, writeBatch, query, orderBy, where, limit, startAfter } from 'firebase/firestore';
 
 const APP_ID = 'quan-ly-chi-tieu-family';
 
@@ -592,7 +592,7 @@ export const addRequest = async (uid, requestData) => {
 
     const docRef = await addDoc(requestsCol, {
         ...requestData,
-        status: 'PENDING',
+        status: requestData.status || 'PENDING',
         createdAt: new Date().toISOString()
     });
     return docRef.id;
@@ -601,39 +601,72 @@ export const addRequest = async (uid, requestData) => {
 /**
  * Get Requests with optional filtering
  */
-export const getRequests = async (uid, profileId = null, role = null) => {
+export const getRequests = async (uid, profileId = null, role = null, lastDoc = null, limitSize = 25) => {
     const familyRef = getFamilyRef(uid);
     const requestsCol = collection(familyRef, 'requests');
     const profilesCol = collection(familyRef, 'profiles');
 
+    // 1. Build Query
+    let conditions = [orderBy('createdAt', 'desc')];
+
+    // Admin sees all, Non-admin sees only own (if strictly enforced)
+    // NOTE: If we use 'where' for non-admin, we need a composite index (createdByProfileId + createdAt).
+    // To avoid index issues during dev, we might fetch global and filter, BUT pagination requests "don't crawl all".
+    // For now, let's stick to global fetch + sort, assuming volume isn't massive yet, OR apply filter if index exists.
+    // Let's rely on Client-Side filtering for non-admins to keep it simple without Indexes, 
+    // BUT we must return the lastDoc for pagination.
+
+    // Actually, to support "load 25", we must limit.
+    conditions.push(limit(limitSize));
+
+    if (lastDoc) {
+        conditions.push(startAfter(lastDoc));
+    }
+
+    const q = query(requestsCol, ...conditions);
+
     const [reqSnapshot, profSnapshot] = await Promise.all([
-        getDocs(requestsCol),
-        getDocs(profilesCol)
+        getDocs(q),
+        getDocs(profilesCol) // Profiles are small, fetch all is fine for mapping
     ]);
 
     const profilesMap = {};
     profSnapshot.docs.forEach(d => {
-        profilesMap[d.id] = d.data().name;
+        profilesMap[d.id] = { name: d.data().name, avatarId: d.data().avatarId };
     });
 
     let requests = reqSnapshot.docs.map(d => {
         const data = d.data();
+        const approver = data.approvedBy ? profilesMap[data.approvedBy] : null;
+
+        // Requester Info (Dynamically mapped from current profiles)
+        const requester = profilesMap[data.createdByProfileId];
+        const receiver = data.toProfileId ? profilesMap[data.toProfileId] : null;
+
         return {
             id: d.id,
             ...data,
-            approvedByName: data.approvedBy ? (profilesMap[data.approvedBy] || 'Admin') : null
+            approvedByName: approver ? approver.name : 'Admin',
+            createdByName: requester ? requester.name : (data.createdByName || 'Unknown'),
+            createdByAvatarId: requester ? requester.avatarId : null,
+            toProfileName: receiver ? receiver.name : null,
+            toProfileAvatarId: receiver ? receiver.avatarId : null,
+            _doc: d // Keep ref for pagination
         };
     });
 
     const isAdmin = role === 'Owner' || role === 'Partner';
 
     if (!isAdmin && profileId) {
-        // Non-admins see only their own
-        requests = requests.filter(r => r.createdByProfileId === profileId);
+        // Non-admins see own requests OR requests sent to them
+        requests = requests.filter(r => r.createdByProfileId === profileId || r.toProfileId === profileId);
     }
     // Admins see all
 
-    return requests.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    return {
+        data: requests,
+        lastVisible: reqSnapshot.docs[reqSnapshot.docs.length - 1] || null
+    };
 };
 
 /**

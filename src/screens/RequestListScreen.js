@@ -1,16 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, ActivityIndicator, Alert, Platform, DeviceEventEmitter, useColorScheme } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, ActivityIndicator, Alert, Platform, DeviceEventEmitter, useColorScheme, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../components/context/AuthContext';
 import { getRequests, rejectRequest, processTransfer } from '../services/firestoreRepository';
 import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
+import Avatar from '../components/Avatar';
 
 export default function RequestListScreen({ navigation }) {
     const { user, profile } = useAuth();
     const [requests, setRequests] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [statusFilter, setStatusFilter] = useState('ALL'); // ALL, PENDING, APPROVED, REJECTED, SENT
+    const [lastVisible, setLastVisible] = useState(null);
+    const [hasMore, setHasMore] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
 
     const theme = useColorScheme() || 'light';
     const colors = COLORS[theme];
@@ -19,27 +24,59 @@ export default function RequestListScreen({ navigation }) {
     const strRole = profile?.role?.toLowerCase() || '';
     const isAdmin = strRole === 'owner' || strRole === 'partner';
 
-    const loadRequests = async () => {
+    const loadRequests = async (isLoadMore = false) => {
+        if (isLoadMore && (!hasMore || loadingMore)) return;
+
         try {
-            const data = await getRequests(user.uid, profile.id, profile.role);
-            setRequests(data);
+            if (isLoadMore) setLoadingMore(true);
+            else setLoading(true);
+
+            // If refresh/initial, reset cursor
+            const cursor = isLoadMore ? lastVisible : null;
+
+            const { data, lastVisible: nextCursor } = await getRequests(user.uid, profile.id, profile.role, cursor);
+
+            if (data.length < 25) {
+                setHasMore(false);
+            } else {
+                setHasMore(true);
+            }
+
+            setLastVisible(nextCursor);
+
+            if (isLoadMore) {
+                setRequests(prev => {
+                    const existingIds = new Set(prev.map(r => r.id));
+                    const newUniqueData = data.filter(r => !existingIds.has(r.id));
+                    return [...prev, ...newUniqueData];
+                });
+            } else {
+                setRequests(data);
+            }
         } catch (error) {
             console.error(error);
         } finally {
             setLoading(false);
+            setLoadingMore(false);
             setRefreshing(false);
         }
     };
 
     useEffect(() => {
         loadRequests();
-        const sub = DeviceEventEmitter.addListener('refresh_profile_dashboard', loadRequests);
+        const sub = DeviceEventEmitter.addListener('refresh_profile_dashboard', () => loadRequests(false));
         return () => sub.remove();
     }, []);
 
     const handleRefresh = () => {
         setRefreshing(true);
-        loadRequests();
+        setHasMore(true);
+        setLastVisible(null);
+        loadRequests(false);
+    };
+
+    const handleLoadMore = () => {
+        loadRequests(true);
     };
 
     const handleApprove = (req) => {
@@ -133,31 +170,32 @@ export default function RequestListScreen({ navigation }) {
         switch (status) {
             case 'APPROVED': return colors.success;
             case 'REJECTED': return colors.error;
-            default: return colors.warning; // Pending
+            case 'SENT': return colors.primaryAction; // Blue for Sent
+            default: return '#EAB308'; // Warning Yellow for Pending
         }
     };
+
+
+
+    const filteredRequests = requests.filter(req => {
+        if (statusFilter === 'ALL') return true;
+        return req.status === statusFilter;
+    });
 
     const renderItem = ({ item }) => (
         <View style={[styles.itemContainer, { borderColor: colors.divider }]}>
             <View style={styles.topRow}>
-                {/* Left: Icon/Avatar */}
-                {!isAdmin ? (
-                    // CHILD VIEW
-                    <View style={[styles.iconBox, { backgroundColor: colors.surface }]}>
-                        <Text style={{ fontSize: 20 }}>{item.categoryData?.icon || '💰'}</Text>
-                    </View>
-                ) : (
-                    // ADMIN VIEW
-                    <View style={[styles.avatarBox, { backgroundColor: colors.surface }]}>
-                        <Text style={[styles.avatarText, { color: colors.primaryText }]}>{item.createdByName?.[0] || '?'}</Text>
-                    </View>
-                )}
+
 
                 {/* Center: Details */}
                 <View style={styles.detailsColumn}>
                     <View style={styles.titleRow}>
                         <Text style={[styles.reason, { color: colors.primaryText }]} numberOfLines={1}>
-                            {isAdmin ? (item.createdByName || 'Unknown') : (item.reason || 'Money Request')}
+                            {isAdmin ? (
+                                item.status === 'SENT' ? `Sent to ${item.toProfileName}` : (item.createdByName || 'Unknown')
+                            ) : (
+                                item.reason || 'Money Request'
+                            )}
                         </Text>
                         <Text style={[styles.amount, { color: colors.primaryText }]}>{item.amount.toLocaleString()}</Text>
                     </View>
@@ -177,8 +215,8 @@ export default function RequestListScreen({ navigation }) {
             {/* Admin Actions for PENDING requests */}
             {isAdmin && item.status === 'PENDING' && (
                 <View style={styles.actionRow}>
-                    <TouchableOpacity style={[styles.actionBtn, { borderColor: colors.error }]} onPress={() => handleReject(item)}>
-                        <Text style={[styles.actionText, { color: colors.error }]}>Reject</Text>
+                    <TouchableOpacity style={[styles.actionBtn, { borderColor: '#EAB308' }]} onPress={() => handleReject(item)}>
+                        <Text style={[styles.actionText, { color: '#EAB308' }]}>Reject</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.primaryAction, borderColor: colors.primaryAction }]} onPress={() => handleApprove(item)}>
                         <Text style={[styles.actionText, { color: '#fff' }]}>Approve</Text>
@@ -208,12 +246,46 @@ export default function RequestListScreen({ navigation }) {
                 )}
             </View>
 
+
+
+            {/* Filter Tabs */}
+            <View style={styles.filterContainer}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterContent}>
+                    {['ALL', 'PENDING', 'APPROVED', 'REJECTED', 'SENT'].map(status => (
+                        <TouchableOpacity
+                            key={status}
+                            style={[
+                                styles.filterChip,
+                                { borderColor: colors.divider, backgroundColor: colors.surface },
+                                statusFilter === status && { backgroundColor: colors.primaryAction, borderColor: colors.primaryAction }
+                            ]}
+                            onPress={() => setStatusFilter(status)}
+                        >
+                            <Text style={[
+                                styles.filterText,
+                                { color: colors.secondaryText },
+                                statusFilter === status && { color: '#ffffff', fontWeight: 'bold' }
+                            ]}>
+                                {status.charAt(0) + status.slice(1).toLowerCase()}
+                            </Text>
+                        </TouchableOpacity>
+                    ))}
+                </ScrollView>
+            </View>
+
             <FlatList
-                data={requests}
+                data={filteredRequests}
                 renderItem={renderItem}
                 keyExtractor={item => item.id}
                 contentContainerStyle={styles.list}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primaryText} />}
+                onEndReached={handleLoadMore}
+                onEndReachedThreshold={0.5}
+                ListFooterComponent={
+                    loadingMore ? (
+                        <ActivityIndicator size="small" color={colors.primaryText} style={{ marginVertical: 20 }} />
+                    ) : null
+                }
                 ListEmptyComponent={
                     !loading && (
                         <View style={styles.emptyContainer}>
@@ -222,7 +294,7 @@ export default function RequestListScreen({ navigation }) {
                     )
                 }
             />
-        </SafeAreaView>
+        </SafeAreaView >
     );
 }
 
@@ -313,4 +385,21 @@ const styles = StyleSheet.create({
     },
     emptyContainer: { alignItems: 'center', marginTop: 60 },
     emptyText: { fontSize: TYPOGRAPHY.size.body },
+    filterContainer: {
+        paddingVertical: SPACING.m,
+    },
+    filterContent: {
+        paddingHorizontal: SPACING.screenPadding,
+        gap: SPACING.m
+    },
+    filterChip: {
+        paddingHorizontal: 20,
+        paddingVertical: 8,
+        borderRadius: 24,
+        borderWidth: 1,
+    },
+    filterText: {
+        fontSize: TYPOGRAPHY.size.caption,
+        fontWeight: '600'
+    }
 });

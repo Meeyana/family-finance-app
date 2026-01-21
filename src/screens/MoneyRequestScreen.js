@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ActivityIndicator, TouchableWithoutFeedback, Keyboard, useColorScheme, Platform, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ActivityIndicator, TouchableWithoutFeedback, Keyboard, useColorScheme, Platform, ScrollView, DeviceEventEmitter } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../components/context/AuthContext';
@@ -52,6 +52,9 @@ export default function MoneyRequestScreen({ navigation }) {
                 categoryData: selectedCategory, // Save full object
                 category: selectedCategory.name // Fallback/Display
             });
+
+            DeviceEventEmitter.emit('refresh_profile_dashboard');
+
             Alert.alert('Success', 'Request sent to admin!', [
                 { text: 'OK', onPress: () => navigation.goBack() }
             ]);
