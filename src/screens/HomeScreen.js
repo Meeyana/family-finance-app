@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, FlatList, Alert, DeviceEventEmitter, Modal, TextInput, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, useColorScheme } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, FlatList, Alert, DeviceEventEmitter, Modal, TextInput, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, useColorScheme, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { auth } from '../services/firebase';
@@ -8,6 +8,16 @@ import { useAuth } from '../components/context/AuthContext';
 import { updateProfile } from '../services/firestoreRepository';
 import { canViewAccountDashboard } from '../services/permissionService';
 import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
+import Avatar from '../components/Avatar';
+import { Asset } from 'expo-asset'; // Import Asset
+import { getAvatarSource } from '../utils/avatars'; // Import helper
+import { Dimensions } from 'react-native';
+
+const { width } = Dimensions.get('window');
+// Increased padding and gap to slightly shrink the avatars as requested
+const SCREEN_PADDING = SPACING.xxl; // 32
+const ROW_GAP = SPACING.l; // 16
+const ITEM_WIDTH = (width - (SCREEN_PADDING * 2) - ROW_GAP) / 2;
 
 export default function HomeScreen({ navigation }) {
     const { userProfiles, selectProfile, user, refreshProfiles } = useAuth();
@@ -47,6 +57,7 @@ export default function HomeScreen({ navigation }) {
     const [newPin, setNewPin] = useState('');
     const [pinError, setPinError] = useState('');
     const [creatingPin, setCreatingPin] = useState(false);
+    const [isLoggingIn, setIsLoggingIn] = useState(false);
 
     const handleProfileSelect = (profile) => {
         if (profile.pin && profile.pin.length > 0) {
@@ -72,8 +83,29 @@ export default function HomeScreen({ navigation }) {
         if (!enteredPin) return;
 
         if (enteredPin === selectedProfileForAuth.pin) {
-            setAuthModalVisible(false);
-            selectProfile(selectedProfileForAuth);
+            // Show loading state
+            setIsLoggingIn(true);
+
+            const performLogin = async () => {
+                try {
+                    // Preload Avatar if exists
+                    if (selectedProfileForAuth.avatarId) {
+                        const source = getAvatarSource(selectedProfileForAuth.avatarId);
+                        if (source) {
+                            console.log(`🖼️ Preloading avatar: ${selectedProfileForAuth.avatarId}`);
+                            await Asset.fromModule(source).downloadAsync();
+                        }
+                    }
+                } catch (e) {
+                    console.warn("Failed to preload avatar", e);
+                } finally {
+                    setAuthModalVisible(false);
+                    setIsLoggingIn(false);
+                    selectProfile(selectedProfileForAuth);
+                }
+            };
+
+            performLogin();
         } else {
             setPinError('Incorrect PIN');
             setEnteredPin('');
@@ -81,8 +113,8 @@ export default function HomeScreen({ navigation }) {
     };
 
     const handleCreatePinSubmit = async () => {
-        if (newPin.length < 4) {
-            Alert.alert("Invalid PIN", "PIN must be 4-6 digits");
+        if (newPin.length !== 4) {
+            Alert.alert("Invalid PIN", "PIN must be exactly 4 digits");
             return;
         }
 
@@ -136,25 +168,47 @@ export default function HomeScreen({ navigation }) {
         }
     };
 
+    const getStatusColor = (status) => {
+        if (!status) return colors.secondaryText;
+        const s = status.toLowerCase();
+        if (s.includes('healthy') || s.includes('good')) return '#10B981'; // Emerald
+        if (s.includes('deficit')) return '#F97316'; // Orange
+        if (s.includes('risk') || s.includes('warning')) return '#F59E0B'; // Amber
+        if (s.includes('critical') || s.includes('danger') || s.includes('over')) return '#EF4444'; // Red
+        return '#6B7280'; // Gray
+    };
+
     const renderProfileItem = ({ item }) => {
         const stats = profileStats[item.id];
         const status = stats?.financialStatus || '';
+        const statusColor = getStatusColor(status);
 
         return (
             <TouchableOpacity
-                style={[styles.profileCard, { backgroundColor: colors.surface, borderColor: colors.divider }]}
+                style={styles.profileCard}
                 onPress={() => handleProfileSelect(item)}
             >
-                <View style={[styles.avatarPlaceholder, { backgroundColor: colors.background }]}>
-                    <Text style={{ fontSize: 24, paddingBottom: 2 }}>{item.avatar || '👤'}</Text>
+                <View style={styles.avatarContainer}>
+                    <Avatar
+                        name={item.name}
+                        avatarId={item.avatarId}
+                        size={ITEM_WIDTH}
+                        backgroundColor={item.avatarId ? 'transparent' : '#E0E0E0'}
+                        textColor="#333333"
+                        borderRadius={16}
+                        fontSize={48}
+                    />
+                    {status ? (
+                        <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
+                            {/* Strip emojis/symbols and trim */}
+                            <Text style={styles.statusBadgeText}>
+                                {status.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1F018}-\u{1F270}\u{238C}\u{2B05}-\u{2B07}\u{2190}-\u{2195}\u{200D}]/gu, '').trim()}
+                            </Text>
+                        </View>
+                    ) : null}
                 </View>
+
                 <Text style={[styles.profileName, { color: colors.primaryText }]}>{item.name}</Text>
-                <Text style={[styles.profileRole, { color: colors.secondaryText }]}>{item.role}</Text>
-                {status ? (
-                    <View style={{ marginTop: 8, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4, backgroundColor: colors.background }}>
-                        <Text style={[styles.statusText, { color: colors.primaryText }]}>{status}</Text>
-                    </View>
-                ) : null}
             </TouchableOpacity>
         );
     };
@@ -187,34 +241,46 @@ export default function HomeScreen({ navigation }) {
                 onRequestClose={() => setAuthModalVisible(false)}
             >
                 <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                    <View style={styles.modalOverlay}>
-                        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+                    <KeyboardAvoidingView
+                        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                        style={styles.modalOverlay}
+                    >
+                        <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
                             <Text style={[styles.modalTitle, { color: colors.primaryText }]}>Enter PIN</Text>
                             <Text style={[styles.modalSubtitle, { color: colors.secondaryText }]}>for {selectedProfileForAuth?.name}</Text>
 
-                            <TextInput
-                                style={[styles.pinInput, { color: colors.primaryText, borderColor: pinError ? colors.error : colors.divider }]}
-                                value={enteredPin}
-                                onChangeText={setEnteredPin}
-                                placeholder="****"
-                                placeholderTextColor={colors.secondaryText}
-                                keyboardType="numeric"
-                                secureTextEntry
-                                maxLength={6}
-                                autoFocus={true}
-                            />
-                            {pinError ? <Text style={[styles.errorText, { color: colors.error }]}>{pinError}</Text> : null}
+                            {isLoggingIn ? (
+                                <View style={{ alignItems: 'center', marginVertical: 20 }}>
+                                    <ActivityIndicator size="large" color={colors.primaryAction} />
+                                    <Text style={{ marginTop: 12, color: colors.secondaryText, fontWeight: '500' }}>Accessing Profile...</Text>
+                                </View>
+                            ) : (
+                                <>
+                                    <TextInput
+                                        style={[styles.pinInput, { color: colors.primaryText, borderColor: pinError ? colors.error : colors.divider }]}
+                                        value={enteredPin}
+                                        onChangeText={setEnteredPin}
+                                        placeholder="****"
+                                        placeholderTextColor={colors.secondaryText}
+                                        keyboardType="numeric"
+                                        secureTextEntry
+                                        maxLength={4}
+                                        autoFocus={true}
+                                    />
+                                    {pinError ? <Text style={[styles.errorText, { color: colors.error }]}>{pinError}</Text> : null}
 
-                            <View style={styles.modalButtons}>
-                                <TouchableOpacity style={[styles.cancelButton, { backgroundColor: colors.background }]} onPress={() => setAuthModalVisible(false)}>
-                                    <Text style={[styles.cancelText, { color: colors.secondaryText }]}>Cancel</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity style={[styles.enterButton, { backgroundColor: colors.primaryAction }]} onPress={handlePinSubmit}>
-                                    <Text style={[styles.enterText, { color: '#fff' }]}>Enter</Text>
-                                </TouchableOpacity>
-                            </View>
-                        </KeyboardAvoidingView>
-                    </View>
+                                    <View style={styles.modalButtons}>
+                                        <TouchableOpacity style={[styles.cancelButton, { backgroundColor: colors.background }]} onPress={() => setAuthModalVisible(false)}>
+                                            <Text style={[styles.cancelText, { color: colors.secondaryText }]}>Cancel</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity style={[styles.enterButton, { backgroundColor: colors.primaryAction }]} onPress={handlePinSubmit}>
+                                            <Text style={[styles.enterText, { color: '#fff' }]}>Enter</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                </>
+                            )}
+                        </View>
+                    </KeyboardAvoidingView>
                 </TouchableWithoutFeedback>
             </Modal>
 
@@ -238,11 +304,11 @@ export default function HomeScreen({ navigation }) {
                                 style={[styles.pinInput, { color: colors.primaryText, borderColor: colors.divider, backgroundColor: colors.surface }]}
                                 value={newPin}
                                 onChangeText={setNewPin}
-                                placeholder="Create PIN (4-6 digits)"
+                                placeholder="Create PIN (4 digits)"
                                 placeholderTextColor={colors.secondaryText}
                                 keyboardType="numeric"
                                 secureTextEntry
-                                maxLength={6}
+                                maxLength={4}
                                 autoFocus={true}
                             />
 
@@ -280,86 +346,114 @@ const styles = StyleSheet.create({
         padding: 8,
     },
     listContent: {
-        padding: SPACING.screenPadding,
+        paddingHorizontal: SPACING.xxl, // Match the logic above
+        paddingVertical: SPACING.screenPadding,
     },
     row: {
         justifyContent: 'space-between',
-        gap: SPACING.m,
+        gap: SPACING.l, // Match logic above
     },
     profileCard: {
-        width: '47%',
-        paddingVertical: 24,
-        paddingHorizontal: 16,
+        width: ITEM_WIDTH,
+        paddingVertical: 0, // Removed padding to allow full flush
+        paddingHorizontal: 0,
         borderRadius: 16,
-        marginBottom: 16,
+        marginBottom: 24,
         alignItems: 'center',
-        borderWidth: 1,
-        // No shadow, neo-bank minimal
+        // Removed borders and background for clean look
     },
     avatarPlaceholder: {
-        width: 64,
-        height: 64,
-        borderRadius: 32,
+        width: 100,
+        height: 100,
+        borderRadius: 16,
         marginBottom: 16,
         justifyContent: 'center',
         alignItems: 'center',
     },
     profileName: {
-        fontSize: TYPOGRAPHY.size.body,
-        fontWeight: TYPOGRAPHY.weight.bold,
+        fontSize: 18, // Slightly larger
+        fontWeight: '600',
         marginBottom: 4,
         textAlign: 'center',
     },
-    profileRole: {
-        fontSize: TYPOGRAPHY.size.caption,
-        textAlign: 'center',
+    avatarContainer: {
+        position: 'relative',
+        marginBottom: 12,
     },
-    statusText: {
-        fontSize: TYPOGRAPHY.size.caption,
+    statusBadge: {
+        position: 'absolute',
+        bottom: 8,
+        right: 8,
+        backgroundColor: '#10B981', // Dynamic color overrides this
+        paddingVertical: 4,
+        paddingHorizontal: 8,
+        borderRadius: 8,
+        alignItems: 'center',
+        justifyContent: 'center',
+        // Optional shadow for visibility on images
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.2,
+        shadowRadius: 2,
+        elevation: 2,
+    },
+    statusBadgeText: {
+        color: '#FFFFFF',
+        fontSize: 10,
         fontWeight: 'bold',
+        textTransform: 'uppercase',
     },
 
     // Modal Styles
+    // Modal Styles
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.6)', // Darker overlay for focus
+        backgroundColor: 'rgba(0,0,0,0.5)', // Slightly lighter overlay
         justifyContent: 'center',
         alignItems: 'center',
     },
     modalContent: {
-        width: '85%',
-        borderRadius: 24,
-        padding: 32,
+        width: '80%', // Slightly narrower
+        borderRadius: 28, // iOS style large radius
+        paddingHorizontal: 24,
+        paddingTop: 32,
+        paddingBottom: 40, // Increased bottom padding significantly
         alignItems: 'center',
+        backgroundColor: '#FFFFFF', // Force white/surface
         shadowColor: "#000",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 12,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.15,
+        shadowRadius: 24,
         elevation: 10,
     },
     modalTitle: {
-        fontSize: TYPOGRAPHY.size.h3,
-        fontWeight: 'bold',
-        marginBottom: 8,
+        fontSize: 20,
+        fontWeight: '700',
+        marginBottom: 4,
+        color: '#111827',
     },
     modalSubtitle: {
-        fontSize: TYPOGRAPHY.size.body,
+        fontSize: 14,
+        color: '#6B7280',
         marginBottom: 24,
     },
     pinInput: {
         width: '100%',
-        borderWidth: 1,
-        borderRadius: 12,
+        backgroundColor: '#F3F4F6', // Filled background
+        borderRadius: 16,
         padding: 16,
         fontSize: 24,
         textAlign: 'center',
-        letterSpacing: 8,
-        marginBottom: 16,
-        height: 60,
+        letterSpacing: 12, // Wider spacing for PIN
+        marginBottom: 24,
+        height: 64,
+        borderWidth: 0, // Remove border
+        color: '#111827',
     },
     errorText: {
         marginBottom: 16,
-        fontWeight: 'bold',
+        fontWeight: '600',
+        color: '#EF4444',
     },
     modalButtons: {
         flexDirection: 'row',
@@ -368,20 +462,26 @@ const styles = StyleSheet.create({
     },
     cancelButton: {
         flex: 1,
-        padding: 16,
-        borderRadius: 12,
+        paddingVertical: 14,
+        borderRadius: 14,
         alignItems: 'center',
+        backgroundColor: '#F3F4F6',
     },
     enterButton: {
         flex: 1,
-        padding: 16,
-        borderRadius: 12,
+        paddingVertical: 14,
+        borderRadius: 14,
         alignItems: 'center',
+        backgroundColor: '#10B981', // Emerald Green
     },
     cancelText: {
         fontWeight: '600',
+        color: '#4B5563',
+        fontSize: 16,
     },
     enterText: {
-        fontWeight: 'bold',
+        fontWeight: '600',
+        color: '#FFFFFF',
+        fontSize: 16,
     }
 });

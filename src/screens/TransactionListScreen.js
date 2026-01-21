@@ -10,6 +10,7 @@ import { useTheme } from '../components/context/ThemeContext';
 import SwipeDateFilter from '../components/SwipeDateFilter';
 import SimpleDateFilterModal from '../components/SimpleDateFilterModal';
 import TransactionRow from '../components/TransactionRow';
+import Avatar from '../components/Avatar';
 import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
 
 export default function TransactionListScreen({ navigation }) {
@@ -65,7 +66,7 @@ export default function TransactionListScreen({ navigation }) {
             setTransactions(txs);
             setCategories(cats);
         } catch (error) {
-            console.error("Failed to load transactions", error);
+            // Failed to load transactions
         } finally {
             setLoading(false);
             setIsRefreshing(false);
@@ -156,12 +157,14 @@ export default function TransactionListScreen({ navigation }) {
             <View style={[styles.header, { borderBottomWidth: 0, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
                 {/* Left: Avatar + Title */}
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                    <View style={{
-                        width: 44, height: 44, borderRadius: 22,
-                        backgroundColor: '#ffffff', justifyContent: 'center', alignItems: 'center'
-                    }}>
-                        <Text style={{ fontSize: 24 }}>{profile?.avatar || '👤'}</Text>
-                    </View>
+                    <Avatar
+                        name={profile?.name}
+                        avatarId={profile?.avatarId}
+                        size={44}
+                        backgroundColor="#ffffff"
+                        textColor="#3e2723"
+                        style={styles.avatar}
+                    />
                     <Text style={{ fontSize: 18, fontWeight: '900', color: '#3e2723' }}>Transactions</Text>
                 </View>
 
@@ -279,7 +282,7 @@ export default function TransactionListScreen({ navigation }) {
                 keyExtractor={item => item.id}
                 renderItem={renderItem}
                 renderSectionHeader={renderSectionHeader}
-                ListHeaderComponent={renderHeader}
+                ListHeaderComponent={renderHeader()}
                 stickySectionHeadersEnabled={true}
                 contentContainerStyle={{ paddingBottom: 100 }}
                 overScrollMode="never"
@@ -356,4 +359,12 @@ const styles = StyleSheet.create({
         fontSize: TYPOGRAPHY.size.body,
         fontWeight: TYPOGRAPHY.weight.bold,
     },
+    addButtonText: {
+        fontSize: TYPOGRAPHY.size.body,
+        fontWeight: TYPOGRAPHY.weight.bold,
+    },
+    avatar: {
+        borderWidth: 1,
+        borderColor: '#eeeeee'
+    }
 });

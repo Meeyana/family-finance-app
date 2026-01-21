@@ -1,11 +1,13 @@
 import React, { useState, useLayoutEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, TouchableWithoutFeedback, Keyboard, useColorScheme } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, TouchableWithoutFeedback, Keyboard, useColorScheme, Modal, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { updateProfile, addProfile, deleteProfile } from '../services/firestoreRepository';
 import { auth } from '../services/firebase';
 import { useAuth } from '../components/context/AuthContext';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
+import Avatar from '../components/Avatar';
+import { AVAILABLE_AVATARS, getAvatarSource } from '../utils/avatars';
 
 export default function EditProfileScreen({ route, navigation }) {
     const { profile, isNew } = route.params;
@@ -23,6 +25,8 @@ export default function EditProfileScreen({ route, navigation }) {
     const [limit, setLimit] = useState(String(profile?.limit || 0));
     const [role, setRole] = useState(profile?.role || 'Child');
     const [pin, setPin] = useState(''); // Init empty for Blind Reset
+    const [avatarId, setAvatarId] = useState(profile?.avatarId || null);
+    const [showAvatarModal, setShowAvatarModal] = useState(false);
     const [loading, setLoading] = useState(false);
 
     // Has existing PIN?
@@ -48,12 +52,14 @@ export default function EditProfileScreen({ route, navigation }) {
                     name: name.trim(),
                     limit: numLimit,
                     role: role,
-                    pin: pin.trim() // Save PIN
+                    pin: pin.trim(), // Save PIN
+                    avatarId: avatarId
                 });
             } else {
                 const updateData = {
                     limit: numLimit,
-                    role: role
+                    role: role,
+                    avatarId: avatarId
                 };
                 if (pin.length > 0) {
                     updateData.pin = pin.trim();
@@ -102,20 +108,83 @@ export default function EditProfileScreen({ route, navigation }) {
 
     return (
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+            <SafeAreaView style={[styles.container, { backgroundColor: '#ffffff' }]}>
+                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1, backgroundColor: '#ffffff' }}>
                     {/* Header */}
-                    <View style={[styles.header, { borderBottomColor: colors.divider }]}>
+                    <View style={[styles.header, { backgroundColor: '#ffffff', borderBottomColor: colors.divider, borderBottomWidth: 1 }]}>
                         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                            <Ionicons name="arrow-back" size={24} color={colors.primaryText} />
+                            <Ionicons name="arrow-back" size={24} color="#3e2723" />
                         </TouchableOpacity>
-                        <Text style={[styles.headerTitle, { color: colors.primaryText }]}>{isNew ? 'New Profile' : 'Edit Profile'}</Text>
+                        <Text style={[styles.headerTitle, { color: '#3e2723' }]}>{isNew ? 'New Profile' : 'Edit Profile'}</Text>
                         <TouchableOpacity onPress={handleSave} disabled={loading}>
                             {loading ? <ActivityIndicator color={colors.primaryAction} /> : <Text style={[styles.saveText, { color: colors.primaryAction }]}>Save</Text>}
                         </TouchableOpacity>
                     </View>
 
                     <ScrollView contentContainerStyle={styles.form} keyboardShouldPersistTaps='handled'>
+                        {/* Avatar Preview */}
+                        <View style={{ alignItems: 'center', marginBottom: 24 }}>
+                            <View>
+                                <Avatar
+                                    name={name || 'User'}
+                                    avatarId={avatarId}
+                                    size={80}
+                                    backgroundColor={colors.surface}
+                                    textColor={colors.primaryText}
+                                    style={{ borderWidth: 1, borderColor: colors.divider }}
+                                    fontSize={36}
+                                />
+                                {(!isNew && useAuth().profile?.id === profile?.id) && (
+                                    <TouchableOpacity
+                                        style={{ position: 'absolute', bottom: 0, right: 0, backgroundColor: colors.primaryAction, borderRadius: 12, width: 24, height: 24, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#ffffff' }}
+                                        onPress={() => setShowAvatarModal(true)}
+                                    >
+                                        <MaterialCommunityIcons name="pencil" size={12} color="#ffffff" />
+                                    </TouchableOpacity>
+                                )}
+                            </View>
+                        </View>
+
+                        <Modal
+                            visible={showAvatarModal}
+                            transparent={true}
+                            animationType="slide"
+                            onRequestClose={() => setShowAvatarModal(false)}
+                        >
+                            <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+                                <View style={{ backgroundColor: '#ffffff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 }}>
+                                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                                        <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#3e2723' }}>Choose Avatar</Text>
+                                        <TouchableOpacity onPress={() => setShowAvatarModal(false)}>
+                                            <Ionicons name="close" size={24} color="#3e2723" />
+                                        </TouchableOpacity>
+                                    </View>
+
+                                    <View style={{ flexDirection: 'row', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
+                                        <TouchableOpacity onPress={() => { setAvatarId(null); setShowAvatarModal(false); }}>
+                                            <Avatar
+                                                name={name}
+                                                size={64}
+                                                backgroundColor={colors.surface}
+                                                textColor={colors.primaryText}
+                                                style={{ borderWidth: avatarId === null ? 2 : 0, borderColor: colors.primaryAction }}
+                                            />
+                                        </TouchableOpacity>
+
+                                        {AVAILABLE_AVATARS.map(id => (
+                                            <TouchableOpacity key={id} onPress={() => { setAvatarId(id); setShowAvatarModal(false); }}>
+                                                <Image
+                                                    source={getAvatarSource(id)}
+                                                    style={{ width: 64, height: 64, borderRadius: 32, borderWidth: avatarId === id ? 2 : 0, borderColor: colors.primaryAction }}
+                                                />
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
+                                    <View style={{ height: 20 }} />
+                                </View>
+                            </View>
+                        </Modal>
+
                         {/* Name Input */}
                         <View style={styles.inputGroup}>
                             <Text style={[styles.label, { color: colors.secondaryText }]}>NAME</Text>
@@ -160,10 +229,10 @@ export default function EditProfileScreen({ route, navigation }) {
                                     {['Partner', 'Child'].map(r => (
                                         <TouchableOpacity
                                             key={r}
-                                            style={[styles.segmentBtn, role === r && { backgroundColor: colors.background, shadowOpacity: 0.1 }]}
+                                            style={[styles.segmentBtn, role === r && { backgroundColor: colors.primaryAction, shadowOpacity: 0.1 }]}
                                             onPress={() => setRole(r)}
                                         >
-                                            <Text style={[styles.segmentText, { color: role === r ? colors.primaryText : colors.secondaryText }]}>{r}</Text>
+                                            <Text style={[styles.segmentText, { color: role === r ? 'white' : colors.secondaryText }]}>{r}</Text>
                                         </TouchableOpacity>
                                     ))}
                                 </View>
@@ -180,18 +249,18 @@ export default function EditProfileScreen({ route, navigation }) {
                                 style={[styles.input, { marginTop: 8, backgroundColor: colors.surface, color: colors.primaryText, borderColor: colors.divider }]}
                                 value={pin}
                                 onChangeText={setPin}
-                                placeholder={hasPin ? "••••••" : "Set a 6-digit PIN"}
+                                placeholder={hasPin ? "••••" : "Set a 4-digit PIN"}
                                 placeholderTextColor={colors.secondaryText}
                                 keyboardType="numeric"
                                 secureTextEntry={true}
-                                maxLength={6}
+                                maxLength={4}
                             />
                         </View>
 
                         {/* Remove PIN Button */}
                         {hasPin && (
                             <TouchableOpacity
-                                style={[styles.actionButton, { backgroundColor: colors.surface, borderColor: colors.divider }]}
+                                style={{ alignSelf: 'center', marginTop: 8, padding: 8 }}
                                 onPress={async () => {
                                     setLoading(true);
                                     await updateProfile(auth.currentUser.uid, profile.id, { pin: '' });
@@ -201,14 +270,14 @@ export default function EditProfileScreen({ route, navigation }) {
                                     navigation.goBack();
                                 }}
                             >
-                                <Text style={[styles.actionText, { color: colors.primaryAction }]}>Remove PIN Requirement</Text>
+                                <Text style={{ color: colors.primaryAction, fontSize: 12 }}>Remove PIN Requirement</Text>
                             </TouchableOpacity>
                         )}
 
                         {/* Delete Profile Button */}
                         {!isNew && !isOwner && (
-                            <TouchableOpacity style={[styles.actionButton, { marginTop: 20, backgroundColor: colors.surface, borderColor: colors.error }]} onPress={handleDelete}>
-                                <Text style={[styles.actionText, { color: colors.error }]}>Delete Profile</Text>
+                            <TouchableOpacity style={{ alignSelf: 'center', marginTop: 24, padding: 8 }} onPress={handleDelete}>
+                                <Text style={{ color: colors.error, fontSize: 12 }}>Delete Profile</Text>
                             </TouchableOpacity>
                         )}
                     </ScrollView>

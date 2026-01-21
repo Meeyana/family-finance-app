@@ -347,13 +347,13 @@ export const getLatestTransactions = async (uid, profileId = null, limitCount = 
  * Fetch all available categories
  */
 export const getFamilyCategories = async (uid, profileId = null, role = null) => {
-    console.log(`📥 Repo: Fetching categories for ${uid}, profile: ${profileId}, role: ${role}`);
+
     const familyRef = getFamilyRef(uid);
     const categoriesCol = collection(familyRef, 'categories');
 
     const snapshot = await getDocs(categoriesCol);
     const categories = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    console.log(`📦 Repo: Fetched ${categories.length} total categories from Firestore.`);
+
 
     if (profileId) {
         return categories.filter(c => {
@@ -388,14 +388,14 @@ export const getFamilyCategories = async (uid, profileId = null, role = null) =>
 };
 
 export const initializeCategories = async (uid) => {
-    console.log(`🛠️ Repo: Checking categories for ${uid}...`);
+
     const familyRef = getFamilyRef(uid);
     const categoriesCol = collection(familyRef, 'categories');
 
     const snapshot = await getDocs(categoriesCol);
 
     if (snapshot.empty) {
-        console.log('🔥 Repo: Seeding DEFAULT_CATEGORIES...');
+
         // Defaults: ownerId=null (System), isShared=true implicitly
         await Promise.all(DEFAULT_CATEGORIES.map(cat =>
             setDoc(doc(categoriesCol, cat.id), { ...cat, isShared: true })
@@ -408,7 +408,7 @@ export const initializeCategories = async (uid) => {
 // ...
 
 export const addCategory = async (uid, name, icon = '🏷️', type = 'expense', ownerId = null, isShared = false) => {
-    console.log(`📝 Repo: Adding category "${name}" (${type}) Owner:${ownerId} Shared:${isShared}`);
+
     const familyRef = getFamilyRef(uid);
     const categoriesCol = collection(familyRef, 'categories');
 
@@ -430,7 +430,7 @@ export const addCategory = async (uid, name, icon = '🏷️', type = 'expense',
  * Used by: ManageCategoriesScreen
  */
 export const deleteCategory = async (uid, categoryId) => {
-    console.log(`🗑️ Repo: Deleting category "${categoryId}"`);
+
     const familyRef = getFamilyRef(uid);
     const categoryRef = doc(familyRef, 'categories', categoryId);
     await deleteDoc(categoryRef);
@@ -438,7 +438,7 @@ export const deleteCategory = async (uid, categoryId) => {
 };
 
 export const updateCategory = async (uid, categoryId, data) => {
-    console.log(`📝 Repo: Updating category "${categoryId}"`);
+
     const familyRef = getFamilyRef(uid);
     const categoryRef = doc(familyRef, 'categories', categoryId);
     await updateDoc(categoryRef, data);
@@ -458,7 +458,7 @@ export const updateProfile = async (uid, profileId, data) => {
 };
 
 export const addProfile = async (uid, profileData) => {
-    console.log(`👤 Repo: Adding profile "${profileData.name}"`);
+
     const familyRef = getFamilyRef(uid);
     const profilesCol = collection(familyRef, 'profiles');
 
@@ -475,7 +475,7 @@ export const addProfile = async (uid, profileData) => {
 };
 
 export const deleteProfile = async (uid, profileId) => {
-    console.log(`🔥 Repo: Deleting profile ${profileId} and ALL transactions`);
+
     const familyRef = getFamilyRef(uid);
 
     // 1. Delete all transactions for this profile

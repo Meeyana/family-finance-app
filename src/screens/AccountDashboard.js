@@ -11,6 +11,8 @@ import { useTheme } from '../components/context/ThemeContext';
 import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
 import CurrencyText from '../components/CurrencyText';
 import TransactionRow from '../components/TransactionRow';
+import { useVisibility } from '../components/context/VisibilityContext';
+import Avatar from '../components/Avatar';
 
 const { width } = Dimensions.get('window');
 
@@ -28,6 +30,7 @@ export default function AccountDashboard({ navigation }) {
 
     const { theme } = useTheme();
     const colors = COLORS[theme];
+    const { isValuesHidden, toggleVisibility } = useVisibility();
 
     const getGreeting = () => {
         const hour = new Date().getHours();
@@ -188,9 +191,14 @@ export default function AccountDashboard({ navigation }) {
                     {/* HEADER */}
                     <View style={[styles.header, { marginTop: 10 }]}>
                         <View style={styles.headerLeft}>
-                            <View style={[styles.avatarContainer, { backgroundColor: '#ffffff' }]}>
-                                <Text style={{ fontSize: 24 }}>{profile?.avatar || '👤'}</Text>
-                            </View>
+                            <Avatar
+                                name={profile?.name}
+                                avatarId={profile?.avatarId}
+                                size={44}
+                                backgroundColor="#ffffff"
+                                textColor="#3e2723"
+                                style={{ borderWidth: 1, borderColor: '#eeeeee' }}
+                            />
                             <View>
                                 {/* Greeting */}
                                 <Text style={[styles.greeting, { color: '#8d6e63' }]}>Hello,</Text>
@@ -198,9 +206,6 @@ export default function AccountDashboard({ navigation }) {
                             </View>
                         </View>
 
-                        <TouchableOpacity style={[styles.iconButton, { backgroundColor: 'rgba(255,255,255,0.6)' }]}>
-                            <Ionicons name="search-outline" size={18} color="#8d6e63" />
-                        </TouchableOpacity>
                         <TouchableOpacity style={[styles.iconButton, { backgroundColor: 'rgba(255,255,255,0.6)', marginLeft: 8 }]}>
                             <Ionicons name="notifications-outline" size={18} color="#8d6e63" />
                             <View style={[styles.notificationBadge, { backgroundColor: '#ef5350' }]} />
@@ -217,10 +222,13 @@ export default function AccountDashboard({ navigation }) {
                             <CurrencyText
                                 amount={viewData?.netCashflow}
                                 showSign={false}
+                                hideable={true}
                                 style={{ color: '#6ca749', fontSize: 30, fontWeight: 'bold' }}
                                 symbolStyle={{ color: '#6ca749', fontSize: 30, fontWeight: 'bold', textDecorationLine: 'none' }}
                             />
-                            <Ionicons name="eye-outline" size={18} color="#8d6e63" />
+                            <TouchableOpacity onPress={toggleVisibility}>
+                                <Ionicons name={isValuesHidden ? "eye-off-outline" : "eye-outline"} size={18} color="#8d6e63" />
+                            </TouchableOpacity>
                         </View>
 
                         <View style={{ opacity: 0.8, transform: [{ scale: 0.85 }], marginBottom: 12 }}>
@@ -250,6 +258,7 @@ export default function AccountDashboard({ navigation }) {
                                         <CurrencyText
                                             amount={viewData?.totalIncome}
                                             showSign={false}
+                                            hideable={true}
                                             style={{ color: '#263238', fontSize: 18, fontWeight: 'bold' }}
                                         />
                                         {viewData?.incomeDiffPercent !== 0 && (
@@ -275,6 +284,7 @@ export default function AccountDashboard({ navigation }) {
                                         <CurrencyText
                                             amount={-viewData?.totalSpent}
                                             showSign={false}
+                                            hideable={true}
                                             style={{ color: '#263238', fontSize: 18, fontWeight: 'bold' }}
                                         />
                                         {viewData?.expenseDiffPercent !== 0 && (
@@ -347,10 +357,15 @@ export default function AccountDashboard({ navigation }) {
                                             {cat.name}
                                         </Text>
                                     </View>
-                                    <CurrencyText
-                                        amount={cat.amount}
-                                        style={[styles.categoryAmount, { color: colors.primaryText }]}
-                                    />
+                                    <View style={{ alignItems: 'flex-end' }}>
+                                        <CurrencyText
+                                            amount={cat.amount}
+                                            style={[styles.categoryAmount, { color: colors.primaryText }]}
+                                        />
+                                        <Text style={{ fontSize: 12, color: colors.secondaryText, fontWeight: '500' }}>
+                                            {cat.percent.toFixed(1)}%
+                                        </Text>
+                                    </View>
                                 </View>
                                 <View style={styles.progressContainer}>
                                     <View style={[styles.progressBar, { width: `${cat.percent}%`, backgroundColor: colors.primaryAction }]} />
@@ -516,6 +531,7 @@ const styles = StyleSheet.create({
     categoryHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
+        alignItems: 'center',
         marginBottom: SPACING.xs,
     },
     categoryName: {
@@ -542,9 +558,9 @@ const styles = StyleSheet.create({
         height: '100%',
     },
     iconBox: {
-        width: 36,
-        height: 36,
-        borderRadius: 10,
+        width: 44,
+        height: 44,
+        borderRadius: 12,
         justifyContent: 'center',
         alignItems: 'center',
     },

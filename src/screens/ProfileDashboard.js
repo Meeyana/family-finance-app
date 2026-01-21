@@ -1,13 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../components/context/AuthContext';
 import { updateProfile } from '../services/firestoreRepository';
 import { auth } from '../services/firebase';
+import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
+import { useTheme } from '../components/context/ThemeContext';
+import Avatar from '../components/Avatar';
 
 export default function ProfileDashboard({ route, navigation }) {
     const { profile: authProfile, userProfiles, refreshProfiles } = useAuth();
+    const { theme } = useTheme();
+    const colors = COLORS[theme];
 
     // Use live data from userProfiles if possible, falling back to params/authProfile
     const targetId = route.params?.profile?.id || authProfile?.id;
@@ -45,110 +50,110 @@ export default function ProfileDashboard({ route, navigation }) {
 
     return (
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-            <SafeAreaView style={styles.container}>
-                <View style={styles.header}>
+            <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
+                <View style={{ backgroundColor: '#ffffff' }}>
+                    <SafeAreaView edges={['top', 'left', 'right']} />
+                </View>
+
+                {/* Header */}
+                <View style={[styles.header, { backgroundColor: '#ffffff', borderBottomColor: colors.divider, borderBottomWidth: 1 }]}>
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                        <MaterialCommunityIcons name="arrow-left" size={24} color="#007AFF" />
+                        <Ionicons name="arrow-back" size={24} color="#3e2723" />
                     </TouchableOpacity>
-                    <Text style={styles.title}>My Profile</Text>
+                    <Text style={[styles.title, { color: '#3e2723' }]}>My Profile</Text>
                     <View style={{ width: 24 }} />
                 </View>
 
                 <View style={styles.content}>
                     <View style={styles.avatarContainer}>
-                        <View style={styles.avatar}>
-                            <MaterialCommunityIcons name="account" size={60} color="white" />
-                        </View>
+                        <Avatar
+                            name={name}
+                            avatarId={profileData.avatarId}
+                            size={100}
+                            backgroundColor={colors.surface}
+                            textColor={colors.primaryText}
+                            style={{ borderWidth: 1, borderColor: colors.divider }}
+                            fontSize={40}
+                        />
                         {/* Placeholder for future image upload */}
-                        <TouchableOpacity style={styles.editIconBadge} onPress={() => Alert.alert("Coming Soon", "Image upload not implemented yet")}>
+                        <TouchableOpacity style={[styles.editIconBadge, { backgroundColor: colors.primaryAction }]} onPress={() => Alert.alert("Coming Soon", "Image upload not implemented yet")}>
                             <MaterialCommunityIcons name="camera" size={16} color="white" />
                         </TouchableOpacity>
                     </View>
 
                     <View style={styles.form}>
-                        <Text style={styles.label}>Display Name</Text>
+                        <Text style={[styles.label, { color: colors.secondaryText }]}>DISPLAY NAME</Text>
                         <TextInput
-                            style={styles.input}
+                            style={[styles.input, { backgroundColor: colors.surface, color: colors.primaryText, borderColor: colors.divider }]}
                             value={name}
                             onChangeText={setName}
                             placeholder="Enter your name"
+                            placeholderTextColor={colors.secondaryText}
                         />
 
-                        <View style={styles.disabledInput}>
-                            <Text style={styles.disabledText}>{profileData.role || 'User'}</Text>
-                            <MaterialCommunityIcons name="lock" size={16} color="#999" />
+                        <View style={[styles.disabledInput, { backgroundColor: colors.background, borderColor: colors.divider }]}>
+                            <Text style={[styles.disabledText, { color: colors.secondaryText }]}>{profileData.role || 'User'}</Text>
+                            <MaterialCommunityIcons name="lock" size={16} color={colors.secondaryText} />
                         </View>
 
-                        <Text style={styles.label}>Profile PIN (Optional)</Text>
+                        <Text style={[styles.label, { color: colors.secondaryText }]}>PROFILE PIN</Text>
                         <View style={styles.pinContainer}>
                             <TextInput
-                                style={[styles.input, { flex: 1, marginBottom: 0 }]}
+                                style={[styles.input, { flex: 1, marginBottom: 0, backgroundColor: colors.surface, color: colors.primaryText, borderColor: colors.divider }]}
                                 value={pin}
                                 onChangeText={setPin}
-                                placeholder="Enter 4-6 digit PIN"
+                                placeholder="Enter 4-digit PIN"
+                                placeholderTextColor={colors.secondaryText}
                                 keyboardType="numeric"
                                 secureTextEntry={!showPin}
-                                maxLength={6}
+                                maxLength={4}
                             />
                             <TouchableOpacity style={styles.eyeButton} onPress={() => setShowPin(!showPin)}>
-                                <MaterialCommunityIcons name={showPin ? "eye-off" : "eye"} size={24} color="#666" />
+                                <MaterialCommunityIcons name={showPin ? "eye-off" : "eye"} size={24} color={colors.secondaryText} />
                             </TouchableOpacity>
                         </View>
-                        <Text style={styles.helperText}>Leave empty for no PIN protection</Text>
+                        <Text style={[styles.helperText, { color: colors.secondaryText }]}>Leave empty for no PIN protection</Text>
 
-                        <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={loading}>
+                        <TouchableOpacity style={[styles.saveButton, { backgroundColor: colors.primaryAction }]} onPress={handleSave} disabled={loading}>
                             {loading ? <ActivityIndicator color="white" /> : <Text style={styles.saveText}>Save Changes</Text>}
                         </TouchableOpacity>
                     </View>
                 </View>
-            </SafeAreaView>
+            </View>
         </TouchableWithoutFeedback>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#f8f9fa',
-    },
     header: {
-        padding: 16,
-        backgroundColor: 'white',
-        borderBottomWidth: 1,
-        borderBottomColor: '#eee',
+        paddingHorizontal: SPACING.screenPadding,
+        paddingBottom: SPACING.m,
+        paddingTop: SPACING.s,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
     },
     backButton: {
-        paddingRight: 16,
+        padding: 4,
     },
     title: {
-        fontSize: 18,
-        fontWeight: 'bold',
+        fontSize: TYPOGRAPHY.size.h3,
+        fontWeight: TYPOGRAPHY.weight.bold,
     },
     content: {
         flex: 1,
-        padding: 24,
+        padding: SPACING.screenPadding,
+        marginTop: SPACING.l,
     },
     avatarContainer: {
         alignSelf: 'center',
         marginBottom: 32,
         position: 'relative',
     },
-    avatar: {
-        width: 100,
-        height: 100,
-        borderRadius: 50,
-        backgroundColor: '#ccc',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
     editIconBadge: {
         position: 'absolute',
         bottom: 0,
         right: 0,
-        backgroundColor: '#007AFF',
         width: 32,
         height: 32,
         borderRadius: 16,
@@ -161,26 +166,21 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     label: {
-        fontSize: 14,
+        fontSize: TYPOGRAPHY.size.small,
         fontWeight: '600',
-        color: '#666',
         marginBottom: 8,
-        marginLeft: 4,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
     },
     input: {
-        backgroundColor: 'white',
         borderWidth: 1,
-        borderColor: '#ddd',
         borderRadius: 12,
         padding: 14,
-        fontSize: 16,
+        fontSize: TYPOGRAPHY.size.body,
         marginBottom: 20,
-        color: '#333',
     },
     disabledInput: {
-        backgroundColor: '#f0f0f0',
         borderWidth: 1,
-        borderColor: '#eee',
         borderRadius: 12,
         padding: 14,
         flexDirection: 'row',
@@ -189,29 +189,25 @@ const styles = StyleSheet.create({
         marginBottom: 32,
     },
     disabledText: {
-        fontSize: 16,
-        color: '#999',
+        fontSize: TYPOGRAPHY.size.body,
     },
     saveButton: {
-        backgroundColor: '#007AFF',
         paddingVertical: 16,
-        borderRadius: 12,
+        borderRadius: 16,
         alignItems: 'center',
-        shadowColor: '#007AFF',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
+        shadowOpacity: 0.2,
         shadowRadius: 8,
         elevation: 4,
+        marginTop: SPACING.l,
     },
     saveText: {
         color: 'white',
         fontWeight: 'bold',
-        fontSize: 16,
-        fontSize: 16,
+        fontSize: TYPOGRAPHY.size.body,
     },
     helperText: {
-        fontSize: 12,
-        color: '#999',
+        fontSize: TYPOGRAPHY.size.caption,
         marginTop: 4,
         marginBottom: 20,
         marginLeft: 4
@@ -219,7 +215,7 @@ const styles = StyleSheet.create({
     pinContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 4 // Space for helper text
+        marginBottom: 4
     },
     eyeButton: {
         position: 'absolute',

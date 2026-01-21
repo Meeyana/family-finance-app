@@ -13,11 +13,14 @@ import CurrencyText from '../components/CurrencyText';
 import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
 import { useTheme } from '../components/context/ThemeContext';
 import ExpensePieChart from '../components/ExpensePieChart';
+import { useVisibility } from '../components/context/VisibilityContext';
+import Avatar from '../components/Avatar';
 
 export default function AnalyzeScreen({ navigation }) {
     const { userProfiles, profile } = useAuth();
     const { theme } = useTheme();
     const colors = COLORS[theme];
+    const { isValuesHidden, toggleVisibility } = useVisibility();
 
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -151,9 +154,14 @@ export default function AnalyzeScreen({ navigation }) {
                     {/* Header Row - Matching Overview Structure */}
                     <View style={[styles.header, { marginTop: 10 }]}>
                         <View style={styles.headerLeft}>
-                            <View style={[styles.avatarContainer, { backgroundColor: '#ffffff' }]}>
-                                <Text style={{ fontSize: 24 }}>{profile?.avatar || '👤'}</Text>
-                            </View>
+                            <Avatar
+                                name={profile?.name}
+                                avatarId={profile?.avatarId}
+                                size={44}
+                                backgroundColor="#ffffff"
+                                textColor="#3e2723"
+                                style={{ borderWidth: 1, borderColor: '#eeeeee' }}
+                            />
                             <View>
                                 <Text style={[styles.screenTitle, { color: '#3e2723' }]}>Analysis</Text>
                             </View>
@@ -211,11 +219,15 @@ export default function AnalyzeScreen({ navigation }) {
                                     <Ionicons name="wallet-outline" size={14} color="#4CAF50" />
                                 </View>
                                 <Text style={{ color: '#8d6e63', fontSize: 14, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>NET CASHFLOW</Text>
+                                <TouchableOpacity onPress={toggleVisibility} style={{ marginLeft: 'auto' }}>
+                                    <Ionicons name={isValuesHidden ? "eye-off-outline" : "eye-outline"} size={18} color="#8d6e63" />
+                                </TouchableOpacity>
                             </View>
 
                             <CurrencyText
                                 amount={viewData?.netCashflow}
                                 showSign={false}
+                                hideable={true}
                                 style={{ fontSize: 26, fontWeight: '700', color: '#6ca749', marginVertical: 4 }}
                                 symbolStyle={{ fontSize: 26, fontWeight: '700', color: '#6ca749' }}
                             />
@@ -241,7 +253,7 @@ export default function AnalyzeScreen({ navigation }) {
                                     </View>
                                 </View>
                                 <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
-                                    <CurrencyText amount={viewData?.totalIncome} showSign={false} style={{ fontSize: 18, fontWeight: '600', color: '#111111' }} />
+                                    <CurrencyText amount={viewData?.totalIncome} showSign={false} hideable={true} style={{ fontSize: 18, fontWeight: '600', color: '#111111' }} />
                                     {viewData?.incomeDiffPercent !== undefined && viewData.incomeDiffPercent !== 0 && (
                                         <Text style={{ fontSize: 11, fontWeight: '600', color: viewData.incomeDiffPercent >= 0 ? '#4CAF50' : '#F44336' }}>
                                             {viewData.incomeDiffPercent > 0 ? '▲' : '▼'}{Math.abs(viewData.incomeDiffPercent).toFixed(0)}%
@@ -258,7 +270,7 @@ export default function AnalyzeScreen({ navigation }) {
                                     </View>
                                 </View>
                                 <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6, justifyContent: 'flex-end' }}>
-                                    <CurrencyText amount={Math.abs(viewData?.totalSpent || 0)} showSign={false} style={{ fontSize: 18, fontWeight: '600', color: '#111111' }} />
+                                    <CurrencyText amount={Math.abs(viewData?.totalSpent || 0)} showSign={false} hideable={true} style={{ fontSize: 18, fontWeight: '600', color: '#111111' }} />
                                     {viewData?.expenseDiffPercent !== undefined && viewData.expenseDiffPercent !== 0 && (
                                         <Text style={{ fontSize: 11, fontWeight: '600', color: viewData.expenseDiffPercent <= 0 ? '#4CAF50' : '#F44336' }}>
                                             {viewData.expenseDiffPercent > 0 ? '▲' : '▼'}{Math.abs(viewData.expenseDiffPercent).toFixed(0)}%

@@ -5,6 +5,7 @@ import { auth } from '../services/firebase';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
+import Avatar from '../components/Avatar';
 
 const DEMO_CREDENTIALS = {
     email: 'demo@quanlychitieu.com',
@@ -60,6 +61,9 @@ export default function LoginScreen() {
                 >
                     <View style={styles.header}>
                         <View style={[styles.iconContainer, { backgroundColor: colors.primaryAction + '10' }]}>
+                            {/* <Ionicons name="wallet-outline" size={40} color={colors.primaryAction} /> */}
+                            {/* Use generic Avatar or Icon for Login Screen Logo if desired, strictly requested to replace 'all' avatars but this is a logo. */}
+                            {/* Keeping the wallet logo as it is not a user avatar. */}
                             <Ionicons name="wallet-outline" size={40} color={colors.primaryAction} />
                         </View>
                         <Text style={[styles.title, { color: colors.primaryText }]}>Family Finance</Text>

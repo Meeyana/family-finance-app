@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, FlatList, StyleSheet, useColorScheme } fr
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../components/context/AuthContext';
+import Avatar from '../components/Avatar';
 import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
 
 export default function ManageProfilesScreen({ navigation }) {
@@ -20,9 +21,13 @@ export default function ManageProfilesScreen({ navigation }) {
             onPress={() => navigation.navigate('EditProfile', { profile: item })}
         >
             <View style={styles.itemLeft}>
-                <View style={[styles.avatar, { backgroundColor: colors.surface }]}>
-                    <Text style={[styles.avatarText, { color: colors.primaryText }]}>{item.name[0]}</Text>
-                </View>
+                <Avatar
+                    name={item.name}
+                    avatarId={item.avatarId}
+                    size={48}
+                    backgroundColor={colors.surface}
+                    textColor={colors.primaryText}
+                />
                 <View>
                     <Text style={[styles.name, { color: colors.primaryText }]}>{item.name}</Text>
                     <Text style={[styles.role, { color: colors.secondaryText }]}>{item.role}</Text>
@@ -33,13 +38,13 @@ export default function ManageProfilesScreen({ navigation }) {
     );
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <SafeAreaView style={[styles.container, { backgroundColor: '#ffffff' }]}>
             {/* Header */}
-            <View style={[styles.header, { borderBottomColor: colors.divider }]}>
+            <View style={[styles.header, { borderBottomColor: colors.divider, backgroundColor: '#ffffff' }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                    <Ionicons name="arrow-back" size={24} color={colors.primaryText} />
+                    <Ionicons name="arrow-back" size={24} color="#3e2723" />
                 </TouchableOpacity>
-                <Text style={[styles.title, { color: colors.primaryText }]}>Manage Profiles</Text>
+                <Text style={[styles.title, { color: '#3e2723' }]}>Manage Profiles</Text>
                 <TouchableOpacity onPress={() => navigation.navigate('EditProfile', { isNew: true, profile: {} })} >
                     <Ionicons name="add" size={28} color={colors.primaryAction} />
                 </TouchableOpacity>

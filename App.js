@@ -14,14 +14,17 @@ if (Platform.OS === 'web') {
 }
 
 import { ThemeProvider, useTheme } from './src/components/context/ThemeContext';
+import { VisibilityProvider } from './src/components/context/VisibilityContext';
 
 const MainLayout = () => {
   const { theme } = useTheme();
   return (
     <SafeAreaProvider>
       <AuthProvider>
-        <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
-        <RootNavigator />
+        <VisibilityProvider>
+          <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
+          <RootNavigator />
+        </VisibilityProvider>
       </AuthProvider>
     </SafeAreaProvider>
   );

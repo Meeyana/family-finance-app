@@ -1,6 +1,7 @@
 import React from 'react';
 import { Text } from 'react-native';
 import { TYPOGRAPHY } from '../constants/theme';
+import { useVisibility } from './context/VisibilityContext';
 
 const CURRENCIES = {
     VND: { symbol: 'đ', position: 'suffix' },
@@ -8,7 +9,7 @@ const CURRENCIES = {
     EUR: { symbol: '€', position: 'suffix' },
 };
 
-export default function CurrencyText({ amount, currency = 'VND', style, symbolStyle, showSign = false }) {
+export default function CurrencyText({ amount, currency = 'VND', style, symbolStyle, showSign = false, hideable = false }) {
     const config = CURRENCIES[currency] || CURRENCIES.VND;
 
     // Ensure amount is a number
@@ -21,6 +22,12 @@ export default function CurrencyText({ amount, currency = 'VND', style, symbolSt
     // Actually standard toLocaleString usually handles minus, but since we split symbol, better to handle sign explicitly.
 
     const finalSign = numValue < 0 ? '-' : (showSign && numValue > 0 ? '+' : '');
+
+    const { isValuesHidden } = useVisibility();
+
+    if (isValuesHidden && hideable) {
+        return <Text style={style}>******</Text>;
+    }
 
     return (
         <Text style={style} numberOfLines={1}>

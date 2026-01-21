@@ -58,7 +58,7 @@ export default function SettingsScreen({ navigation }) {
                     icon="person-outline"
                     label="My Profile"
                     subtext="Edit personal details"
-                    onPress={() => navigation.navigate('ProfileDashboard', { profile })}
+                    onPress={() => navigation.navigate('EditProfile', { profile, isNew: false })}
                 />
 
                 {/* Preferences Section */}

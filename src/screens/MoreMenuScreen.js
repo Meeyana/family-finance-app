@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Platform }
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../components/context/AuthContext';
+import Avatar from '../components/Avatar';
 import { signOut } from 'firebase/auth';
 import { auth } from '../services/firebase';
 import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
@@ -102,12 +103,17 @@ export default function MoreMenuScreen({ navigation }) {
                 {/* Profile Summary Card */}
                 <TouchableOpacity
                     style={[styles.profileCard, { backgroundColor: '#e8f5e9', elevation: 1, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, shadowOffset: { width: 0, height: 2 } }]}
-                    onPress={() => navigation.navigate('ProfileDashboard', { profile })}
+                    onPress={() => navigation.navigate('EditProfile', { profile, isNew: false })}
                 >
                     {/* Ensure Avatar is Circle */}
-                    <View style={{ width: 48, height: 48, borderRadius: 24, overflow: 'hidden', backgroundColor: '#ffffff', justifyContent: 'center', alignItems: 'center' }}>
-                        <Text style={{ fontSize: 24 }}>{profile?.avatar || '👤'}</Text>
-                    </View>
+                    <Avatar
+                        name={profile?.name}
+                        avatarId={profile?.avatarId}
+                        size={48}
+                        backgroundColor="#ffffff"
+                        textColor="#3e2723"
+                        fontSize={24}
+                    />
 
                     <View>
                         <Text style={[styles.profileName, { color: '#111111' }]}>{profile?.name}</Text>
