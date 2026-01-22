@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator,
 import { useTheme } from '../components/context/ThemeContext';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../services/firebase';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
 import { Alert } from 'react-native';
@@ -14,6 +14,7 @@ const DEMO_CREDENTIALS = {
 };
 
 export default function LoginScreen({ navigation }) {
+    const insets = useSafeAreaInsets();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
@@ -186,52 +187,60 @@ export default function LoginScreen({ navigation }) {
                         </TouchableOpacity>
                     </View>
 
-                    {/* Forgot Password Modal */}
+                    {/* Forgot Password Modal - Full Screen */}
                     <Modal
                         animationType="slide"
-                        transparent={true}
+                        transparent={false}
                         visible={resetModalVisible}
                         onRequestClose={() => setResetModalVisible(false)}
                     >
-                        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                            <View style={[styles.modalOverlay, { backgroundColor: colors.modalOverlay }]}>
-                                <View style={[styles.modalContent, { backgroundColor: colors.cardBackground }]}>
-                                    <View style={styles.modalHeader}>
-                                        <Text style={[styles.modalTitle, { color: colors.primaryText }]}>Forgot Password</Text>
-                                        <TouchableOpacity onPress={() => setResetModalVisible(false)}>
-                                            <Ionicons name="close" size={24} color={colors.primaryText} />
+                        <View style={[styles.modalFullScreen, { backgroundColor: colors.background, paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+                            <KeyboardAvoidingView
+                                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                                style={styles.modalKeyboardView}
+                            >
+                                <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                                    <View style={styles.modalInnerContent}>
+                                        <View style={styles.modalHeader}>
+                                            <Text style={[styles.modalTitle, { color: colors.primaryText }]}>Forgot Password</Text>
+                                            <TouchableOpacity onPress={() => setResetModalVisible(false)}>
+                                                <Ionicons name="close" size={24} color={colors.primaryText} />
+                                            </TouchableOpacity>
+                                        </View>
+
+                                        <Text style={[styles.modalSubtitle, { color: colors.secondaryText }]}>
+                                            Enter your email address and we'll send you a link to reset your password.
+                                        </Text>
+
+                                        <View style={styles.inputContainer}>
+                                            <Text style={[styles.label, { color: colors.secondaryText }]}>Email</Text>
+                                            <TextInput
+                                                style={[styles.input, { backgroundColor: colors.inputBackground, color: colors.primaryText, borderColor: colors.divider }]}
+                                                placeholder="name@example.com"
+                                                placeholderTextColor={colors.secondaryText}
+                                                value={resetEmail}
+                                                onChangeText={setResetEmail}
+                                                autoCapitalize="none"
+                                                keyboardType="email-address"
+                                                autoFocus
+                                            />
+                                        </View>
+
+                                        <TouchableOpacity
+                                            style={[styles.button, { backgroundColor: '#6ca749', marginTop: SPACING.l }]}
+                                            onPress={handleSendResetEmail}
+                                            disabled={resetLoading}
+                                        >
+                                            {resetLoading ? (
+                                                <ActivityIndicator color="#fff" />
+                                            ) : (
+                                                <Text style={styles.buttonText}>Recover Password</Text>
+                                            )}
                                         </TouchableOpacity>
                                     </View>
-
-                                    <Text style={[styles.modalSubtitle, { color: colors.secondaryText }]}>
-                                        Enter your email address and we'll send you a link to reset your password.
-                                    </Text>
-
-                                    <TextInput
-                                        style={[styles.input, { backgroundColor: colors.inputBackground, color: colors.primaryText, borderColor: colors.divider, marginBottom: 24 }]}
-                                        placeholder="name@example.com"
-                                        placeholderTextColor={colors.secondaryText}
-                                        value={resetEmail}
-                                        onChangeText={setResetEmail}
-                                        autoCapitalize="none"
-                                        keyboardType="email-address"
-                                        autoFocus
-                                    />
-
-                                    <TouchableOpacity
-                                        style={[styles.button, { backgroundColor: '#6ca749', marginTop: 0 }]}
-                                        onPress={handleSendResetEmail}
-                                        disabled={resetLoading}
-                                    >
-                                        {resetLoading ? (
-                                            <ActivityIndicator color="#fff" />
-                                        ) : (
-                                            <Text style={styles.buttonText}>Recover Password</Text>
-                                        )}
-                                    </TouchableOpacity>
-                                </View>
-                            </View>
-                        </TouchableWithoutFeedback>
+                                </TouchableWithoutFeedback>
+                            </KeyboardAvoidingView>
+                        </View>
                     </Modal>
 
                 </KeyboardAvoidingView>
@@ -330,32 +339,31 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '500',
     },
-    // Modal Styles
-    modalOverlay: {
+    // Modal Styles - Full Screen
+    modalFullScreen: {
         flex: 1,
-        justifyContent: 'flex-end', // Bottom sheet style or center
-        backgroundColor: 'rgba(0,0,0,0.5)',
     },
-    modalContent: {
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
-        padding: 24,
-        paddingBottom: 48,
-        minHeight: '40%',
+    modalKeyboardView: {
+        flex: 1,
+    },
+    modalInnerContent: {
+        flex: 1,
+        paddingHorizontal: SPACING.l,
+        paddingTop: SPACING.m,
     },
     modalHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 16,
+        marginBottom: SPACING.xl,
     },
     modalTitle: {
-        fontSize: 20,
+        fontSize: TYPOGRAPHY.size.h2,
         fontWeight: 'bold',
     },
     modalSubtitle: {
-        fontSize: 14,
-        marginBottom: 24,
-        lineHeight: 20,
+        fontSize: TYPOGRAPHY.size.body,
+        marginBottom: SPACING.xl,
+        lineHeight: 22,
     }
 });
