@@ -8,6 +8,7 @@ import { useTheme } from '../components/context/ThemeContext';
 import { COLORS } from '../constants/theme';
 
 import LoginScreen from '../screens/LoginScreen';
+import OnboardingProfileScreen from '../screens/OnboardingProfileScreen';
 import HomeScreen from '../screens/HomeScreen'; // Profile Selector
 import AccountDashboard from '../screens/AccountDashboard';
 import TransactionListScreen from '../screens/TransactionListScreen';
@@ -16,7 +17,7 @@ import AddTransactionScreen from '../screens/AddTransactionScreen';
 import ManageCategoriesScreen from '../screens/ManageCategoriesScreen';
 import MoreMenuScreen from '../screens/MoreMenuScreen';
 import SettingsScreen from '../screens/SettingsScreen';
-import ManageProfilesScreen from '../screens/ManageProfilesScreen'; // Import
+import ManageProfilesScreen from '../screens/ManageProfilesScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
 import AnalyzeScreen from '../screens/AnalyzeScreen';
 import MoneyRequestScreen from '../screens/MoneyRequestScreen';
@@ -45,11 +46,11 @@ const CustomTabBarButton = ({ children, onPress, theme }) => {
                 width: 56,
                 height: 56,
                 borderRadius: 28,
-                backgroundColor: colors.primaryAction, // Black (Light) / White (Dark)
+                backgroundColor: colors.primaryAction,
                 justifyContent: 'center',
                 alignItems: 'center',
                 borderWidth: 4,
-                borderColor: colors.background // Creates a cutout effect
+                borderColor: colors.background
             }}>
                 {children}
             </View>
@@ -66,27 +67,25 @@ const NavIcon = ({ name, focused, color, size }) => {
 
     return (
         <View style={{ alignItems: 'center', justifyContent: 'center', width: TAB_WIDTH }}>
-            {/* 1. Continuous Grey Line Segment (top of the bar) */}
             <View style={{
                 position: 'absolute',
-                top: -8, // Flush with top (paddingTop is 8)
+                top: -8,
                 left: 0,
                 right: 0,
                 height: 1,
-                backgroundColor: colors.divider, // The "new grey line"
+                backgroundColor: colors.divider,
             }} />
 
-            {/* 2. Active Indicator (Sits on top/inside the grey line) */}
             {focused && (
                 <View style={{
                     position: 'absolute',
-                    top: -8, // Same level as grey line
+                    top: -8,
                     width: 40,
                     height: 4,
                     backgroundColor: color,
                     borderBottomLeftRadius: 4,
                     borderBottomRightRadius: 4,
-                    zIndex: 10, // Ensure strictly on top
+                    zIndex: 10,
                 }} />
             )}
             <Ionicons name={name} size={size - 2} color={color} />
@@ -94,7 +93,6 @@ const NavIcon = ({ name, focused, color, size }) => {
     );
 };
 
-// 1. Adult Tabs (Owner/Partner)
 function DashboardTabs() {
     const { theme } = useTheme();
     const colors = COLORS[theme];
@@ -103,11 +101,11 @@ function DashboardTabs() {
         headerShown: false,
         tabBarStyle: {
             backgroundColor: colors.background,
-            borderTopWidth: 0, // HIDE default grey line
+            borderTopWidth: 0,
             elevation: 0,
-            height: 88, // Reduced from 100 to push down
+            height: 88,
             paddingTop: 8,
-            paddingBottom: 30, // Safe area
+            paddingBottom: 30,
             shadowOpacity: 0,
         },
         tabBarActiveTintColor: colors.primaryAction,
@@ -142,7 +140,7 @@ function DashboardTabs() {
             />
             <Tab.Screen
                 name="Add"
-                component={View} // Dummy component
+                component={View}
                 listeners={({ navigation }) => ({
                     tabPress: (e) => {
                         e.preventDefault();
@@ -151,7 +149,7 @@ function DashboardTabs() {
                 })}
                 options={{
                     tabBarIcon: ({ focused }) => (
-                        <Ionicons name="add" size={32} color={colors.background} /> // Inverse color icon
+                        <Ionicons name="add" size={32} color={colors.background} />
                     ),
                     tabBarButton: (props) => (
                         <CustomTabBarButton {...props} theme={theme} />
@@ -179,7 +177,6 @@ function DashboardTabs() {
     );
 }
 
-// 2. Child Tabs
 function ChildTabs() {
     const { theme } = useTheme();
     const colors = COLORS[theme];
@@ -188,8 +185,8 @@ function ChildTabs() {
         headerShown: false,
         tabBarStyle: {
             backgroundColor: colors.background,
-            borderTopWidth: 0, // HIDE default grey line
-            height: 88, // Reduced from 100
+            borderTopWidth: 0,
+            height: 88,
             paddingTop: 8,
             paddingBottom: 30,
             elevation: 0,
@@ -226,7 +223,7 @@ function ChildTabs() {
             />
             <Tab.Screen
                 name="Add"
-                component={View} // Dummy component
+                component={View}
                 listeners={({ navigation }) => ({
                     tabPress: (e) => {
                         e.preventDefault();
@@ -264,7 +261,7 @@ function ChildTabs() {
 }
 
 export default function AppStack() {
-    const { user, profile, loading } = useAuth();
+    const { user, userProfiles, profile, loading } = useAuth();
     const { theme } = useTheme();
 
     if (loading) {
@@ -278,6 +275,8 @@ export default function AppStack() {
         }}>
             {!user ? (
                 <Stack.Screen name="Login" component={LoginScreen} />
+            ) : (!userProfiles || userProfiles.length === 0) ? (
+                <Stack.Screen name="OnboardingProfile" component={OnboardingProfileScreen} />
             ) : !profile ? (
                 <Stack.Screen name="ProfileSelection" component={HomeScreen} />
             ) : (
@@ -295,7 +294,6 @@ export default function AppStack() {
                         component={AddTransactionScreen}
                         options={{ presentation: 'modal' }}
                     />
-                    {/* Simplified Headers for Stack Screens */}
                     <Stack.Screen name="ManageCategories" component={ManageCategoriesScreen} options={{ headerShown: true, title: 'Manage Categories' }} />
                     <Stack.Screen name="ManageProfiles" component={ManageProfilesScreen} options={{ headerShown: true, title: 'Manage Profiles' }} />
                     <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ headerShown: true, title: 'Edit Profile' }} />
@@ -304,9 +302,6 @@ export default function AppStack() {
                     <Stack.Screen name="RequestList" component={RequestListScreen} />
                     <Stack.Screen name="GrantMoney" component={GrantMoneyScreen} />
                     <Stack.Screen name="Recurring" component={RecurringScreen} options={{ headerShown: false }} />
-
-
-                    {/* Phase 7: Goals */}
                     <Stack.Screen name="Goals" component={GoalScreen} options={{ headerShown: true, title: 'Savings Goals' }} />
                     <Stack.Screen name="GoalDetail" component={GoalDetailScreen} options={{ headerShown: true, title: 'Goal Details' }} />
                 </>

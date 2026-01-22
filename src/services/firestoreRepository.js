@@ -28,7 +28,7 @@ const DEFAULT_PROFILES = [
     { id: 'child', name: 'Kid', role: 'Child', limit: 500000, spent: 0 }
 ];
 
-const DEFAULT_CATEGORIES = [
+export const DEFAULT_CATEGORIES = [
     { id: 'food', name: 'Food', icon: '🍔', type: 'expense' },
     { id: 'transport', name: 'Transport', icon: '🚕', type: 'expense' },
     { id: 'utilities', name: 'Utilities', icon: '💡', type: 'expense' },
@@ -57,18 +57,39 @@ export const initializeFamily = async (uid, email) => {
         // 1. Create Root Family Document (Global Budget)
         await setDoc(familyRef, {
             ownerEmail: email,
-            ownerEmail: email,
             createdAt: new Date().toISOString()
         });
 
-        // 2. Create Default Profiles
-        const profilesCol = collection(familyRef, 'profiles');
-        for (const p of DEFAULT_PROFILES) {
-            await setDoc(doc(profilesCol, p.id), { ...p, earned: 0 });
-        }
+        // 2. Create Default Profiles - REMOVED
+        // We now rely on the Onboarding Wizard to create the specific profiles (Owner, etc.)
+        // const profilesCol = collection(familyRef, 'profiles');
+        // for (const p of DEFAULT_PROFILES) {
+        //    await setDoc(doc(profilesCol, p.id), { ...p, earned: 0 });
+        // }
         return true;
     }
     return false; // Already exists
+};
+
+/**
+ * Initialize Root User License (Required for Security Rules)
+ * Creates /users/{uid} to track Trial/Premium status
+ */
+export const initializeUserLicense = async (uid, email) => {
+    const userRef = doc(db, 'users', uid);
+    const userSnap = await getDoc(userRef);
+
+    if (!userSnap.exists()) {
+        console.log('🔑 Creating User License Doc for:', uid);
+        await setDoc(userRef, {
+            email,
+            createdAt: new Date(), // Timestamp for Trial check
+            isUnlimited: false,
+            isPremium: null
+        });
+        return true;
+    }
+    return false;
 };
 
 /**
@@ -88,6 +109,16 @@ export const getFamilySettings = async (uid) => {
     const familyRef = getFamilyRef(uid);
     const snap = await getDoc(familyRef);
     return snap.exists() ? snap.data() : null;
+};
+
+/**
+ * Update family settings (Language, Currency, etc.)
+ */
+export const updateFamilySettings = async (uid, settings) => {
+    const familyRef = getFamilyRef(uid);
+    // Use setDoc with merge: true so it creates the doc if missing
+    await setDoc(familyRef, settings, { merge: true });
+    return true;
 };
 
 // ------------------------------------------------------------------

@@ -60,17 +60,31 @@ export const AuthProvider = ({ children }) => {
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (u) => {
             // LOG: Auth state change detected
-            console.log(`🔐 AuthContext: Auth State Changed. User: ${u ? u.email : 'None'}`);
+            console.log(`🔐 AuthContext: Auth State Changed. User: ${u ? u.email : 'None'} (Verified: ${u?.emailVerified})`);
+
+            // STRICT VERIFICATION RULE:
+            // Only set 'user' if email is verified OR if it is the Demo User.
+            // This prevents "Jumping to Onboarding" before verification.
+            const isDemoUser = u && u.email === 'demo@quanlychitieu.com';
+
+            if (u && !u.emailVerified && !isDemoUser) {
+                console.log("🔒 AuthContext: User email not verified. Treating as logged out for Navigation.");
+                setUser(null);
+                setUserProfiles([]);
+                setProfile(null);
+                setLoading(false);
+                return;
+            }
 
             setUser(u);
 
             if (u) {
                 try {
-                    // IMPLEMENTED: Auto-init family structure
-                    await initializeFamily(u.uid, u.email || 'anon');
+                    // REMOVED: Auto-init family structure (moved to SignUpScreen to avoid race conditions)
+                    // await initializeFamily(u.uid, u.email || 'anon');
 
-                    // IMPLEMENTED: Auto-init categories (Phase 2.1)
-                    await initializeCategories(u.uid);
+                    // REMOVED: Auto-init categories (moved to SignUpScreen)
+                    // await initializeCategories(u.uid);
 
                     const profiles = await getFamilyProfiles(u.uid);
                     console.log(`📂 AuthContext: Loaded ${profiles.length} profiles from Firestore`);

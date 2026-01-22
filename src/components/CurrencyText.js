@@ -2,24 +2,34 @@ import React from 'react';
 import { Text } from 'react-native';
 import { TYPOGRAPHY } from '../constants/theme';
 import { useVisibility } from './context/VisibilityContext';
+import { useSettings } from './context/SettingsContext';
 
 const CURRENCIES = {
-    VND: { symbol: 'đ', position: 'suffix' },
-    USD: { symbol: '$', position: 'prefix' },
-    EUR: { symbol: '€', position: 'suffix' },
+    VND: { symbol: 'đ', position: 'suffix', rate: 1 },
+    USD: { symbol: '$', position: 'prefix', rate: 0.000041 }, // Approx rate
 };
 
-export default function CurrencyText({ amount, currency = 'VND', style, symbolStyle, showSign = false, hideable = false }) {
-    const config = CURRENCIES[currency] || CURRENCIES.VND;
+export default function CurrencyText({ amount, currency: propCurrency, style, symbolStyle, showSign = false, hideable = false }) {
+    const { currency: globalCurrency } = useSettings();
+    const targetCurrency = propCurrency || globalCurrency || 'VND';
+    const config = CURRENCIES[targetCurrency] || CURRENCIES.VND;
 
-    // Ensure amount is a number and Round for global consistency (VND usually no decimals)
-    const numValue = Math.round(Number(amount) || 0);
+    // TODO: Implement real exchange rate conversion if needed.
+    // For now, we assume the amount passed in is ALREADY in the target currency
+    // OR we just display the symbol. 
+    // If the storage is always VND, we might need conversion here.
+    // Assumption: The App stores numbers. If user switches currency, 
+    // we should ideally convert all numbers or just show the new symbol?
+    // User request: "Choose currency (vnd default)" implying the Whole App uses that currency.
+    // So we just format the number with that symbol.
+
+    // Ensure amount is a number
+    const numValue = Number(amount) || 0;
     const absValue = Math.abs(numValue);
-    const formattedValue = absValue.toLocaleString();
 
-    const sign = showSign && numValue > 0 ? '+' : (numValue < 0 ? '-' : '');
-    // Note: if numValue < 0, formatting absValue removes sign, so we must add it back manually if we want controlled sign placement.
-    // Actually standard toLocaleString usually handles minus, but since we split symbol, better to handle sign explicitly.
+    // Format: VND usually no decimals, USD has 2
+    const digits = targetCurrency === 'VND' ? 0 : 2;
+    const formattedValue = absValue.toLocaleString('en-US', { minimumFractionDigits: digits, maximumFractionDigits: digits });
 
     const finalSign = numValue < 0 ? '-' : (showSign && numValue > 0 ? '+' : '');
 

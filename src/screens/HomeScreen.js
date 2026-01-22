@@ -287,25 +287,25 @@ export default function HomeScreen({ navigation }) {
 
             {/* Create PIN Modal (Setup) */}
             <Modal
-                animationType="slide"
+                animationType="fade"
                 transparent={true}
                 visible={createPinModalVisible}
                 onRequestClose={() => setCreatePinModalVisible(false)}
             >
                 <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                    <View style={[styles.modalOverlay, { backgroundColor: colors.modalOverlay }]}>
-                        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={[styles.modalContent, { backgroundColor: colors.cardBackground }]}>
-                            <MaterialCommunityIcons name="shield-check" size={48} color={colors.primaryAction} style={{ marginBottom: 16 }} />
-                            <Text style={[styles.modalTitle, { color: colors.primaryText }]}>Protect your Profile</Text>
-                            <Text style={[styles.modalSubtitle, { textAlign: 'center', marginBottom: 24, color: colors.secondaryText }]}>
-                                Set a PIN for {selectedProfileForAuth?.name} to prevent unauthorized access.
-                            </Text>
+                    <KeyboardAvoidingView
+                        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                        style={[styles.modalOverlay, { backgroundColor: colors.modalOverlay }]}
+                    >
+                        <View style={[styles.modalContent, { backgroundColor: colors.cardBackground }]}>
+                            <Text style={[styles.modalTitle, { color: colors.primaryText }]}>Set Up PIN</Text>
+                            <Text style={[styles.modalSubtitle, { color: colors.secondaryText }]}>Create a 4-digit PIN for {selectedProfileForAuth?.name}</Text>
 
                             <TextInput
                                 style={[styles.pinInput, { color: colors.primaryText, borderColor: colors.divider, backgroundColor: colors.inputBackground }]}
                                 value={newPin}
                                 onChangeText={setNewPin}
-                                placeholder="Create PIN (4 digits)"
+                                placeholder="****"
                                 placeholderTextColor={colors.placeholderText}
                                 keyboardType="numeric"
                                 secureTextEntry
@@ -321,8 +321,8 @@ export default function HomeScreen({ navigation }) {
                                     <Text style={[styles.enterText, { color: '#fff' }]}>{creatingPin ? 'Saving...' : 'Set PIN'}</Text>
                                 </TouchableOpacity>
                             </View>
-                        </KeyboardAvoidingView>
-                    </View>
+                        </View>
+                    </KeyboardAvoidingView>
                 </TouchableWithoutFeedback>
             </Modal>
         </SafeAreaView>

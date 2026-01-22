@@ -15,6 +15,7 @@ if (Platform.OS === 'web') {
 
 import { ThemeProvider, useTheme } from './src/components/context/ThemeContext';
 import { VisibilityProvider } from './src/components/context/VisibilityContext';
+import { SettingsProvider } from './src/components/context/SettingsContext';
 
 const AppContent = () => {
   const { theme } = useTheme();
@@ -31,9 +32,11 @@ export default function App() {
     <SafeAreaProvider>
       <AuthProvider>
         <ThemeProvider>
-          <VisibilityProvider>
-            <AppContent />
-          </VisibilityProvider>
+          <SettingsProvider>
+            <VisibilityProvider>
+              <AppContent />
+            </VisibilityProvider>
+          </SettingsProvider>
         </ThemeProvider>
       </AuthProvider>
     </SafeAreaProvider>
