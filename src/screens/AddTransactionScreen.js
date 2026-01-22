@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, DeviceEventEmitter, TouchableWithoutFeedback, Keyboard, useColorScheme } from 'react-native';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, DeviceEventEmitter, TouchableWithoutFeedback, Keyboard, useColorScheme, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -7,12 +7,13 @@ import { auth } from '../services/firebase';
 import { addTransaction, updateTransaction, deleteTransaction, getFamilyCategories } from '../services/firestoreRepository';
 import { validateTransaction } from '../services/transactionService';
 import { useAuth } from '../components/context/AuthContext';
+import { useTheme } from '../components/context/ThemeContext';
 import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
 import { formatMoney, parseMoney } from '../utils/formatting';
 
 export default function AddTransactionScreen({ route, navigation }) {
     const { profile: authProfile } = useAuth();
-    const theme = useColorScheme() || 'light';
+    const { theme } = useTheme();
     const colors = COLORS[theme];
 
     // INPUT: Passed from ProfileDashboard OR Fallback
@@ -27,6 +28,7 @@ export default function AddTransactionScreen({ route, navigation }) {
     const [category, setCategory] = useState(transaction ? transaction.category : '');
     const [note, setNote] = useState(transaction ? transaction.note : '');
     const [date, setDate] = useState(transaction ? transaction.date : new Date().toISOString().split('T')[0]);
+    const [tempDate, setTempDate] = useState(new Date());
 
     // Active Color Theme
     const activeColor = type === 'income' ? colors.success : colors.error;
@@ -63,9 +65,28 @@ export default function AddTransactionScreen({ route, navigation }) {
     }, [type, categories]);
 
     const onDateChange = (event, selectedDate) => {
-        const currentDate = selectedDate || new Date(date);
-        setShowDatePicker(Platform.OS === 'ios');
-        setDate(currentDate.toISOString().split('T')[0]);
+        const currentDate = selectedDate || tempDate;
+        if (Platform.OS === 'android') {
+            setShowDatePicker(false);
+            setDate(currentDate.toISOString().split('T')[0]);
+        } else {
+            setTempDate(currentDate);
+        }
+    };
+
+    const openDatePicker = () => {
+        const [y, m, d] = date.split('-').map(Number);
+        setTempDate(new Date(y, m - 1, d));
+        setShowDatePicker(true);
+    };
+
+    const confirmIOSDate = () => {
+        setDate(tempDate.toISOString().split('T')[0]);
+        setShowDatePicker(false);
+    };
+
+    const setToday = () => {
+        setTempDate(new Date());
     };
 
     const handleSave = async () => {
@@ -167,7 +188,7 @@ export default function AddTransactionScreen({ route, navigation }) {
                     </TouchableOpacity>
 
                     {/* Segmented Control */}
-                    <View style={[styles.segmentContainer, { backgroundColor: colors.surface }]}>
+                    <View style={[styles.segmentContainer, { backgroundColor: colors.inputBackground }]}>
                         <TouchableOpacity
                             style={[styles.segment, type === 'expense' && { backgroundColor: colors.background, shadowOpacity: 0.1 }]}
                             onPress={() => setType('expense')}
@@ -201,7 +222,7 @@ export default function AddTransactionScreen({ route, navigation }) {
                             <TextInput
                                 style={[styles.heroInput, { color: activeColor }]}
                                 placeholder="0"
-                                placeholderTextColor={colors.divider}
+                                placeholderTextColor={colors.placeholderText}
                                 keyboardType="numeric"
                                 value={amount}
                                 onChangeText={(text) => setAmount(formatMoney(text))}
@@ -242,31 +263,21 @@ export default function AddTransactionScreen({ route, navigation }) {
                             {/* DATE */}
                             <View style={{ flex: 1, marginRight: SPACING.m }}>
                                 <Text style={[styles.label, { color: colors.secondaryText }]}>Date</Text>
-                                {Platform.OS === 'ios' ? (
-                                    <DateTimePicker
-                                        value={new Date(date)}
-                                        mode="date"
-                                        display="compact"
-                                        onChange={onDateChange}
-                                        style={{ alignSelf: 'flex-start' }}
-                                    />
-                                ) : (
-                                    <TouchableOpacity
-                                        style={[styles.inputBox, { backgroundColor: colors.surface }]}
-                                        onPress={() => setShowDatePicker(true)}
-                                    >
-                                        <Text style={{ color: colors.primaryText }}>{date}</Text>
-                                    </TouchableOpacity>
-                                )}
+                                <TouchableOpacity
+                                    style={[styles.inputBox, { backgroundColor: colors.inputBackground }]}
+                                    onPress={openDatePicker}
+                                >
+                                    <Text style={{ color: colors.primaryText }}>{date}</Text>
+                                </TouchableOpacity>
                             </View>
 
                             {/* NOTE */}
                             <View style={{ flex: 1 }}>
                                 <Text style={[styles.label, { color: colors.secondaryText }]}>Note</Text>
                                 <TextInput
-                                    style={[styles.inputBox, { backgroundColor: colors.surface, color: colors.primaryText }]}
+                                    style={[styles.inputBox, { backgroundColor: colors.inputBackground, color: colors.primaryText }]}
                                     placeholder="Optional"
-                                    placeholderTextColor={colors.secondaryText}
+                                    placeholderTextColor={colors.placeholderText}
                                     value={note}
                                     onChangeText={setNote}
                                 />
@@ -292,14 +303,53 @@ export default function AddTransactionScreen({ route, navigation }) {
                         </TouchableOpacity>
                     </View>
 
-                    {/* Android Date Modal */}
-                    {Platform.OS === 'android' && showDatePicker && (
-                        <DateTimePicker
-                            value={new Date(date)}
-                            mode="date"
-                            display="default"
-                            onChange={onDateChange}
-                        />
+                    {/* Date Picker Handling */}
+                    {showDatePicker && (
+                        Platform.OS === 'ios' ? (
+                            <Modal
+                                transparent={true}
+                                animationType="fade"
+                                visible={showDatePicker}
+                                onRequestClose={() => setShowDatePicker(false)}
+                            >
+                                <TouchableOpacity
+                                    style={styles.modalOverlay}
+                                    activeOpacity={1}
+                                    onPress={() => setShowDatePicker(false)}
+                                >
+                                    <View style={[styles.datePickerModalContent, { backgroundColor: colors.cardBackground }]}>
+                                        <View style={styles.datePickerHeader}>
+                                            <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                                                <Text style={[styles.headerBtnText, { color: colors.secondaryText }]}>Cancel</Text>
+                                            </TouchableOpacity>
+                                            <TouchableOpacity onPress={setToday}>
+                                                <Text style={[styles.headerBtnText, { color: colors.primaryText, fontWeight: '600' }]}>Today</Text>
+                                            </TouchableOpacity>
+                                            <TouchableOpacity onPress={confirmIOSDate}>
+                                                <Text style={[styles.headerBtnText, { color: colors.primaryAction, fontWeight: 'bold' }]}>OK</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                        <DateTimePicker
+                                            value={tempDate}
+                                            mode="date"
+                                            display="spinner"
+                                            onChange={onDateChange}
+                                            style={{ height: 200 }}
+                                            themeVariant={theme}
+                                            textColor={colors.primaryText} // Important for spinner visibility
+                                            accentColor={colors.primaryAction}
+                                        />
+                                    </View>
+                                </TouchableOpacity>
+                            </Modal>
+                        ) : (
+                            <DateTimePicker
+                                value={new Date(date)}
+                                mode="date"
+                                display="default"
+                                onChange={onDateChange}
+                            />
+                        )
                     )}
 
                 </KeyboardAvoidingView>
@@ -389,7 +439,9 @@ const styles = StyleSheet.create({
         marginBottom: SPACING.xl,
     },
     inputBox: {
-        padding: SPACING.m,
+        paddingHorizontal: SPACING.m,
+        height: 50, // Fixed height for consistency
+        justifyContent: 'center',
         borderRadius: 12,
         fontSize: TYPOGRAPHY.size.body,
     },
@@ -411,5 +463,31 @@ const styles = StyleSheet.create({
         color: 'white',
         fontSize: TYPOGRAPHY.size.body,
         fontWeight: TYPOGRAPHY.weight.bold,
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'flex-end',
+    },
+    datePickerModalContent: {
+        width: '100%',
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        paddingBottom: 40,
+        paddingHorizontal: 16,
+        paddingTop: 16,
+    },
+    datePickerHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingVertical: 12,
+        paddingHorizontal: 8,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+        borderBottomColor: '#333',
+        marginBottom: 8,
+    },
+    headerBtnText: {
+        fontSize: 16,
     },
 });

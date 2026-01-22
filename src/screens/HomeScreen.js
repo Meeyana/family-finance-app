@@ -5,6 +5,7 @@ import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { auth } from '../services/firebase';
 import { signOut } from 'firebase/auth';
 import { useAuth } from '../components/context/AuthContext';
+import { useTheme } from '../components/context/ThemeContext';
 import { updateProfile } from '../services/firestoreRepository';
 import { canViewAccountDashboard } from '../services/permissionService';
 import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
@@ -21,7 +22,7 @@ const ITEM_WIDTH = (width - (SCREEN_PADDING * 2) - ROW_GAP) / 2;
 
 export default function HomeScreen({ navigation }) {
     const { userProfiles, selectProfile, user, refreshProfiles } = useAuth();
-    const theme = useColorScheme() || 'light';
+    const { theme } = useTheme();
     const colors = COLORS[theme];
 
     // Check if any available profile has Owner/Partner role to show the dashboard button
@@ -193,8 +194,8 @@ export default function HomeScreen({ navigation }) {
                         name={item.name}
                         avatarId={item.avatarId}
                         size={ITEM_WIDTH}
-                        backgroundColor={item.avatarId ? 'transparent' : '#E0E0E0'}
-                        textColor="#333333"
+                        backgroundColor={item.avatarId ? 'transparent' : colors.surface}
+                        textColor={colors.primaryText}
                         borderRadius={16}
                         fontSize={48}
                     />
@@ -243,9 +244,9 @@ export default function HomeScreen({ navigation }) {
                 <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
                     <KeyboardAvoidingView
                         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                        style={styles.modalOverlay}
+                        style={[styles.modalOverlay, { backgroundColor: colors.modalOverlay }]}
                     >
-                        <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+                        <View style={[styles.modalContent, { backgroundColor: colors.cardBackground }]}>
                             <Text style={[styles.modalTitle, { color: colors.primaryText }]}>Enter PIN</Text>
                             <Text style={[styles.modalSubtitle, { color: colors.secondaryText }]}>for {selectedProfileForAuth?.name}</Text>
 
@@ -257,11 +258,11 @@ export default function HomeScreen({ navigation }) {
                             ) : (
                                 <>
                                     <TextInput
-                                        style={[styles.pinInput, { color: colors.primaryText, borderColor: pinError ? colors.error : colors.divider }]}
+                                        style={[styles.pinInput, { color: colors.primaryText, borderColor: pinError ? colors.error : colors.divider, backgroundColor: colors.inputBackground }]}
                                         value={enteredPin}
                                         onChangeText={setEnteredPin}
                                         placeholder="****"
-                                        placeholderTextColor={colors.secondaryText}
+                                        placeholderTextColor={colors.placeholderText}
                                         keyboardType="numeric"
                                         secureTextEntry
                                         maxLength={4}
@@ -270,8 +271,8 @@ export default function HomeScreen({ navigation }) {
                                     {pinError ? <Text style={[styles.errorText, { color: colors.error }]}>{pinError}</Text> : null}
 
                                     <View style={styles.modalButtons}>
-                                        <TouchableOpacity style={[styles.cancelButton, { backgroundColor: colors.background }]} onPress={() => setAuthModalVisible(false)}>
-                                            <Text style={[styles.cancelText, { color: colors.secondaryText }]}>Cancel</Text>
+                                        <TouchableOpacity style={[styles.cancelButton, { backgroundColor: colors.surface }]} onPress={() => setAuthModalVisible(false)}>
+                                            <Text style={[styles.cancelText, { color: colors.primaryText }]}>Cancel</Text>
                                         </TouchableOpacity>
                                         <TouchableOpacity style={[styles.enterButton, { backgroundColor: colors.primaryAction }]} onPress={handlePinSubmit}>
                                             <Text style={[styles.enterText, { color: '#fff' }]}>Enter</Text>
@@ -292,8 +293,8 @@ export default function HomeScreen({ navigation }) {
                 onRequestClose={() => setCreatePinModalVisible(false)}
             >
                 <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                    <View style={styles.modalOverlay}>
-                        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={[styles.modalContent, { backgroundColor: colors.background }]}>
+                    <View style={[styles.modalOverlay, { backgroundColor: colors.modalOverlay }]}>
+                        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={[styles.modalContent, { backgroundColor: colors.cardBackground }]}>
                             <MaterialCommunityIcons name="shield-check" size={48} color={colors.primaryAction} style={{ marginBottom: 16 }} />
                             <Text style={[styles.modalTitle, { color: colors.primaryText }]}>Protect your Profile</Text>
                             <Text style={[styles.modalSubtitle, { textAlign: 'center', marginBottom: 24, color: colors.secondaryText }]}>
@@ -301,11 +302,11 @@ export default function HomeScreen({ navigation }) {
                             </Text>
 
                             <TextInput
-                                style={[styles.pinInput, { color: colors.primaryText, borderColor: colors.divider, backgroundColor: colors.surface }]}
+                                style={[styles.pinInput, { color: colors.primaryText, borderColor: colors.divider, backgroundColor: colors.inputBackground }]}
                                 value={newPin}
                                 onChangeText={setNewPin}
                                 placeholder="Create PIN (4 digits)"
-                                placeholderTextColor={colors.secondaryText}
+                                placeholderTextColor={colors.placeholderText}
                                 keyboardType="numeric"
                                 secureTextEntry
                                 maxLength={4}
@@ -314,7 +315,7 @@ export default function HomeScreen({ navigation }) {
 
                             <View style={styles.modalButtons}>
                                 <TouchableOpacity style={[styles.cancelButton, { backgroundColor: colors.surface }]} onPress={handleSkipPin}>
-                                    <Text style={[styles.cancelText, { color: colors.secondaryText }]}>Not Now</Text>
+                                    <Text style={[styles.cancelText, { color: colors.primaryText }]}>Not Now</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity style={[styles.enterButton, { backgroundColor: colors.primaryAction }]} onPress={handleCreatePinSubmit} disabled={creatingPin}>
                                     <Text style={[styles.enterText, { color: '#fff' }]}>{creatingPin ? 'Saving...' : 'Set PIN'}</Text>
@@ -408,7 +409,7 @@ const styles = StyleSheet.create({
     // Modal Styles
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)', // Slightly lighter overlay
+        // backgroundColor handled dynamically
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -419,7 +420,7 @@ const styles = StyleSheet.create({
         paddingTop: 32,
         paddingBottom: 40, // Increased bottom padding significantly
         alignItems: 'center',
-        backgroundColor: '#FFFFFF', // Force white/surface
+        // backgroundColor handled dynamically
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 8 },
         shadowOpacity: 0.15,
@@ -439,7 +440,7 @@ const styles = StyleSheet.create({
     },
     pinInput: {
         width: '100%',
-        backgroundColor: '#F3F4F6', // Filled background
+        // backgroundColor handled dynamically
         borderRadius: 16,
         padding: 16,
         fontSize: 24,

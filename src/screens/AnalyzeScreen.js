@@ -128,17 +128,17 @@ export default function AnalyzeScreen({ navigation }) {
         };
     }, [data, selectedProfileIds, selectedCategories]);
 
-    if (loading) return <View style={styles.center}><ActivityIndicator size="large" color="#6ca749" /></View>;
-    if (error) return <View style={styles.center}><Text style={{ color: colors.error }}>{error}</Text></View>;
+    if (loading) return <View style={[styles.center, { backgroundColor: colors.background }]}><ActivityIndicator size="large" color={colors.primaryAction} /></View>;
+    if (error) return <View style={[styles.center, { backgroundColor: colors.background }]}><Text style={{ color: colors.error }}>{error}</Text></View>;
 
     const allCategories = (data?.current) ? [...new Set(data.current.transactions.filter(t => (t.type || 'expense') === 'expense').map(t => t.category))] : [];
     const categoryOptions = allCategories.map(c => ({ id: c, name: c }));
     const profileOptions = userProfiles.map(p => ({ id: p.id, name: p.name }));
 
     return (
-        <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
-            <View style={{ backgroundColor: '#f7ede2' }}>
-                <SafeAreaView edges={['top', 'left', 'right']} style={{ backgroundColor: '#f7ede2' }} />
+        <View style={{ flex: 1, backgroundColor: colors.background }}>
+            <View style={{ backgroundColor: colors.headerBackground }}>
+                <SafeAreaView edges={['top', 'left', 'right']} style={{ backgroundColor: colors.headerBackground }} />
             </View>
 
             <ScrollView
@@ -149,7 +149,7 @@ export default function AnalyzeScreen({ navigation }) {
             >
 
                 {/* TOP SECTION (Beige) */}
-                <View style={styles.topSection}>
+                <View style={[styles.topSection, { backgroundColor: colors.headerBackground }]}>
 
                     {/* Header Row - Matching Overview Structure */}
                     <View style={[styles.header, { marginTop: 10 }]}>
@@ -158,30 +158,30 @@ export default function AnalyzeScreen({ navigation }) {
                                 name={profile?.name}
                                 avatarId={profile?.avatarId}
                                 size={44}
-                                backgroundColor="#ffffff"
-                                textColor="#3e2723"
-                                style={{ borderWidth: 1, borderColor: '#eeeeee' }}
+                                backgroundColor={colors.cardBackground}
+                                textColor={colors.headerText}
+                                style={{ borderWidth: 1, borderColor: colors.divider }}
                             />
                             <View>
-                                <Text style={[styles.screenTitle, { color: '#3e2723' }]}>Analysis</Text>
+                                <Text style={[styles.screenTitle, { color: colors.headerText }]}>Analysis</Text>
                             </View>
                         </View>
 
                         {/* Filter & Date Row */}
                         <View style={{ flexDirection: 'row', gap: 8 }}>
-                            <TouchableOpacity onPress={() => setShowDateFilter(true)} style={styles.headerButton}>
-                                <MaterialCommunityIcons name="calendar" size={18} color="#8d6e63" />
+                            <TouchableOpacity onPress={() => setShowDateFilter(true)} style={[styles.headerButton, { backgroundColor: colors.iconBackground }]}>
+                                <MaterialCommunityIcons name="calendar" size={18} color={colors.headerIcon} />
                             </TouchableOpacity>
-                            <TouchableOpacity onPress={() => setShowFilters(!showFilters)} style={styles.headerButton}>
-                                <MaterialCommunityIcons name="tune" size={18} color={showFilters ? "#6ca749" : "#8d6e63"} />
+                            <TouchableOpacity onPress={() => setShowFilters(!showFilters)} style={[styles.headerButton, { backgroundColor: colors.iconBackground }]}>
+                                <MaterialCommunityIcons name="tune" size={18} color={showFilters ? colors.primaryAction : colors.headerIcon} />
                             </TouchableOpacity>
                         </View>
                     </View>
 
                     {/* Hero Title */}
                     <View style={{ marginBottom: 20 }}>
-                        <Text style={{ fontSize: 28, fontWeight: '900', color: '#5d4037', lineHeight: 40 }}>
-                            My <Text style={{ color: '#6ca749' }}>Family</Text> Financial
+                        <Text style={{ fontSize: 28, fontWeight: '900', color: colors.headerText, lineHeight: 40 }}>
+                            My <Text style={{ color: colors.primaryAction }}>Family</Text> Financial
                         </Text>
                     </View>
 
@@ -192,7 +192,7 @@ export default function AnalyzeScreen({ navigation }) {
                 <View style={styles.mainCardContainer}>
                     {/* Filter Panel - MOVED HERE */}
                     {showFilters && (
-                        <View style={styles.filterPanel}>
+                        <View style={[styles.filterPanel, { backgroundColor: colors.cardBackground }]}>
                             <MultiSelectDropdown
                                 label="Profile"
                                 options={profileOptions}
@@ -206,21 +206,22 @@ export default function AnalyzeScreen({ navigation }) {
                                 options={categoryOptions}
                                 selectedValues={selectedCategories}
                                 onSelectionChange={setSelectedCategories}
+                                theme={theme}
                                 compact={false}
                             />
                         </View>
                     )}
 
-                    <View style={styles.mainCard}>
+                    <View style={[styles.mainCard, { backgroundColor: colors.cardBackground, shadowColor: colors.shadow }]}>
                         {/* Top: Net Cashflow */}
                         <View style={{ padding: 14, paddingBottom: 10 }}>
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
                                 <View style={{ backgroundColor: '#E8F5E9', padding: 4, borderRadius: 6 }}>
                                     <Ionicons name="wallet-outline" size={14} color="#4CAF50" />
                                 </View>
-                                <Text style={{ color: '#8d6e63', fontSize: 14, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>NET CASHFLOW</Text>
+                                <Text style={{ color: colors.secondaryText, fontSize: 14, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>NET CASHFLOW</Text>
                                 <TouchableOpacity onPress={toggleVisibility} style={{ marginLeft: 'auto' }}>
-                                    <Ionicons name={isValuesHidden ? "eye-off-outline" : "eye-outline"} size={18} color="#8d6e63" />
+                                    <Ionicons name={isValuesHidden ? "eye-off-outline" : "eye-outline"} size={18} color={colors.secondaryText} />
                                 </TouchableOpacity>
                             </View>
 
@@ -228,8 +229,8 @@ export default function AnalyzeScreen({ navigation }) {
                                 amount={viewData?.netCashflow}
                                 showSign={false}
                                 hideable={true}
-                                style={{ fontSize: 26, fontWeight: '700', color: '#6ca749', marginVertical: 4 }}
-                                symbolStyle={{ fontSize: 26, fontWeight: '700', color: '#6ca749' }}
+                                style={{ fontSize: 26, fontWeight: '700', color: colors.primaryAction, marginVertical: 4 }}
+                                symbolStyle={{ fontSize: 26, fontWeight: '700', color: colors.primaryAction }}
                             />
                             {/* Comparison Text */}
                             {viewData?.netDiff !== undefined && (
@@ -241,19 +242,19 @@ export default function AnalyzeScreen({ navigation }) {
                             )}
                         </View>
 
-                        <View style={styles.divider} />
+                        <View style={[styles.divider, { backgroundColor: colors.divider }]} />
 
                         {/* Bottom: Income vs Expense */}
                         <View style={{ flexDirection: 'row', padding: 14, paddingTop: 10 }}>
                             <View style={{ flex: 1 }}>
                                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 2 }}>
-                                    <Text style={{ fontSize: 14, color: '#9e9e9e' }}>Total Income</Text>
-                                    <View style={{ backgroundColor: '#e8f5e9', padding: 2, borderRadius: 8 }}>
-                                        <Ionicons name="trending-up" size={12} color="#4CAF50" />
+                                    <Text style={{ fontSize: 14, color: colors.secondaryText }}>Total Income</Text>
+                                    <View style={{ backgroundColor: colors.success + '20', padding: 2, borderRadius: 8 }}>
+                                        <Ionicons name="trending-up" size={12} color={colors.success} />
                                     </View>
                                 </View>
                                 <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
-                                    <CurrencyText amount={viewData?.totalIncome} showSign={false} hideable={true} style={{ fontSize: 18, fontWeight: '600', color: '#111111' }} />
+                                    <CurrencyText amount={viewData?.totalIncome} showSign={false} hideable={true} style={{ fontSize: 18, fontWeight: '600', color: colors.primaryText }} />
                                     {viewData?.incomeDiffPercent !== undefined && viewData.incomeDiffPercent !== 0 && (
                                         <Text style={{ fontSize: 11, fontWeight: '600', color: viewData.incomeDiffPercent >= 0 ? '#4CAF50' : '#F44336' }}>
                                             {viewData.incomeDiffPercent > 0 ? '▲' : '▼'}{Math.abs(viewData.incomeDiffPercent).toFixed(0)}%
@@ -261,18 +262,18 @@ export default function AnalyzeScreen({ navigation }) {
                                     )}
                                 </View>
                             </View>
-                            <View style={{ width: 1, backgroundColor: '#f5f5f5', marginHorizontal: 16 }} />
+                            <View style={{ width: 1, backgroundColor: colors.divider, marginHorizontal: 16 }} />
                             <View style={{ flex: 1, alignItems: 'flex-end' }}>
                                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 2 }}>
-                                    <Text style={{ fontSize: 14, color: '#9e9e9e' }}>Total Expense</Text>
-                                    <View style={{ backgroundColor: '#ffebee', padding: 2, borderRadius: 8 }}>
-                                        <Ionicons name="trending-down" size={12} color="#f44336" />
+                                    <Text style={{ fontSize: 14, color: colors.secondaryText }}>Total Expense</Text>
+                                    <View style={{ backgroundColor: colors.error + '20', padding: 2, borderRadius: 8 }}>
+                                        <Ionicons name="trending-down" size={12} color={colors.error} />
                                     </View>
                                 </View>
                                 <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6, justifyContent: 'flex-end' }}>
-                                    <CurrencyText amount={Math.abs(viewData?.totalSpent || 0)} showSign={false} hideable={true} style={{ fontSize: 18, fontWeight: '600', color: '#111111' }} />
+                                    <CurrencyText amount={Math.abs(viewData?.totalSpent || 0)} showSign={false} hideable={true} style={{ fontSize: 18, fontWeight: '600', color: colors.primaryText }} />
                                     {viewData?.expenseDiffPercent !== undefined && viewData.expenseDiffPercent !== 0 && (
-                                        <Text style={{ fontSize: 11, fontWeight: '600', color: viewData.expenseDiffPercent <= 0 ? '#4CAF50' : '#F44336' }}>
+                                        <Text style={{ fontSize: 11, fontWeight: '600', color: viewData.expenseDiffPercent <= 0 ? colors.success : colors.error }}>
                                             {viewData.expenseDiffPercent > 0 ? '▲' : '▼'}{Math.abs(viewData.expenseDiffPercent).toFixed(0)}%
                                         </Text>
                                     )}
@@ -283,34 +284,34 @@ export default function AnalyzeScreen({ navigation }) {
                 </View>
 
                 {/* BOTTOM CONTENT */}
-                <View style={styles.bottomSection}>
+                <View style={[styles.bottomSection, { backgroundColor: colors.background }]}>
 
 
 
                     {/* SECONDARY CARDS (Compact) */}
                     <View style={{ flexDirection: 'row', gap: 10, marginBottom: 24, marginTop: 8 }}>
-                        <View style={styles.secondaryCard}>
+                        <View style={[styles.secondaryCard, { backgroundColor: colors.inputBackground }]}>
                             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                <Text style={styles.secondaryLabel}>DAILY AVG</Text>
-                                <View style={styles.miniIconBox}><MaterialCommunityIcons name="chart-timeline-variant" size={12} color="#6ca749" /></View>
+                                <Text style={[styles.secondaryLabel, { color: colors.secondaryText }]}>DAILY AVG</Text>
+                                <View style={[styles.miniIconBox, { backgroundColor: colors.cardBackground }]}><MaterialCommunityIcons name="chart-timeline-variant" size={12} color={colors.primaryAction} /></View>
                             </View>
                             <CurrencyText
                                 amount={Math.round((viewData?.totalSpent || 0) / Math.max(new Date().getDate(), 1))}
-                                style={{ fontSize: 18, fontWeight: '600', color: '#111111' }}
-                                symbolStyle={{ fontSize: 12, color: '#111111', verticalAlign: 'top', lineHeight: 22 }}
+                                style={{ fontSize: 18, fontWeight: '600', color: colors.primaryText }}
+                                symbolStyle={{ fontSize: 12, color: colors.primaryText, verticalAlign: 'top', lineHeight: 22 }}
                             />
                             <View style={styles.decorativeCurve} />
                         </View>
 
-                        <View style={styles.secondaryCard}>
+                        <View style={[styles.secondaryCard, { backgroundColor: colors.inputBackground }]}>
                             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                <Text style={styles.secondaryLabel}>FORECAST</Text>
-                                <View style={styles.miniIconBox}><MaterialCommunityIcons name="flash" size={12} color="#FF9800" /></View>
+                                <Text style={[styles.secondaryLabel, { color: colors.secondaryText }]}>FORECAST</Text>
+                                <View style={[styles.miniIconBox, { backgroundColor: colors.cardBackground }]}><MaterialCommunityIcons name="flash" size={12} color="#FF9800" /></View>
                             </View>
                             <CurrencyText
                                 amount={viewData?.projectedSpend}
-                                style={{ fontSize: 18, fontWeight: '600', color: '#111111' }}
-                                symbolStyle={{ fontSize: 12, color: '#111111', verticalAlign: 'top', lineHeight: 22 }}
+                                style={{ fontSize: 18, fontWeight: '600', color: colors.primaryText }}
+                                symbolStyle={{ fontSize: 12, color: colors.primaryText, verticalAlign: 'top', lineHeight: 22 }}
                             />
                             <View style={styles.decorativeCurve} />
                         </View>
@@ -318,7 +319,7 @@ export default function AnalyzeScreen({ navigation }) {
 
                     {/* Charts */}
                     <View style={styles.section}>
-                        <Text style={[styles.sectionTitle, { color: '#111111' }]}>Monthly Trend</Text>
+                        <Text style={[styles.sectionTitle, { color: colors.primaryText }]}>Monthly Trend</Text>
                         {viewData && (
                             <MonthlyTrendLineChart
                                 data={viewData.transactions}
@@ -331,21 +332,21 @@ export default function AnalyzeScreen({ navigation }) {
 
                     {selectedCategories.length === 0 && (
                         <View style={styles.section}>
-                            <Text style={[styles.sectionTitle, { color: '#111111' }]}>Income vs Expense</Text>
+                            <Text style={[styles.sectionTitle, { color: colors.primaryText }]}>Income vs Expense</Text>
                             {viewData && <IncomeExpenseBarChart income={viewData.totalIncome} expense={viewData.totalSpent} />}
                         </View>
                     )}
 
                     {selectedCategories.length === 0 && (
                         <View style={styles.section}>
-                            <Text style={[styles.sectionTitle, { color: '#111111' }]}>Expense By Category</Text>
+                            <Text style={[styles.sectionTitle, { color: colors.primaryText }]}>Expense By Category</Text>
                             {viewData && <ExpensePieChart data={viewData} />}
                         </View>
                     )}
 
                     {/* Budgets */}
                     <View style={styles.section}>
-                        <Text style={[styles.sectionTitle, { color: '#111111' }]}>Budgets</Text>
+                        <Text style={[styles.sectionTitle, { color: colors.primaryText }]}>Budgets</Text>
                         {data && data.current && data.current.budgets && Object.keys(data.current.budgets.profiles)
                             .filter(pid => selectedProfileIds.length === 0 || selectedProfileIds.includes(pid))
                             .map(pid => {
@@ -390,7 +391,7 @@ const styles = StyleSheet.create({
     scrollContent: { paddingBottom: 40 },
 
     topSection: {
-        backgroundColor: '#f7ede2',
+        backgroundColor: '#f7ede2', // fallback
         paddingHorizontal: SPACING.screenPadding,
         paddingBottom: 60,
         borderBottomLeftRadius: 36,
@@ -462,7 +463,7 @@ const styles = StyleSheet.create({
 
     bottomSection: {
         paddingHorizontal: SPACING.screenPadding,
-        backgroundColor: '#ffffff',
+        backgroundColor: '#ffffff', // fallback handled in component
         minHeight: 500,
     },
     filterPanel: {

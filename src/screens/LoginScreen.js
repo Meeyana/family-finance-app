@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, useColorScheme } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import { useTheme } from '../components/context/ThemeContext';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../services/firebase';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -19,7 +20,7 @@ export default function LoginScreen() {
     const [error, setError] = useState('');
 
     // Theme
-    const theme = useColorScheme() || 'light';
+    const { theme } = useTheme();
     const colors = COLORS[theme];
 
     const handleLogin = async () => {
@@ -80,7 +81,7 @@ export default function LoginScreen() {
                         <View style={styles.inputContainer}>
                             <Text style={[styles.label, { color: colors.secondaryText }]}>EMAIL</Text>
                             <TextInput
-                                style={[styles.input, { backgroundColor: colors.surface, color: colors.primaryText, borderColor: colors.divider }]}
+                                style={[styles.input, { backgroundColor: colors.inputBackground, color: colors.primaryText, borderColor: colors.divider }]}
                                 placeholder="name@example.com"
                                 placeholderTextColor={colors.secondaryText}
                                 value={email}
@@ -93,7 +94,7 @@ export default function LoginScreen() {
                         <View style={styles.inputContainer}>
                             <Text style={[styles.label, { color: colors.secondaryText }]}>PASSWORD</Text>
                             <TextInput
-                                style={[styles.input, { backgroundColor: colors.surface, color: colors.primaryText, borderColor: colors.divider }]}
+                                style={[styles.input, { backgroundColor: colors.inputBackground, color: colors.primaryText, borderColor: colors.divider }]}
                                 placeholder="••••••••"
                                 placeholderTextColor={colors.secondaryText}
                                 value={password}

@@ -1,10 +1,11 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, useColorScheme } from 'react-native';
 import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
+import { useTheme } from '../components/context/ThemeContext';
 import CurrencyText from './CurrencyText';
 
 const TransactionRow = ({ item, onPress, iconBackgroundColor, showDate }) => {
-    const theme = useColorScheme() || 'light';
+    const { theme } = useTheme();
     const colors = COLORS[theme];
 
     const isExpense = (item.type || 'expense') === 'expense';
@@ -50,7 +51,7 @@ const TransactionRow = ({ item, onPress, iconBackgroundColor, showDate }) => {
     return (
         <TouchableOpacity style={styles.container} onPress={onPress}>
             {/* Icon Circle */}
-            <View style={[styles.iconBox, { backgroundColor: iconBackgroundColor || colors.surface }]}>
+            <View style={[styles.iconBox, { backgroundColor: iconBackgroundColor || colors.iconBackground }]}>
                 <Text style={{ fontSize: 20 }}>{icon}</Text>
             </View>
 

@@ -8,6 +8,7 @@ import MultiSelectDropdown from '../components/MultiSelectDropdown';
 import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
 import { formatMoney, parseMoney } from '../utils/formatting';
 import CurrencyText from '../components/CurrencyText';
+import { useTheme } from '../components/context/ThemeContext';
 import { useColorScheme } from 'react-native';
 
 const COMMON_EMOJIS = [
@@ -23,7 +24,7 @@ const COMMON_EMOJIS = [
 export default function GoalDetailScreen({ navigation, route }) {
     const { goal } = route.params; // Initial goal data
     const { user, profile } = useAuth();
-    const theme = useColorScheme() || 'light';
+    const { theme } = useTheme();
     const colors = COLORS[theme];
 
     const [currentGoal, setCurrentGoal] = useState(goal);
@@ -254,10 +255,10 @@ export default function GoalDetailScreen({ navigation, route }) {
         const totalContributed = Object.values(contributions).reduce((a, b) => a + b, 0);
 
         return (
-            <View style={[styles.card, { backgroundColor: colors.surface }]}>
+            <View style={[styles.card, { backgroundColor: colors.cardBackground }]}>
                 {/* ... existing header ... */}
                 <View style={{ alignItems: 'center', marginBottom: SPACING.l }}>
-                    <View style={[styles.bigIcon, { backgroundColor: colors.background }]}>
+                    <View style={[styles.bigIcon, { backgroundColor: colors.iconBackground }]}>
                         <Text style={{ fontSize: 40 }}>{currentGoal.icon || '🎯'}</Text>
                     </View>
                     <Text style={[styles.title, { color: colors.primaryText }]}>{currentGoal.name}</Text>
@@ -341,7 +342,7 @@ export default function GoalDetailScreen({ navigation, route }) {
                     }
                 }}
             >
-                <View style={[styles.txIcon, { backgroundColor: item.type === 'expense' ? colors.success + '20' : colors.error + '20' }]}>
+                <View style={[styles.txIcon, { backgroundColor: item.type === 'expense' ? (theme === 'dark' ? 'rgba(45, 162, 73, 0.2)' : colors.success + '20') : (theme === 'dark' ? 'rgba(239, 68, 68, 0.2)' : colors.error + '20') }]}>
                     <Ionicons
                         name={item.type === 'expense' ? 'arrow-down' : 'arrow-up'}
                         size={20}
@@ -424,7 +425,7 @@ export default function GoalDetailScreen({ navigation, route }) {
                             autoFocus
                         />
                         <TextInput
-                            style={[styles.input, { color: colors.primaryText, backgroundColor: colors.background, marginTop: 12 }]}
+                            style={[styles.input, { color: colors.primaryText, backgroundColor: colors.inputBackground, marginTop: 12 }]}
                             placeholder="Note (Optional)"
                             placeholderTextColor={colors.secondaryText}
                             value={note}
@@ -473,7 +474,7 @@ export default function GoalDetailScreen({ navigation, route }) {
                             {/* Icon Picker (Round) */}
                             <View style={{ alignItems: 'center', marginVertical: SPACING.m }}>
                                 <TouchableOpacity
-                                    style={[styles.iconPickerBtn, { borderColor: colors.primaryAction, backgroundColor: colors.surface }]}
+                                    style={[styles.iconPickerBtn, { borderColor: colors.primaryAction, backgroundColor: colors.inputBackground }]}
                                     onPress={() => setEditEmojiPickerVisible(true)}
                                 >
                                     <Text style={{ fontSize: 40 }}>{editIcon}</Text>
@@ -498,7 +499,7 @@ export default function GoalDetailScreen({ navigation, route }) {
                             <View style={styles.inputGroup}>
                                 <Text style={[styles.label, { color: colors.secondaryText }]}>GOAL NAME</Text>
                                 <TextInput
-                                    style={[styles.input, { color: colors.primaryText, backgroundColor: colors.surface }]}
+                                    style={[styles.input, { color: colors.primaryText, backgroundColor: colors.inputBackground }]}
                                     value={editName}
                                     onChangeText={setEditName}
                                     placeholderTextColor={colors.secondaryText}

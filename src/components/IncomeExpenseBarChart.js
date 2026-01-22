@@ -27,7 +27,7 @@ export default function IncomeExpenseBarChart({ income, expense }) {
                     <VictoryAxis
                         style={{
                             axis: { stroke: "none" }, // Hide axis line
-                            tickLabels: { fill: "#9CA3AF", fontSize: 13, fontWeight: '500', fontFamily: TYPOGRAPHY.fontFamily.medium },
+                            tickLabels: { fill: colors.secondaryText, fontSize: 13, fontWeight: '500', fontFamily: TYPOGRAPHY.fontFamily.medium },
                             grid: { stroke: "none" }
                         }}
                     />
@@ -35,7 +35,7 @@ export default function IncomeExpenseBarChart({ income, expense }) {
                         data={data}
                         style={{
                             data: { fill: ({ datum }) => datum.fill, width: 60 },
-                            labels: { fill: "#6B7280", fontSize: 12, fontFamily: TYPOGRAPHY.fontFamily.regular }
+                            labels: { fill: colors.primaryText, fontSize: 12, fontFamily: TYPOGRAPHY.fontFamily.regular }
                         }}
                         barWidth={60}
                         cornerRadius={{ top: 8 }}

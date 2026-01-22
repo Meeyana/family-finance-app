@@ -5,6 +5,7 @@ import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { auth } from '../services/firebase';
 import { getFamilyCategories, addCategory, deleteCategory, updateCategory } from '../services/firestoreRepository';
 import { useAuth } from '../components/context/AuthContext';
+import { useTheme } from '../components/context/ThemeContext';
 import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
 
 // Common Emojis grouped by usage
@@ -21,7 +22,7 @@ const COMMON_EMOJIS = [
 
 export default function ManageCategoriesScreen({ navigation }) {
     const { profile, userProfiles } = useAuth();
-    const theme = useColorScheme() || 'light';
+    const { theme } = useTheme();
     const colors = COLORS[theme];
 
     // Role Check
@@ -203,7 +204,7 @@ export default function ManageCategoriesScreen({ navigation }) {
                 disabled={!isAdmin}
             >
                 <View style={styles.itemLeft}>
-                    <View style={[styles.iconBox, { backgroundColor: colors.surface }]}>
+                    <View style={[styles.iconBox, { backgroundColor: colors.iconBackground }]}>
                         <Text style={{ fontSize: 24 }}>{item.icon}</Text>
                     </View>
                     <View>
@@ -231,7 +232,7 @@ export default function ManageCategoriesScreen({ navigation }) {
 
             {/* Segmented Control */}
             <View style={{ alignItems: 'center', marginVertical: SPACING.m }}>
-                <View style={[styles.segmentContainer, { backgroundColor: colors.surface }]}>
+                <View style={[styles.segmentContainer, { backgroundColor: colors.inputBackground }]}>
                     <TouchableOpacity
                         style={[styles.segmentBtn, selectedType === 'expense' && { backgroundColor: colors.background, shadowOpacity: 0.1 }]}
                         onPress={() => setSelectedType('expense')}
@@ -280,7 +281,7 @@ export default function ManageCategoriesScreen({ navigation }) {
                     >
                         {/* MODAL TYPE TOGGLE */}
                         <View style={{ alignItems: 'center', marginBottom: SPACING.l }}>
-                            <View style={[styles.segmentContainer, { backgroundColor: colors.surface }]}>
+                            <View style={[styles.segmentContainer, { backgroundColor: colors.inputBackground }]}>
                                 <TouchableOpacity
                                     style={[styles.segmentBtn, formType === 'expense' && { backgroundColor: colors.background, shadowOpacity: 0.1 }]}
                                     onPress={() => setFormType('expense')}
@@ -299,7 +300,7 @@ export default function ManageCategoriesScreen({ navigation }) {
                         {/* Icon Picker Button */}
                         <View style={{ alignItems: 'center', marginVertical: SPACING.m }}>
                             <TouchableOpacity
-                                style={[styles.iconPickerBtn, { borderColor: formActiveColor, backgroundColor: colors.surface }]}
+                                style={[styles.iconPickerBtn, { borderColor: formActiveColor, backgroundColor: colors.inputBackground }]}
                                 onPress={() => setEmojiPickerVisible(true)}
                             >
                                 <Text style={{ fontSize: 40 }}>{newCategoryIcon}</Text>
@@ -310,7 +311,7 @@ export default function ManageCategoriesScreen({ navigation }) {
                         <View style={styles.inputGroup}>
                             <Text style={[styles.label, { color: colors.secondaryText }]}>NAME</Text>
                             <TextInput
-                                style={[styles.input, { color: colors.primaryText, backgroundColor: colors.surface }]}
+                                style={[styles.input, { color: colors.primaryText, backgroundColor: colors.inputBackground }]}
                                 value={newCategoryName}
                                 onChangeText={setNewCategoryName}
                                 placeholder="e.g. Shopping"

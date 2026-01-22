@@ -84,7 +84,8 @@ Assets Currency Symbol:        #3e2723
 
 ```text
 Background        #0F0F0F
-Surface           #1A1A1A
+Surface           #252728
+Interactive/Input #272727  <-- FOR BOXES/TOGGLES
 Primary Text      #F5F5F5
 Secondary Text    #9CA3AF
 Divider / Border  #2A2A2A

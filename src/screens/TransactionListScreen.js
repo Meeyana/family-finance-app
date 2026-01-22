@@ -152,7 +152,7 @@ export default function TransactionListScreen({ navigation }) {
     };
 
     const renderHeader = () => (
-        <View style={{ backgroundColor: '#f7ede2', borderBottomLeftRadius: 24, borderBottomRightRadius: 24, paddingBottom: 16 }}>
+        <View style={{ backgroundColor: colors.headerBackground, borderBottomLeftRadius: 24, borderBottomRightRadius: 24, paddingBottom: 16 }}>
             {/* Header Row */}
             <View style={[styles.header, { borderBottomWidth: 0, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
                 {/* Left: Avatar + Title */}
@@ -161,11 +161,11 @@ export default function TransactionListScreen({ navigation }) {
                         name={profile?.name}
                         avatarId={profile?.avatarId}
                         size={44}
-                        backgroundColor="#ffffff"
-                        textColor="#3e2723"
+                        backgroundColor={colors.cardBackground}
+                        textColor={colors.headerText}
                         style={styles.avatar}
                     />
-                    <Text style={{ fontSize: 18, fontWeight: '900', color: '#3e2723' }}>Transactions</Text>
+                    <Text style={{ fontSize: 18, fontWeight: '900', color: colors.headerText }}>Transactions</Text>
                 </View>
 
                 {/* Right: Actions */}
@@ -176,11 +176,11 @@ export default function TransactionListScreen({ navigation }) {
                         style={{
                             width: 36, height: 36,
                             borderRadius: 12,
-                            backgroundColor: 'rgba(255,255,255,0.6)',
+                            backgroundColor: colors.iconBackground,
                             justifyContent: 'center', alignItems: 'center',
                         }}
                     >
-                        <MaterialCommunityIcons name="calendar" size={18} color="#8d6e63" />
+                        <MaterialCommunityIcons name="calendar" size={18} color={colors.headerIcon} />
                     </TouchableOpacity>
 
                     {/* Filter Icon */}
@@ -189,11 +189,11 @@ export default function TransactionListScreen({ navigation }) {
                         style={{
                             width: 36, height: 36,
                             borderRadius: 12,
-                            backgroundColor: 'rgba(255,255,255,0.6)',
+                            backgroundColor: colors.iconBackground,
                             justifyContent: 'center', alignItems: 'center',
                         }}
                     >
-                        <MaterialCommunityIcons name="tune" size={18} color={showFilters ? "#6ca749" : "#8d6e63"} />
+                        <MaterialCommunityIcons name="tune" size={18} color={showFilters ? colors.primaryAction : colors.headerIcon} />
                     </TouchableOpacity>
                 </View>
             </View>
@@ -236,22 +236,22 @@ export default function TransactionListScreen({ navigation }) {
 
             {/* Search Box */}
             <View style={[styles.searchContainer, {
-                backgroundColor: '#ffffff',
+                backgroundColor: colors.inputBackground, // Changed from cardBackground for better contrast
                 borderColor: 'transparent',
                 marginBottom: SPACING.s,
                 marginHorizontal: SPACING.screenPadding,
             }]}>
-                <Ionicons name="search" size={18} color="#8d6e63" />
+                <Ionicons name="search" size={18} color={colors.headerIcon} />
                 <TextInput
-                    style={[styles.searchInput, { color: '#3e2723' }]}
+                    style={[styles.searchInput, { color: colors.primaryText }]}
                     placeholder="Search transactions..."
-                    placeholderTextColor="#bcaaa4"
+                    placeholderTextColor={colors.placeholderText}
                     value={searchText}
                     onChangeText={setSearchText}
                 />
                 {searchText.length > 0 && (
                     <TouchableOpacity onPress={() => setSearchText('')}>
-                        <Ionicons name="close-circle" size={16} color="#8d6e63" />
+                        <Ionicons name="close-circle" size={16} color={colors.headerIcon} />
                     </TouchableOpacity>
                 )}
             </View>
@@ -273,8 +273,8 @@ export default function TransactionListScreen({ navigation }) {
     );
 
     return (
-        <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
-            <View style={{ backgroundColor: '#f7ede2' }}>
+        <View style={{ flex: 1, backgroundColor: colors.background }}>
+            <View style={{ backgroundColor: colors.headerBackground }}>
                 <SafeAreaView edges={['top', 'left', 'right']} />
             </View>
             <SectionList

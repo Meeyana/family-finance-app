@@ -3,12 +3,13 @@ import { View, Text, TouchableOpacity, FlatList, StyleSheet, useColorScheme } fr
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../components/context/AuthContext';
+import { useTheme } from '../components/context/ThemeContext';
 import Avatar from '../components/Avatar';
 import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
 
 export default function ManageProfilesScreen({ navigation }) {
     const { userProfiles } = useAuth(); // Live data from Context
-    const theme = useColorScheme() || 'light';
+    const { theme } = useTheme();
     const colors = COLORS[theme];
 
     useLayoutEffect(() => {
@@ -38,13 +39,13 @@ export default function ManageProfilesScreen({ navigation }) {
     );
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: '#ffffff' }]}>
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
             {/* Header */}
-            <View style={[styles.header, { borderBottomColor: colors.divider, backgroundColor: '#ffffff' }]}>
+            <View style={[styles.header, { borderBottomColor: colors.divider, backgroundColor: colors.background }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                    <Ionicons name="arrow-back" size={24} color="#3e2723" />
+                    <Ionicons name="arrow-back" size={24} color={colors.primaryText} />
                 </TouchableOpacity>
-                <Text style={[styles.title, { color: '#3e2723' }]}>Manage Profiles</Text>
+                <Text style={[styles.title, { color: colors.primaryText }]}>Manage Profiles</Text>
                 <TouchableOpacity onPress={() => navigation.navigate('EditProfile', { isNew: true, profile: {} })} >
                     <Ionicons name="add" size={28} color={colors.primaryAction} />
                 </TouchableOpacity>

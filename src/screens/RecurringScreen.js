@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, Modal, TextI
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../components/context/AuthContext';
+import { useTheme } from '../components/context/ThemeContext';
 import { getRecurring, addRecurring, deleteRecurring, updateRecurring, getFamilyCategories, checkAndProcessRecurring } from '../services/firestoreRepository';
 import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
 import { formatMoney, parseMoney } from '../utils/formatting';
@@ -10,7 +11,7 @@ import CurrencyText from '../components/CurrencyText';
 
 export default function RecurringScreen({ navigation }) {
     const { user, profile } = useAuth();
-    const theme = useColorScheme() || 'light';
+    const { theme } = useTheme();
     const colors = COLORS[theme];
 
     const [items, setItems] = useState([]);
@@ -173,7 +174,7 @@ export default function RecurringScreen({ navigation }) {
             >
                 {/* Left: Icon & Title/Tag/Desc */}
                 <View style={[styles.itemLeft, { flex: 1 }]}>
-                    <View style={[styles.iconBox, { backgroundColor: colors.surface }]}>
+                    <View style={[styles.iconBox, { backgroundColor: colors.iconBackground }]}>
                         <Text style={{ fontSize: 20 }}>{item.categoryData?.icon || '📅'}</Text>
                     </View>
                     <View style={{ flex: 1, paddingRight: 8 }}>
@@ -246,7 +247,7 @@ export default function RecurringScreen({ navigation }) {
                         </TouchableOpacity>
 
                         {/* Segmented Control Moved Here */}
-                        <View style={[styles.segmentContainer, { backgroundColor: colors.surface, marginBottom: 0 }]}>
+                        <View style={[styles.segmentContainer, { backgroundColor: colors.inputBackground, marginBottom: 0 }]}>
                             <TouchableOpacity
                                 style={[styles.segmentBtn, type === 'expense' && { backgroundColor: colors.background, shadowOpacity: 0.1 }]}
                                 onPress={() => setType('expense')}
@@ -281,7 +282,7 @@ export default function RecurringScreen({ navigation }) {
                             <TextInput
                                 style={[styles.heroInput, { color: activeColor }]}
                                 placeholder="0"
-                                placeholderTextColor={colors.divider}
+                                placeholderTextColor={colors.placeholderText}
                                 keyboardType="numeric"
                                 value={amount}
                                 onChangeText={(text) => setAmount(formatMoney(text))}
@@ -291,22 +292,22 @@ export default function RecurringScreen({ navigation }) {
                         <View style={styles.inputGroup}>
                             <Text style={[styles.label, { color: colors.secondaryText }]}>NAME</Text>
                             <TextInput
-                                style={[styles.input, { color: colors.primaryText, backgroundColor: colors.surface }]}
+                                style={[styles.input, { color: colors.primaryText, backgroundColor: colors.inputBackground }]}
                                 value={name}
                                 onChangeText={setName}
                                 placeholder="e.g. Netflix"
-                                placeholderTextColor={colors.secondaryText}
+                                placeholderTextColor={colors.placeholderText}
                             />
                         </View>
 
                         <View style={styles.inputGroup}>
                             <Text style={[styles.label, { color: colors.secondaryText }]}>DESCRIPTION</Text>
                             <TextInput
-                                style={[styles.input, { color: colors.primaryText, backgroundColor: colors.surface }]}
+                                style={[styles.input, { color: colors.primaryText, backgroundColor: colors.inputBackground }]}
                                 value={description}
                                 onChangeText={setDescription}
                                 placeholder="Optional description..."
-                                placeholderTextColor={colors.secondaryText}
+                                placeholderTextColor={colors.placeholderText}
                             />
                         </View>
 
@@ -338,7 +339,7 @@ export default function RecurringScreen({ navigation }) {
                                 {['MONTHLY', 'YEARLY'].map(opt => (
                                     <TouchableOpacity
                                         key={opt}
-                                        style={[styles.freqChip, unit === opt && { backgroundColor: colors.primaryAction }]}
+                                        style={[styles.freqChip, unit === opt ? { backgroundColor: colors.primaryAction } : { backgroundColor: colors.surface }]}
                                         onPress={() => setUnit(opt)}
                                     >
                                         <Text style={[styles.freqText, { color: unit === opt ? colors.background : colors.secondaryText }]}>{opt}</Text>
@@ -350,7 +351,7 @@ export default function RecurringScreen({ navigation }) {
                         <View style={styles.inputGroup}>
                             <Text style={[styles.label, { color: colors.secondaryText }]}>DURATION</Text>
 
-                            <View style={[styles.segmentContainer, { backgroundColor: colors.surface, marginBottom: 12 }]}>
+                            <View style={[styles.segmentContainer, { backgroundColor: colors.inputBackground, marginBottom: 12 }]}>
                                 <TouchableOpacity
                                     style={[styles.segmentBtn, isForever && { backgroundColor: colors.background, shadowOpacity: 0.1 }]}
                                     onPress={() => setIsForever(true)}
@@ -367,12 +368,12 @@ export default function RecurringScreen({ navigation }) {
 
                             {!isForever && (
                                 <TextInput
-                                    style={[styles.input, { color: colors.primaryText, backgroundColor: colors.surface }]}
+                                    style={[styles.input, { color: colors.primaryText, backgroundColor: colors.inputBackground }]}
                                     value={durationCount}
                                     onChangeText={setDurationCount}
                                     placeholder={`Number of ${unit === 'MONTHLY' ? 'Months' : 'Years'}`}
                                     keyboardType="numeric"
-                                    placeholderTextColor={colors.secondaryText}
+                                    placeholderTextColor={colors.placeholderText}
                                 />
                             )}
                         </View>
@@ -541,7 +542,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingVertical: 8,
         borderRadius: 20,
-        backgroundColor: '#eee', // fallback
+        // backgroundColor handled dynamically
     },
     freqText: { fontSize: TYPOGRAPHY.size.caption, fontWeight: '600' },
     deleteButton: {

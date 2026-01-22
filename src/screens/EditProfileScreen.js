@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { updateProfile, addProfile, deleteProfile } from '../services/firestoreRepository';
 import { auth } from '../services/firebase';
 import { useAuth } from '../components/context/AuthContext';
+import { useTheme } from '../components/context/ThemeContext';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
 import Avatar from '../components/Avatar';
@@ -14,7 +15,7 @@ export default function EditProfileScreen({ route, navigation }) {
     const { refreshProfiles } = useAuth();
 
     // Theme
-    const theme = useColorScheme() || 'light';
+    const { theme } = useTheme();
     const colors = COLORS[theme];
 
     useLayoutEffect(() => {
@@ -108,14 +109,14 @@ export default function EditProfileScreen({ route, navigation }) {
 
     return (
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-            <SafeAreaView style={[styles.container, { backgroundColor: '#ffffff' }]}>
-                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1, backgroundColor: '#ffffff' }}>
+            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1, backgroundColor: colors.background }}>
                     {/* Header */}
-                    <View style={[styles.header, { backgroundColor: '#ffffff', borderBottomColor: colors.divider, borderBottomWidth: 1 }]}>
+                    <View style={[styles.header, { backgroundColor: colors.background, borderBottomColor: colors.divider, borderBottomWidth: 1 }]}>
                         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                            <Ionicons name="arrow-back" size={24} color="#3e2723" />
+                            <Ionicons name="arrow-back" size={24} color={colors.primaryText} />
                         </TouchableOpacity>
-                        <Text style={[styles.headerTitle, { color: '#3e2723' }]}>{isNew ? 'New Profile' : 'Edit Profile'}</Text>
+                        <Text style={[styles.headerTitle, { color: colors.primaryText }]}>{isNew ? 'New Profile' : 'Edit Profile'}</Text>
                         <TouchableOpacity onPress={handleSave} disabled={loading}>
                             {loading ? <ActivityIndicator color={colors.primaryAction} /> : <Text style={[styles.saveText, { color: colors.primaryAction }]}>Save</Text>}
                         </TouchableOpacity>
@@ -151,12 +152,12 @@ export default function EditProfileScreen({ route, navigation }) {
                             animationType="slide"
                             onRequestClose={() => setShowAvatarModal(false)}
                         >
-                            <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
-                                <View style={{ backgroundColor: '#ffffff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 }}>
+                            <View style={{ flex: 1, backgroundColor: colors.modalOverlay, justifyContent: 'flex-end' }}>
+                                <View style={{ backgroundColor: colors.background, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 }}>
                                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                                        <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#3e2723' }}>Choose Avatar</Text>
+                                        <Text style={{ fontSize: 18, fontWeight: 'bold', color: colors.primaryText }}>Choose Avatar</Text>
                                         <TouchableOpacity onPress={() => setShowAvatarModal(false)}>
-                                            <Ionicons name="close" size={24} color="#3e2723" />
+                                            <Ionicons name="close" size={24} color={colors.primaryText} />
                                         </TouchableOpacity>
                                     </View>
 
@@ -190,7 +191,7 @@ export default function EditProfileScreen({ route, navigation }) {
                             <Text style={[styles.label, { color: colors.secondaryText }]}>NAME</Text>
                             {isNew ? (
                                 <TextInput
-                                    style={[styles.input, { backgroundColor: colors.surface, color: colors.primaryText, borderColor: colors.divider }]}
+                                    style={[styles.input, { backgroundColor: colors.inputBackground, color: colors.primaryText, borderColor: colors.divider }]}
                                     value={name}
                                     onChangeText={setName}
                                     placeholder="Enter Name"
@@ -208,7 +209,7 @@ export default function EditProfileScreen({ route, navigation }) {
                         <View style={styles.inputGroup}>
                             <Text style={[styles.label, { color: colors.secondaryText }]}>MONTHLY LIMIT (VND)</Text>
                             <TextInput
-                                style={[styles.input, { backgroundColor: colors.surface, color: colors.primaryText, borderColor: colors.divider }]}
+                                style={[styles.input, { backgroundColor: colors.inputBackground, color: colors.primaryText, borderColor: colors.divider }]}
                                 value={limit}
                                 onChangeText={setLimit}
                                 keyboardType="numeric"
@@ -225,7 +226,7 @@ export default function EditProfileScreen({ route, navigation }) {
                                     <MaterialCommunityIcons name="lock" size={16} color={colors.secondaryText} />
                                 </View>
                             ) : (
-                                <View style={[styles.segmentContainer, { backgroundColor: colors.surface }]}>
+                                <View style={[styles.segmentContainer, { backgroundColor: colors.inputBackground }]}>
                                     {['Partner', 'Child'].map(r => (
                                         <TouchableOpacity
                                             key={r}
@@ -246,7 +247,7 @@ export default function EditProfileScreen({ route, navigation }) {
                                 <Text style={[styles.helperText, { color: colors.secondaryText }]}>{hasPin ? "Enter new to reset" : "Optional"}</Text>
                             </View>
                             <TextInput
-                                style={[styles.input, { marginTop: 8, backgroundColor: colors.surface, color: colors.primaryText, borderColor: colors.divider }]}
+                                style={[styles.input, { marginTop: 8, backgroundColor: colors.inputBackground, color: colors.primaryText, borderColor: colors.divider }]}
                                 value={pin}
                                 onChangeText={setPin}
                                 placeholder={hasPin ? "••••" : "Set a 4-digit PIN"}

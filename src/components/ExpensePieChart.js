@@ -1,11 +1,15 @@
 import React from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import { VictoryPie } from 'victory-native';
-import { TYPOGRAPHY } from '../constants/theme';
+import { TYPOGRAPHY, COLORS } from '../constants/theme';
+import { useTheme } from './context/ThemeContext';
 
-const COLORS = ['#007AFF', '#FF9500', '#FF2D55', '#5856D6', '#4CD964', '#FFCC00'];
+const CHART_COLORS = ['#007AFF', '#FF9500', '#FF2D55', '#5856D6', '#4CD964', '#FFCC00'];
 
 export default function ExpensePieChart({ data }) {
+    const { theme } = useTheme();
+    const colors = COLORS[theme];
+
     // Transform transaction data
     const categoryTotals = {};
     let totalExpenseFiltered = 0;
@@ -26,12 +30,12 @@ export default function ExpensePieChart({ data }) {
             y: value,
             label: percentage > 4 ? `${percentage}%` : '',
             percentage: percentage,
-            color: COLORS[index % COLORS.length]
+            color: CHART_COLORS[index % CHART_COLORS.length]
         };
     });
 
     if (chartData.length === 0) {
-        return <Text style={styles.noData}>No data to display</Text>;
+        return <Text style={[styles.noData, { color: colors.secondaryText }]}>No data to display</Text>;
     }
 
     const screenWidth = Dimensions.get('window').width;
@@ -48,7 +52,7 @@ export default function ExpensePieChart({ data }) {
                     labels={({ datum }) => datum.percentage > 4 ? `${datum.x}\n${datum.percentage}%` : ''}
                     style={{
                         labels: { fill: "white", fontSize: 11, fontWeight: "bold", textAlign: "center", fontFamily: TYPOGRAPHY.fontFamily.bold },
-                        data: { stroke: "#fff", strokeWidth: 2 }
+                        data: { stroke: colors.background, strokeWidth: 2 }
                     }}
                     padAngle={2}
                     height={260}
@@ -62,7 +66,7 @@ export default function ExpensePieChart({ data }) {
                     .map((item, index) => (
                         <View key={index} style={styles.legendItem}>
                             <View style={[styles.dot, { backgroundColor: item.color }]} />
-                            <Text style={styles.legendText}>{item.x}</Text>
+                            <Text style={[styles.legendText, { color: colors.primaryText }]}>{item.x}</Text>
                         </View>
                     ))}
             </View>
@@ -74,12 +78,10 @@ const styles = StyleSheet.create({
     container: {
         alignItems: 'center',
         padding: 10,
-        // Removed card styles (shadow, bg, radius) for minimalist consistency
         marginBottom: 16,
     },
     noData: {
         textAlign: 'center',
-        color: '#999',
         padding: 20,
         fontFamily: TYPOGRAPHY.fontFamily.regular
     },
@@ -103,7 +105,6 @@ const styles = StyleSheet.create({
     },
     legendText: {
         fontSize: 12,
-        color: '#333',
         fontFamily: TYPOGRAPHY.fontFamily.medium
     }
 });

@@ -2,8 +2,12 @@ import React from 'react';
 import { View, StyleSheet, Dimensions } from 'react-native';
 import { VictoryLine, VictoryChart, VictoryAxis, VictoryArea } from 'victory-native';
 import { COLORS, TYPOGRAPHY } from '../constants/theme';
+import { useTheme } from './context/ThemeContext';
 
 export default function MonthlyTrendLineChart({ data, startDate, endDate, filterCategory }) {
+    const { theme } = useTheme();
+    const colors = COLORS[theme];
+
     // 1. Determine Range
     const start = new Date(startDate);
     const end = new Date(endDate);
@@ -86,7 +90,7 @@ export default function MonthlyTrendLineChart({ data, startDate, endDate, filter
                         tickValues={isMonthlyView ? chartData.map(d => d.x) : [5, 10, 15, 20, 25, 30]}
                         style={{
                             axis: { stroke: "none" },
-                            tickLabels: { fill: "#9CA3AF", fontSize: 10, fontFamily: TYPOGRAPHY.fontFamily.regular },
+                            tickLabels: { fill: colors.secondaryText, fontSize: 10, fontFamily: TYPOGRAPHY.fontFamily.regular },
                             grid: { stroke: "none" }
                         }}
                     />

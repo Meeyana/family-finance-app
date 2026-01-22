@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, ActivityIndicator, Alert, Platform, DeviceEventEmitter, useColorScheme, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../components/context/ThemeContext';
 import { useAuth } from '../components/context/AuthContext';
 import { getRequests, rejectRequest, processTransfer } from '../services/firestoreRepository';
 import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
@@ -9,6 +10,9 @@ import Avatar from '../components/Avatar';
 
 export default function RequestListScreen({ navigation }) {
     const { user, profile } = useAuth();
+    const { theme } = useTheme();
+    const colors = COLORS[theme];
+
     const [requests, setRequests] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -16,9 +20,6 @@ export default function RequestListScreen({ navigation }) {
     const [lastVisible, setLastVisible] = useState(null);
     const [hasMore, setHasMore] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
-
-    const theme = useColorScheme() || 'light';
-    const colors = COLORS[theme];
 
     // simple check: if role is Owner/Partner, they are Admin
     const strRole = profile?.role?.toLowerCase() || '';
@@ -256,7 +257,7 @@ export default function RequestListScreen({ navigation }) {
                             key={status}
                             style={[
                                 styles.filterChip,
-                                { borderColor: colors.divider, backgroundColor: colors.surface },
+                                { borderColor: colors.divider, backgroundColor: colors.inputBackground },
                                 statusFilter === status && { backgroundColor: colors.primaryAction, borderColor: colors.primaryAction }
                             ]}
                             onPress={() => setStatusFilter(status)}

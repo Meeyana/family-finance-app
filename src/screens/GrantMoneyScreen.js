@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ActivityIndicator, FlatList, DeviceEventEmitter, TouchableWithoutFeedback, Keyboard, useColorScheme, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../components/context/ThemeContext';
 import { useAuth } from '../components/context/AuthContext';
 import { processTransfer, getFamilyProfiles, addRequest } from '../services/firestoreRepository';
 import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
@@ -9,14 +10,14 @@ import Avatar from '../components/Avatar';
 
 export default function GrantMoneyScreen({ navigation }) {
     const { user, profile } = useAuth();
+    const { theme } = useTheme();
+    const colors = COLORS[theme];
+
     const [amount, setAmount] = useState('');
     const [reason, setReason] = useState('');
     const [loading, setLoading] = useState(false);
     const [receivers, setReceivers] = useState([]);
     const [selectedReceiver, setSelectedReceiver] = useState(null);
-
-    const theme = useColorScheme() || 'light';
-    const colors = COLORS[theme];
 
     useEffect(() => {
         loadProfiles();
@@ -117,7 +118,7 @@ export default function GrantMoneyScreen({ navigation }) {
                                     key={p.id}
                                     style={[
                                         styles.receiverChip,
-                                        { backgroundColor: colors.surface, borderColor: colors.divider },
+                                        { backgroundColor: colors.inputBackground, borderColor: colors.divider },
                                         selectedReceiver?.id === p.id && { backgroundColor: colors.primaryAction + '15', borderColor: colors.primaryAction }
                                     ]}
                                     onPress={() => setSelectedReceiver(p)}
@@ -163,7 +164,7 @@ export default function GrantMoneyScreen({ navigation }) {
                     <View style={styles.inputSection}>
                         <Text style={[styles.label, { color: colors.secondaryText }]}>REASON</Text>
                         <TextInput
-                            style={[styles.reasonInput, { backgroundColor: colors.surface, color: colors.primaryText, borderColor: colors.divider }]}
+                            style={[styles.reasonInput, { backgroundColor: colors.inputBackground, color: colors.primaryText, borderColor: colors.divider }]}
                             value={reason}
                             onChangeText={setReason}
                             placeholder="Reason or Message..."

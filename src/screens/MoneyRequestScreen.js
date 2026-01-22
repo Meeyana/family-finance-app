@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ActivityIndicator, TouchableWithoutFeedback, Keyboard, useColorScheme, Platform, ScrollView, DeviceEventEmitter } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../components/context/ThemeContext';
 import { useAuth } from '../components/context/AuthContext';
 import { addRequest, getFamilyCategories } from '../services/firestoreRepository';
 import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
@@ -10,14 +11,14 @@ import { formatMoney, parseMoney } from '../utils/formatting';
 
 export default function MoneyRequestScreen({ navigation }) {
     const { user, profile } = useAuth();
+    const { theme } = useTheme();
+    const colors = COLORS[theme];
+
     const [amount, setAmount] = useState('');
     const [reason, setReason] = useState('');
     const [loading, setLoading] = useState(false);
     const [categories, setCategories] = useState([]);
     const [selectedCategory, setSelectedCategory] = useState({ name: 'General', icon: '🏷️' });
-
-    const theme = useColorScheme() || 'light';
-    const colors = COLORS[theme];
 
     useEffect(() => {
         const loadCats = async () => {
@@ -100,7 +101,7 @@ export default function MoneyRequestScreen({ navigation }) {
                                     key={cat.id || cat.name}
                                     style={[
                                         styles.categoryChip,
-                                        { backgroundColor: colors.surface, borderColor: colors.divider },
+                                        { backgroundColor: colors.inputBackground, borderColor: colors.divider },
                                         selectedCategory.name === cat.name && { backgroundColor: colors.primaryAction + '15', borderColor: colors.primaryAction }
                                     ]}
                                     onPress={() => setSelectedCategory(cat)}
@@ -120,7 +121,7 @@ export default function MoneyRequestScreen({ navigation }) {
                     <View style={styles.inputSection}>
                         <Text style={[styles.label, { color: colors.secondaryText }]}>REASON</Text>
                         <TextInput
-                            style={[styles.reasonInput, { backgroundColor: colors.surface, color: colors.primaryText, borderColor: colors.divider }]}
+                            style={[styles.reasonInput, { backgroundColor: colors.inputBackground, color: colors.primaryText, borderColor: colors.divider }]}
                             value={reason}
                             onChangeText={setReason}
                             placeholder="What is this for?"

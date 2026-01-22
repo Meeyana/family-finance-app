@@ -174,20 +174,20 @@ export default function AccountDashboard({ navigation }) {
 
 
 
-    if (loading) return <View style={[styles.center, { backgroundColor: '#f7ede2' }]}><ActivityIndicator size="large" color={colors.primaryAction} /></View>;
-    if (error) return <View style={[styles.center, { backgroundColor: '#f7ede2' }]}><Text style={{ color: colors.error }}>Could not load data</Text></View>;
+    if (loading) return <View style={[styles.center, { backgroundColor: colors.background }]}><ActivityIndicator size="large" color={colors.primaryAction} /></View>;
+    if (error) return <View style={[styles.center, { backgroundColor: colors.background }]}><Text style={{ color: colors.error }}>Could not load data</Text></View>;
 
     // Dynamic Safe Area Background
     return (
-        <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
-            <View style={{ backgroundColor: '#f7ede2' }}>
+        <View style={{ flex: 1, backgroundColor: colors.background }}>
+            <View style={{ backgroundColor: colors.headerBackground }}>
                 <SafeAreaView edges={['top', 'left', 'right']} />
             </View>
 
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} bounces={false}>
 
                 {/* TOP SECTION: BEIGE BACKGROUND */}
-                <View style={styles.topSection}>
+                <View style={[styles.topSection, { backgroundColor: colors.headerBackground }]}>
                     {/* HEADER */}
                     <View style={[styles.header, { marginTop: 10 }]}>
                         <View style={styles.headerLeft}>
@@ -195,27 +195,27 @@ export default function AccountDashboard({ navigation }) {
                                 name={profile?.name}
                                 avatarId={profile?.avatarId}
                                 size={44}
-                                backgroundColor="#ffffff"
-                                textColor="#3e2723"
-                                style={{ borderWidth: 1, borderColor: '#eeeeee' }}
+                                backgroundColor={colors.cardBackground}
+                                textColor={colors.headerText}
+                                style={{ borderWidth: 1, borderColor: colors.divider }}
                             />
                             <View>
                                 {/* Greeting */}
-                                <Text style={[styles.greeting, { color: '#8d6e63' }]}>Hello,</Text>
-                                <Text style={[styles.username, { color: '#3e2723' }]}>{profile?.name || 'User'}</Text>
+                                <Text style={[styles.greeting, { color: colors.headerIcon }]}>Hello,</Text>
+                                <Text style={[styles.username, { color: colors.headerText }]}>{profile?.name || 'User'}</Text>
                             </View>
                         </View>
 
-                        <TouchableOpacity style={[styles.iconButton, { backgroundColor: 'rgba(255,255,255,0.6)', marginLeft: 8 }]}>
-                            <Ionicons name="notifications-outline" size={18} color="#8d6e63" />
-                            <View style={[styles.notificationBadge, { backgroundColor: '#ef5350' }]} />
+                        <TouchableOpacity style={[styles.iconButton, { backgroundColor: colors.iconBackground, marginLeft: 8 }]}>
+                            <Ionicons name="notifications-outline" size={18} color={colors.headerIcon} />
+                            <View style={[styles.notificationBadge, { backgroundColor: colors.error }]} />
                         </TouchableOpacity>
                     </View>
 
                     <View style={styles.balanceContainer}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                            <Ionicons name="wallet-outline" size={14} color="#8d6e63" />
-                            <Text style={{ color: '#8d6e63', fontSize: 11, letterSpacing: 1, fontWeight: '800', textTransform: 'uppercase' }}>Total Assets</Text>
+                            <Ionicons name="wallet-outline" size={14} color={colors.headerIcon} />
+                            <Text style={{ color: colors.headerIcon, fontSize: 11, letterSpacing: 1, fontWeight: '800', textTransform: 'uppercase' }}>Total Assets</Text>
                         </View>
 
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 }}>
@@ -224,10 +224,10 @@ export default function AccountDashboard({ navigation }) {
                                 showSign={false}
                                 hideable={true}
                                 style={{ color: '#6ca749', fontSize: 30, fontWeight: 'bold' }}
-                                symbolStyle={{ color: '#6ca749', fontSize: 30, fontWeight: 'bold', textDecorationLine: 'none' }}
+                                symbolStyle={{ color: colors.primaryAction, fontSize: 30, fontWeight: 'bold', textDecorationLine: 'none' }}
                             />
                             <TouchableOpacity onPress={toggleVisibility}>
-                                <Ionicons name={isValuesHidden ? "eye-off-outline" : "eye-outline"} size={18} color="#8d6e63" />
+                                <Ionicons name={isValuesHidden ? "eye-off-outline" : "eye-outline"} size={18} color={colors.headerIcon} />
                             </TouchableOpacity>
                         </View>
 
@@ -235,23 +235,23 @@ export default function AccountDashboard({ navigation }) {
                             <SwipeDateFilter
                                 date={selectedDate}
                                 onMonthChange={setSelectedDate}
-                                themeColor="#8d6e63"
+                                themeColor={colors.headerIcon}
                             />
                         </View>
                     </View>
 
                     {/* MERGED UNIFIED CARD */}
                     <View style={styles.statsRow}>
-                        <View style={styles.unifiedCard}>
+                        <View style={[styles.unifiedCard, { backgroundColor: colors.cardBackground }]}>
 
                             {/* TOP HALF: STATS */}
                             <View style={styles.statsContent}>
                                 {/* Income */}
                                 <View style={styles.statItem}>
                                     <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6, gap: 4 }}>
-                                        <Text style={{ color: '#9e9e9e', fontSize: 12, fontWeight: '700', textTransform: 'uppercase' }}>Income</Text>
-                                        <View style={{ backgroundColor: '#e8f5e9', padding: 2, borderRadius: 8 }}>
-                                            <Ionicons name="trending-up" size={12} color="#4CAF50" />
+                                        <Text style={{ color: colors.secondaryText, fontSize: 12, fontWeight: '700', textTransform: 'uppercase' }}>Income</Text>
+                                        <View style={{ backgroundColor: colors.success + '20', padding: 2, borderRadius: 8 }}>
+                                            <Ionicons name="trending-up" size={12} color={colors.success} />
                                         </View>
                                     </View>
                                     <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
@@ -259,7 +259,7 @@ export default function AccountDashboard({ navigation }) {
                                             amount={viewData?.totalIncome}
                                             showSign={false}
                                             hideable={true}
-                                            style={{ color: '#263238', fontSize: 18, fontWeight: 'bold' }}
+                                            style={{ color: colors.primaryText, fontSize: 18, fontWeight: 'bold' }}
                                         />
                                         {viewData?.incomeDiffPercent !== 0 && (
                                             <Text style={{ color: viewData?.incomeDiffPercent > 0 ? '#4CAF50' : '#F44336', fontSize: 11, marginLeft: 4, fontWeight: '500' }}>
@@ -275,9 +275,9 @@ export default function AccountDashboard({ navigation }) {
                                 {/* Expense */}
                                 <View style={styles.statItem}>
                                     <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6, gap: 4 }}>
-                                        <Text style={{ color: '#9e9e9e', fontSize: 12, fontWeight: '700', textTransform: 'uppercase' }}>Expense</Text>
-                                        <View style={{ backgroundColor: '#ffebee', padding: 2, borderRadius: 8 }}>
-                                            <Ionicons name="trending-down" size={12} color="#f44336" />
+                                        <Text style={{ color: colors.secondaryText, fontSize: 12, fontWeight: '700', textTransform: 'uppercase' }}>Expense</Text>
+                                        <View style={{ backgroundColor: colors.error + '20', padding: 2, borderRadius: 8 }}>
+                                            <Ionicons name="trending-down" size={12} color={colors.error} />
                                         </View>
                                     </View>
                                     <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
@@ -285,7 +285,7 @@ export default function AccountDashboard({ navigation }) {
                                             amount={-viewData?.totalSpent}
                                             showSign={false}
                                             hideable={true}
-                                            style={{ color: '#263238', fontSize: 18, fontWeight: 'bold' }}
+                                            style={{ color: colors.primaryText, fontSize: 18, fontWeight: 'bold' }}
                                         />
                                         {viewData?.expenseDiffPercent !== 0 && (
                                             <Text style={{ color: viewData?.expenseDiffPercent > 0 ? '#F44336' : '#4CAF50', fontSize: 11, marginLeft: 4, fontWeight: '500' }}>
@@ -297,12 +297,12 @@ export default function AccountDashboard({ navigation }) {
                             </View>
 
                             {/* BOTTOM HALF: LINK */}
-                            <TouchableOpacity style={styles.financeCenterButton} onPress={() => navigation.navigate('Analysis')}>
+                            <TouchableOpacity style={[styles.financeCenterButton, { backgroundColor: colors.primaryAction + '20' }]} onPress={() => navigation.navigate('Analysis')}>
                                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                                    <MaterialCommunityIcons name="finance" size={20} color="#6ca749" />
-                                    <Text style={styles.financeCenterText}>Your family financial center</Text>
+                                    <MaterialCommunityIcons name="finance" size={20} color={colors.primaryAction} />
+                                    <Text style={[styles.financeCenterText, { color: colors.primaryAction }]}>Your family financial center</Text>
                                 </View>
-                                <Ionicons name="chevron-forward" size={18} color="#6ca749" />
+                                <Ionicons name="chevron-forward" size={18} color={colors.primaryAction} />
                             </TouchableOpacity>
 
                         </View>
@@ -310,7 +310,7 @@ export default function AccountDashboard({ navigation }) {
                 </View>
 
                 {/* BOTTOM SECTION: WHITE/CONTENT */}
-                <View style={styles.bottomSection}>
+                <View style={[styles.bottomSection, { backgroundColor: colors.background }]}>
 
 
 
@@ -394,7 +394,7 @@ const styles = StyleSheet.create({
         paddingBottom: 40,
     },
     topSection: {
-        backgroundColor: '#f7ede2',
+        backgroundColor: '#f7ede2', // fallback
         paddingHorizontal: SPACING.screenPadding,
         paddingBottom: 50, // Reduced from 60
         borderBottomLeftRadius: 36,
@@ -501,7 +501,7 @@ const styles = StyleSheet.create({
     bottomSection: {
         paddingTop: 80, // Increased to clear the taller card
         paddingHorizontal: SPACING.screenPadding,
-        backgroundColor: '#ffffff',
+        backgroundColor: '#ffffff', // fallback
         minHeight: 500,
     },
 

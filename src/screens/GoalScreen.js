@@ -8,6 +8,7 @@ import MultiSelectDropdown from '../components/MultiSelectDropdown';
 import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
 import { formatMoney, parseMoney } from '../utils/formatting';
 import CurrencyText from '../components/CurrencyText';
+import { useTheme } from '../components/context/ThemeContext';
 import { useColorScheme } from 'react-native';
 
 const COMMON_EMOJIS = [
@@ -22,7 +23,7 @@ const COMMON_EMOJIS = [
 
 export default function GoalScreen({ navigation }) {
     const { user, profile } = useAuth();
-    const theme = useColorScheme() || 'light';
+    const { theme } = useTheme();
     const colors = COLORS[theme];
 
     const [goals, setGoals] = useState([]);
@@ -117,11 +118,11 @@ export default function GoalScreen({ navigation }) {
 
         return (
             <TouchableOpacity
-                style={[styles.card, { backgroundColor: colors.surface }]}
+                style={[styles.card, { backgroundColor: colors.cardBackground }]}
                 onPress={() => navigation.navigate('GoalDetail', { goal: item })}
             >
                 <View style={styles.cardHeader}>
-                    <View style={[styles.iconBox, { backgroundColor: colors.background }]}>
+                    <View style={[styles.iconBox, { backgroundColor: colors.iconBackground }]}>
                         <Text style={{ fontSize: 24 }}>{item.icon || '🎯'}</Text>
                     </View>
                     <View style={{ flex: 1 }}>
@@ -210,7 +211,7 @@ export default function GoalScreen({ navigation }) {
                             {/* Icon Picker (Round) */}
                             <View style={{ alignItems: 'center', marginVertical: SPACING.m }}>
                                 <TouchableOpacity
-                                    style={[styles.iconPickerBtn, { borderColor: colors.primaryAction, backgroundColor: colors.surface }]}
+                                    style={[styles.iconPickerBtn, { borderColor: colors.primaryAction, backgroundColor: colors.inputBackground }]}
                                     onPress={() => setEmojiPickerVisible(true)}
                                 >
                                     <Text style={{ fontSize: 40 }}>{icon}</Text>
@@ -235,7 +236,7 @@ export default function GoalScreen({ navigation }) {
                             <View style={styles.inputGroup}>
                                 <Text style={[styles.label, { color: colors.secondaryText }]}>GOAL NAME</Text>
                                 <TextInput
-                                    style={[styles.input, { color: colors.primaryText, backgroundColor: colors.surface }]}
+                                    style={[styles.input, { color: colors.primaryText, backgroundColor: colors.inputBackground }]}
                                     value={name}
                                     onChangeText={setName}
                                     placeholder="e.g. New Bike"

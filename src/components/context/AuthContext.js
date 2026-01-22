@@ -3,6 +3,7 @@
 // Wraps: RootNavigator
 
 import React, { createContext, useState, useEffect, useContext } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../../services/firebase';
@@ -74,6 +75,21 @@ export const AuthProvider = ({ children }) => {
                     const profiles = await getFamilyProfiles(u.uid);
                     console.log(`📂 AuthContext: Loaded ${profiles.length} profiles from Firestore`);
                     setUserProfiles(profiles);
+
+                    // Restore last profile
+                    try {
+                        const lastId = await AsyncStorage.getItem('last_profile_id');
+                        if (lastId) {
+                            const found = profiles.find(p => p.id === lastId);
+                            if (found) {
+                                console.log(`🔄 Restoring Profile: ${found.name}`);
+                                setProfile(found);
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Failed to restore profile', e);
+                    }
+
                 } catch (error) {
                     console.error("🔥 AuthContext Error:", error);
                     setUserProfiles([]);
@@ -82,6 +98,7 @@ export const AuthProvider = ({ children }) => {
                 console.log("👤 AuthContext: User logged out");
                 setUserProfiles([]);
                 setProfile(null);
+                AsyncStorage.removeItem('last_profile_id').catch(console.error);
             }
 
             setLoading(false);
@@ -108,11 +125,13 @@ export const AuthProvider = ({ children }) => {
     const selectProfile = (p) => {
         console.log(`👤 AuthContext: Selected Profile ${p.id} (${p.role})`);
         setProfile(p);
+        AsyncStorage.setItem('last_profile_id', p.id).catch(console.error);
     };
 
     const switchProfile = () => {
         console.log("👤 AuthContext: Switching Profile (clearing selection)");
         setProfile(null);
+        AsyncStorage.removeItem('last_profile_id').catch(console.error);
     };
 
     return (

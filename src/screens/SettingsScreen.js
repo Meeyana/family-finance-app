@@ -27,7 +27,7 @@ export default function SettingsScreen({ navigation }) {
             onPress={onPress}
         >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACING.m }}>
-                <View style={[styles.iconBox, { backgroundColor: colors.surface }]}>
+                <View style={[styles.iconBox, { backgroundColor: colors.iconBackground }]}>
                     <Ionicons name={icon} size={22} color={colors.primaryText} />
                 </View>
                 <View>
