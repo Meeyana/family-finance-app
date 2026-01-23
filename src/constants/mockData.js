@@ -4,7 +4,7 @@
 export const MOCK_PROFILES = [
     { id: '1', name: 'Dad', role: 'Owner', avatar: '👨' },
     { id: '2', name: 'Mom', role: 'Partner', avatar: '👩' },
-    { id: '3', name: 'Kid', role: 'Child', avatar: '👶' },
+    { id: '3', name: 'Kid', role: 'Basic', avatar: '👶' },
 ];
 
 export const MOCK_USER_DATA = {

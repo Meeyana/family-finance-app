@@ -24,7 +24,7 @@ export default function EditProfileScreen({ route, navigation }) {
 
     const [name, setName] = useState(profile?.name || '');
     const [limit, setLimit] = useState(String(profile?.limit || 0));
-    const [role, setRole] = useState(profile?.role || 'Child');
+    const [role, setRole] = useState(profile?.role || 'Basic');
     const [pin, setPin] = useState(''); // Init empty for Blind Reset
     const [avatarId, setAvatarId] = useState(profile?.avatarId || null);
     const [showAvatarModal, setShowAvatarModal] = useState(false);
@@ -227,11 +227,14 @@ export default function EditProfileScreen({ route, navigation }) {
                                 </View>
                             ) : (
                                 <View style={[styles.segmentContainer, { backgroundColor: colors.inputBackground }]}>
-                                    {['Partner', 'Child'].map(r => (
+                                    {['Partner', 'Basic'].map(r => (
                                         <TouchableOpacity
                                             key={r}
                                             style={[styles.segmentBtn, role === r && { backgroundColor: colors.primaryAction, shadowOpacity: 0.1 }]}
-                                            onPress={() => setRole(r)}
+                                            onPress={() => {
+                                                setRole(r);
+                                                setShowRoleDropdown(false);
+                                            }}
                                         >
                                             <Text style={[styles.segmentText, { color: role === r ? 'white' : colors.secondaryText }]}>{r}</Text>
                                         </TouchableOpacity>

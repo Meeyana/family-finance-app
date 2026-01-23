@@ -177,7 +177,7 @@ function DashboardTabs() {
     );
 }
 
-function ChildTabs() {
+function BasicTabs() {
     const { theme } = useTheme();
     const colors = COLORS[theme];
 
@@ -264,8 +264,12 @@ export default function AppStack() {
     const { user, userProfiles, profile, loading } = useAuth();
     const { theme } = useTheme();
 
-    if (loading) {
-        return <View style={{ flex: 1, justifyContent: 'center' }}><ActivityIndicator /></View>;
+    if (loading || userProfiles === null) {
+        return (
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                <ActivityIndicator size="large" />
+            </View>
+        );
     }
 
     return (
@@ -281,8 +285,8 @@ export default function AppStack() {
                 <Stack.Screen name="ProfileSelection" component={HomeScreen} />
             ) : (
                 <>
-                    {profile.role === 'Child' ? (
-                        <Stack.Screen name="ChildTabs" component={ChildTabs} />
+                    {profile.role === 'Basic' ? (
+                        <Stack.Screen name="BasicTabs" component={BasicTabs} />
                     ) : (
                         <Stack.Screen name="MainTabs" component={DashboardTabs} />
                     )}

@@ -25,7 +25,7 @@ const getFamilyRef = (uid) => doc(db, 'artifacts', APP_ID, 'users', uid);
 const DEFAULT_PROFILES = [
     { id: 'dad', name: 'Dad', role: 'Owner', limit: 20000000, spent: 0 },
     { id: 'mom', name: 'Mom', role: 'Partner', limit: 3000000, spent: 0 },
-    { id: 'child', name: 'Kid', role: 'Child', limit: 500000, spent: 0 }
+    { id: 'child', name: 'Kid', role: 'Basic', limit: 500000, spent: 0 }
 ];
 
 export const DEFAULT_CATEGORIES = [

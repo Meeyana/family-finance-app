@@ -6,7 +6,7 @@ import AuthStack from './AuthStack';
 import AppStack from './AppStack';
 
 export default function RootNavigator() {
-    const { user, loading } = useAuth();
+    const { user, loading, hasViewedWelcome } = useAuth();
 
     if (loading) {
         return (
@@ -18,7 +18,7 @@ export default function RootNavigator() {
 
     return (
         <NavigationContainer>
-            {user ? <AppStack /> : <AuthStack />}
+            {user ? <AppStack /> : <AuthStack initialRouteName={hasViewedWelcome ? 'Login' : 'Welcome'} />}
         </NavigationContainer>
     );
 }

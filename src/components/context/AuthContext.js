@@ -4,7 +4,7 @@
 
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../../services/firebase';
 import { doc } from 'firebase/firestore';
@@ -15,9 +15,26 @@ const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [userProfiles, setUserProfiles] = useState([]);
+    const [userProfiles, setUserProfiles] = useState(null);
     const [profile, setProfile] = useState(null);
     const [pendingRequestCount, setPendingRequestCount] = useState(0);
+    const [hasViewedWelcome, setHasViewedWelcome] = useState(false);
+    const [authInitialized, setAuthInitialized] = useState(false); // New flag to track full init sequence
+
+    // Load Local Settings (Theme is handled elsewhere, but Welcome state is here)
+    useEffect(() => {
+        const loadLocalState = async () => {
+            try {
+                const viewed = await AsyncStorage.getItem('has_viewed_welcome');
+                if (viewed === 'true') {
+                    setHasViewedWelcome(true);
+                }
+            } catch (e) {
+                console.warn("Failed to load welcome state", e);
+            }
+        };
+        loadLocalState();
+    }, []);
 
     // Initial Processing
     useEffect(() => {
@@ -79,6 +96,7 @@ export const AuthProvider = ({ children }) => {
             setUser(u);
 
             if (u) {
+                setUserProfiles(null); // Reset to null to trigger loading state (prevent Onboarding flash)
                 try {
                     // REMOVED: Auto-init family structure (moved to SignUpScreen to avoid race conditions)
                     // await initializeFamily(u.uid, u.email || 'anon');
@@ -116,6 +134,7 @@ export const AuthProvider = ({ children }) => {
             }
 
             setLoading(false);
+            setAuthInitialized(true);
         });
 
         return unsubscribe;
@@ -148,8 +167,27 @@ export const AuthProvider = ({ children }) => {
         AsyncStorage.removeItem('last_profile_id').catch(console.error);
     };
 
+    const completeWelcome = async () => {
+        setHasViewedWelcome(true);
+        await AsyncStorage.setItem('has_viewed_welcome', 'true');
+    };
+
+    const logout = async () => {
+        try {
+            console.log("👋 AuthContext: logging out and resetting welcome state");
+            setHasViewedWelcome(false);
+            await AsyncStorage.removeItem('has_viewed_welcome');
+            await AsyncStorage.removeItem('last_profile_id');
+            setProfile(null);
+            await signOut(auth);
+        } catch (e) {
+            console.error("Logout failed", e);
+            throw e;
+        }
+    };
+
     return (
-        <AuthContext.Provider value={{ user, userProfiles, profile, selectProfile, switchProfile, loading, refreshProfiles, pendingRequestCount }}>
+        <AuthContext.Provider value={{ user, userProfiles, profile, selectProfile, switchProfile, loading, refreshProfiles, pendingRequestCount, hasViewedWelcome, completeWelcome, authInitialized, logout }}>
             {children}
         </AuthContext.Provider>
     );

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Animated, Dimensions } from '
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
 import { useNavigation } from '@react-navigation/native';
+import { useAuth } from '../components/context/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const { width, height } = Dimensions.get('window');
@@ -12,6 +13,7 @@ const BACKGROUND_IMAGE = { uri: 'https://images.unsplash.com/photo-1579621970563
 
 export default function WelcomeScreen() {
     const navigation = useNavigation();
+    const { completeWelcome } = useAuth();
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const slideAnim = useRef(new Animated.Value(50)).current;
 
@@ -64,14 +66,20 @@ export default function WelcomeScreen() {
                 <Animated.View style={[styles.bottomContent, { opacity: fadeAnim }]}>
                     <TouchableOpacity
                         style={[styles.button, styles.signUpButton]}
-                        onPress={() => navigation.navigate('SignUp')}
+                        onPress={() => {
+                            completeWelcome();
+                            navigation.navigate('SignUp');
+                        }}
                     >
                         <Text style={styles.signUpText}>Sign up</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
                         style={[styles.button, styles.loginButton]}
-                        onPress={() => navigation.navigate('Login')}
+                        onPress={() => {
+                            completeWelcome();
+                            navigation.navigate('Login');
+                        }}
                     >
                         <Text style={styles.loginText}>Log in</Text>
                     </TouchableOpacity>

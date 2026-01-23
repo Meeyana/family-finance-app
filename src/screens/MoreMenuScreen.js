@@ -126,7 +126,7 @@ export default function MoreMenuScreen({ navigation }) {
 
                 <View style={styles.section}>
                     <SectionHeader title="Management" />
-                    {profile?.role !== 'Child' && (
+                    {profile?.role !== 'Basic' && (
                         <MenuOption
                             icon="cash-outline"
                             label="Money Requests"

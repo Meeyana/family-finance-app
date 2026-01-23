@@ -2,8 +2,6 @@ import React, { useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, FlatList, Alert, DeviceEventEmitter, Modal, TextInput, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, useColorScheme, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
-import { auth } from '../services/firebase';
-import { signOut } from 'firebase/auth';
 import { useAuth } from '../components/context/AuthContext';
 import { useTheme } from '../components/context/ThemeContext';
 import { updateProfile } from '../services/firestoreRepository';
@@ -21,7 +19,7 @@ const ROW_GAP = SPACING.l; // 16
 const ITEM_WIDTH = (width - (SCREEN_PADDING * 2) - ROW_GAP) / 2;
 
 export default function HomeScreen({ navigation }) {
-    const { userProfiles, selectProfile, user, refreshProfiles } = useAuth();
+    const { userProfiles, selectProfile, user, refreshProfiles, logout } = useAuth();
     const { theme } = useTheme();
     const colors = COLORS[theme];
 
@@ -159,14 +157,26 @@ export default function HomeScreen({ navigation }) {
         }
     };
 
-    const handleLogout = async () => {
-        try {
-            console.log('👋 Auth: Logging out...');
-            await signOut(auth);
-        } catch (error) {
-            console.error('Logout error:', error);
-            Alert.alert('Error', 'Failed to log out');
-        }
+    const handleLogout = () => {
+        Alert.alert(
+            "Log Out",
+            "Are you sure you want to log out?",
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Log Out",
+                    style: "destructive",
+                    onPress: async () => {
+                        try {
+                            await logout();
+                        } catch (error) {
+                            console.error('Logout error:', error);
+                            Alert.alert('Error', 'Failed to log out');
+                        }
+                    }
+                }
+            ]
+        );
     };
 
     const getStatusColor = (status) => {

@@ -17,6 +17,7 @@ export default function LoginScreen({ navigation }) {
     const insets = useSafeAreaInsets();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
@@ -120,7 +121,16 @@ export default function LoginScreen({ navigation }) {
                     style={styles.keyboardView}
                 >
                     <View style={styles.header}>
-                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                        <TouchableOpacity
+                            onPress={() => {
+                                if (navigation.canGoBack()) {
+                                    navigation.goBack();
+                                } else {
+                                    navigation.navigate('Welcome');
+                                }
+                            }}
+                            style={styles.backButton}
+                        >
                             <Ionicons name="arrow-back" size={24} color={colors.primaryText} />
                         </TouchableOpacity>
                         <View style={styles.headerTitleContainer}>
@@ -147,19 +157,40 @@ export default function LoginScreen({ navigation }) {
                                 onChangeText={setEmail}
                                 autoCapitalize="none"
                                 keyboardType="email-address"
+                                textContentType="username"
+                                autoComplete="email"
                             />
                         </View>
 
                         <View style={styles.inputContainer}>
                             <Text style={[styles.label, { color: colors.secondaryText }]}>Password</Text>
-                            <TextInput
-                                style={[styles.input, { backgroundColor: colors.inputBackground, color: colors.primaryText, borderColor: colors.divider }]}
-                                placeholder="••••••••"
-                                placeholderTextColor={colors.secondaryText}
-                                value={password}
-                                onChangeText={setPassword}
-                                secureTextEntry
-                            />
+                            <View style={[styles.passwordContainer, {
+                                backgroundColor: colors.inputBackground,
+                                borderColor: colors.divider
+                            }]}>
+                                <TextInput
+                                    style={[styles.passwordInput, {
+                                        color: colors.primaryText,
+                                    }]}
+                                    placeholder="••••••••"
+                                    placeholderTextColor={colors.secondaryText}
+                                    value={password}
+                                    onChangeText={setPassword}
+                                    secureTextEntry={!showPassword}
+                                    textContentType="password"
+                                    autoComplete="password"
+                                />
+                                <TouchableOpacity
+                                    style={styles.eyeIcon}
+                                    onPress={() => setShowPassword(!showPassword)}
+                                >
+                                    <Ionicons
+                                        name={showPassword ? "eye" : "eye-off"}
+                                        size={24}
+                                        color={colors.secondaryText}
+                                    />
+                                </TouchableOpacity>
+                            </View>
                         </View>
 
                         <TouchableOpacity onPress={handleForgotPassword} style={styles.forgotPassword}>
@@ -292,6 +323,28 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         paddingHorizontal: 16,
         fontSize: TYPOGRAPHY.size.body,
+        width: '100%',
+    },
+    passwordInput: {
+        flex: 1,
+        fontSize: TYPOGRAPHY.size.body,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        height: '100%',
+    },
+    passwordContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderRadius: 12,
+        height: 50,
+        overflow: 'hidden',
+    },
+    eyeIcon: {
+        paddingHorizontal: 12,
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100%',
     },
     errorContainer: {
         padding: 12,

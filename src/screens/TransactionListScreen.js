@@ -364,7 +364,6 @@ const styles = StyleSheet.create({
         fontWeight: TYPOGRAPHY.weight.bold,
     },
     avatar: {
-        borderWidth: 1,
-        borderColor: '#eeeeee'
+        // No border for consistency
     }
 });

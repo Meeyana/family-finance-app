@@ -532,10 +532,10 @@ export default function OnboardingProfileScreen() {
                                 <Text style={[styles.roleText, member.role === 'Partner' && { color: '#fff' }, member.role !== 'Partner' && { color: colors.secondaryText }]}>Partner</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
-                                style={[styles.roleButton, member.role === 'Child' && { backgroundColor: '#6ca749' }, { borderColor: colors.divider }]}
-                                onPress={() => updateMember(index, 'role', 'Child')}
+                                style={[styles.roleButton, member.role === 'Basic' && { backgroundColor: '#6ca749' }, { borderColor: colors.divider }]}
+                                onPress={() => updateMember(index, 'role', 'Basic')}
                             >
-                                <Text style={[styles.roleText, member.role === 'Child' && { color: '#fff' }, member.role !== 'Child' && { color: colors.secondaryText }]}>Child</Text>
+                                <Text style={[styles.roleText, member.role === 'Basic' && { color: '#fff' }, member.role !== 'Basic' && { color: colors.secondaryText }]}>Basic</Text>
                             </TouchableOpacity>
                         </View>
                         <TextInput

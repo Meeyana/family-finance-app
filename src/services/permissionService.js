@@ -4,7 +4,7 @@
 export const ROLES = {
     OWNER: 'Owner',
     PARTNER: 'Partner',
-    CHILD: 'Child'
+    BASIC: 'Basic'
 };
 
 export const PERMISSIONS = {
@@ -24,6 +24,6 @@ export const canEditBudget = (role) => {
 export const canViewProfile = (userRole, profileId, currentProfileId) => {
     // Owner/Partner can view all
     if (PERMISSIONS.VIEW_ALL_PROFILES.includes(userRole)) return true;
-    // Child can only view their own
+    // Basic can only view their own
     return profileId === currentProfileId;
 };
