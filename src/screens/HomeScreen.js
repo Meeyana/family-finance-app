@@ -11,6 +11,8 @@ import Avatar from '../components/Avatar';
 import { Asset } from 'expo-asset'; // Import Asset
 import { getAvatarSource } from '../utils/avatars'; // Import helper
 import { Dimensions } from 'react-native';
+import { addDoc, collection } from 'firebase/firestore'; // Import Firestore functions
+import { auth, db } from '../services/firebase'; // Import auth and db instances
 
 const { width } = Dimensions.get('window');
 // Increased padding and gap to slightly shrink the avatars as requested
@@ -57,6 +59,12 @@ export default function HomeScreen({ navigation }) {
     const [pinError, setPinError] = useState('');
     const [creatingPin, setCreatingPin] = useState(false);
     const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+    // Verification Code (Forgot PIN) State
+    const [verificationModalVisible, setVerificationModalVisible] = useState(false);
+    const [verificationCode, setVerificationCode] = useState('');
+    const [inputCode, setInputCode] = useState('');
+    const [codeLoading, setCodeLoading] = useState(false);
 
     const handleProfileSelect = (profile) => {
         if (profile.pin && profile.pin.length > 0) {
@@ -139,6 +147,100 @@ export default function HomeScreen({ navigation }) {
             Alert.alert("Error", "Failed to save PIN");
         } finally {
             setCreatingPin(false);
+        }
+    };
+
+    const handleForgotPin = async () => {
+        if (!selectedProfileForAuth) return;
+
+        if (selectedProfileForAuth.role === 'Owner') {
+            // Generate Random 6-digit Code
+            const code = Math.floor(100000 + Math.random() * 900000).toString();
+            setVerificationCode(code);
+            setInputCode('');
+
+            try {
+                console.log(`[EMAIL FLOW] Attempting to write to 'mail' collection for ${user.email}...`);
+
+                // 1. Write to Firestore 'mail' collection (Triggers Firebase Extension)
+                const docRef = await addDoc(collection(db, 'mail'), {
+                    to: [user.email],
+                    message: {
+                        subject: 'Reset your Finance App PIN',
+                        html: `<p>You requested to reset your profile PIN.</p><p>Your verification code is: <strong>${code}</strong></p><p>If you did not request this, please ignore this email.</p>`,
+                    }
+                });
+
+                console.log(`[EMAIL FLOW] SUCCESS: Document written with ID: ${docRef.id}`);
+                console.log(`[EMAIL TRIGGER] Verification Code ${code} sent to ${user.email} via Firestore 'mail' collection.`);
+
+                // 2. Alert User
+                // Note: In production, the user would actually receive the email. 
+                // We show the code here for DEV/DEMO purposes or if the extension is not yet installed.
+                Alert.alert(
+                    "Verification Code Sent",
+                    `We have sent a verification email to ${user.email}. Please check your inbox (and spam). \n\n(Dev Note: The code is ${code})`,
+                    [
+                        {
+                            text: "Enter Code",
+                            onPress: () => {
+                                setVerificationModalVisible(true);
+                                setAuthModalVisible(false); // Close PIN modal
+                            }
+                        }
+                    ]
+                );
+
+            } catch (error) {
+                console.error("[EMAIL FLOW] FAILED: Could not write to Firestore.", error);
+
+                if (error.code === 'permission-denied') {
+                    Alert.alert("Permission Error", "Your app does not have permission to send emails. Please check Firestore Rules.");
+                } else {
+                    Alert.alert("Error", `Could not send verification email. Details: ${error.message}`);
+                }
+            }
+
+        } else {
+            // Non-Owner Case: Ask Admin
+            Alert.alert(
+                "Forgot PIN?",
+                "Please ask the Account Owner (Admin) to reset your PIN in Manage Profiles."
+            );
+        }
+    };
+
+    const handleVerifyCode = async () => {
+        if (inputCode.length !== 6) {
+            Alert.alert("Invalid Code", "Please enter the 6-digit code.");
+            return;
+        }
+
+        setCodeLoading(true);
+        try {
+            // Verify Code
+            if (inputCode === verificationCode) {
+                console.log("Code Verified. Resetting PIN for owner...");
+
+                await updateProfile(user.uid, selectedProfileForAuth.id, {
+                    pin: '' // Clear PIN
+                });
+                await refreshProfiles();
+
+                // Success UI
+                setVerificationModalVisible(false);
+                Alert.alert("Success", "Identity verified. Your profile PIN has been removed.");
+
+                // Automatically log them in
+                selectProfile(selectedProfileForAuth);
+            } else {
+                Alert.alert("Verification Failed", "Incorrect code. Please try again.");
+            }
+        } catch (error) {
+            console.error("Reset PIN failed", error);
+            Alert.alert("Error", "Failed to reset PIN.");
+        } finally {
+            setCodeLoading(false);
         }
     };
 
@@ -288,8 +390,70 @@ export default function HomeScreen({ navigation }) {
                                             <Text style={[styles.enterText, { color: '#fff' }]}>Enter</Text>
                                         </TouchableOpacity>
                                     </View>
+
+                                    <TouchableOpacity style={{ marginTop: 24 }} onPress={handleForgotPin}>
+                                        <Text style={{ color: colors.secondaryText, fontSize: 14, textDecorationLine: 'underline' }}>Forgot PIN?</Text>
+                                    </TouchableOpacity>
                                 </>
                             )}
+                        </View>
+                    </KeyboardAvoidingView>
+                </TouchableWithoutFeedback>
+            </Modal>
+
+            {/* Verification Code Modal */}
+            <Modal
+                animationType="fade"
+                transparent={true}
+                visible={verificationModalVisible}
+                onRequestClose={() => setVerificationModalVisible(false)}
+            >
+                <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                    <KeyboardAvoidingView
+                        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                        style={[styles.modalOverlay, { backgroundColor: colors.modalOverlay }]}
+                    >
+                        <View style={[styles.modalContent, { backgroundColor: colors.cardBackground }]}>
+                            <Text style={[styles.modalTitle, { color: colors.primaryText }]}>Enter Code</Text>
+                            <Text style={[styles.modalSubtitle, { color: colors.secondaryText, textAlign: 'center' }]}>
+                                Please enter the 6-digit code sent to your email.
+                            </Text>
+
+                            <TextInput
+                                style={[styles.pinInput, {
+                                    color: colors.primaryText,
+                                    borderColor: colors.divider,
+                                    backgroundColor: colors.inputBackground,
+                                    fontSize: 24,
+                                    letterSpacing: 8,
+                                    textAlign: 'center',
+                                    paddingHorizontal: 0
+                                }]}
+                                value={inputCode}
+                                onChangeText={setInputCode}
+                                placeholder="000000"
+                                placeholderTextColor={colors.placeholderText}
+                                keyboardType="numeric"
+                                maxLength={6}
+                                autoFocus={true}
+                            />
+
+                            <View style={styles.modalButtons}>
+                                <TouchableOpacity style={[styles.cancelButton, { backgroundColor: colors.surface }]} onPress={() => { setVerificationModalVisible(false); setAuthModalVisible(true); }}>
+                                    <Text style={[styles.cancelText, { color: colors.primaryText }]}>Cancel</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[styles.enterButton, { backgroundColor: colors.primaryAction }]}
+                                    onPress={handleVerifyCode}
+                                    disabled={codeLoading}
+                                >
+                                    {codeLoading ? (
+                                        <ActivityIndicator color="#fff" size="small" />
+                                    ) : (
+                                        <Text style={[styles.enterText, { color: '#fff' }]}>Verify</Text>
+                                    )}
+                                </TouchableOpacity>
+                            </View>
                         </View>
                     </KeyboardAvoidingView>
                 </TouchableWithoutFeedback>

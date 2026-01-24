@@ -1,8 +1,11 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, DeviceEventEmitter, TouchableOpacity, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getProfileData } from '../services/dataService';
 import { getTransactions, getFamilyCategories, getLatestTransactions } from '../services/firestoreRepository';
+import { useFocusEffect } from '@react-navigation/native';
+import { getDoc, doc } from 'firebase/firestore';
+import { db } from '../services/firebase';
 import { auth } from '../services/firebase';
 import { useAuth } from '../components/context/AuthContext';
 import SwipeDateFilter from '../components/SwipeDateFilter';
@@ -13,6 +16,7 @@ import CurrencyText from '../components/CurrencyText';
 import TransactionRow from '../components/TransactionRow';
 import { useVisibility } from '../components/context/VisibilityContext';
 import Avatar from '../components/Avatar';
+import { registerForPushNotificationsAsync } from '../services/notificationService';
 
 const { width } = Dimensions.get('window');
 
@@ -25,6 +29,28 @@ export default function AccountDashboard({ navigation }) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [selectedDate, setSelectedDate] = useState(new Date());
+    const [notifEnabled, setNotifEnabled] = useState(false);
+
+    // Check notification status whenever screen is focused
+    useFocusEffect(
+        useCallback(() => {
+            checkNotifStatus();
+        }, [user, profile])
+    );
+
+    const checkNotifStatus = async () => {
+        if (!auth.currentUser || !profile) return;
+        try {
+            // Check specific PROFILE subcollection
+            const profileDoc = await getDoc(doc(db, 'users', auth.currentUser.uid, 'profiles', profile.id));
+            if (profileDoc.exists()) {
+                const d = profileDoc.data();
+                setNotifEnabled(d.notificationsEnabled === true && !!d.pushToken);
+            }
+        } catch (e) {
+            console.log("Notif check error", e);
+        }
+    };
 
     const [recentTransactions, setRecentTransactions] = useState([]);
 
@@ -206,9 +232,36 @@ export default function AccountDashboard({ navigation }) {
                             </View>
                         </View>
 
-                        <TouchableOpacity style={[styles.iconButton, { backgroundColor: colors.iconBackground, marginLeft: 8 }]}>
-                            <Ionicons name="notifications-outline" size={18} color={colors.headerIcon} />
-                            <View style={[styles.notificationBadge, { backgroundColor: colors.error }]} />
+                        <TouchableOpacity
+                            style={[
+                                styles.iconButton,
+                                { backgroundColor: notifEnabled ? colors.primaryAction + '20' : colors.iconBackground, marginLeft: 8 }
+                            ]}
+                            onPress={async () => {
+                                if (notifEnabled) {
+                                    // Already enabled -> Go to settings to manage
+                                    navigation.navigate('NotificationSettings');
+                                } else {
+                                    // Not enabled -> Quick enable
+                                    const token = await registerForPushNotificationsAsync(user.uid, profile.id);
+                                    if (token) {
+                                        setNotifEnabled(true);
+                                    } else {
+                                        // If failed/denied, go to settings guide
+                                        navigation.navigate('NotificationSettings');
+                                    }
+                                }
+                            }}
+                        >
+                            <Ionicons
+                                name={notifEnabled ? "notifications" : "notifications-outline"}
+                                size={20}
+                                color={notifEnabled ? colors.primaryAction : colors.headerIcon}
+                            />
+                            {/* Show red dot only if DISABLED (to prompt user) or maybe for unread in future */}
+                            {!notifEnabled && (
+                                <View style={[styles.notificationBadge, { backgroundColor: colors.error }]} />
+                            )}
                         </TouchableOpacity>
                     </View>
 

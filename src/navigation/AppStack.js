@@ -17,6 +17,7 @@ import AddTransactionScreen from '../screens/AddTransactionScreen';
 import ManageCategoriesScreen from '../screens/ManageCategoriesScreen';
 import MoreMenuScreen from '../screens/MoreMenuScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import NotificationSettingsScreen from '../screens/NotificationSettingsScreen';
 import ManageProfilesScreen from '../screens/ManageProfilesScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
 import AnalyzeScreen from '../screens/AnalyzeScreen';
@@ -293,6 +294,7 @@ export default function AppStack() {
 
                     <Stack.Screen name="ProfileDashboard" component={ProfileDashboard} />
                     <Stack.Screen name="Settings" component={SettingsScreen} />
+                    <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
                     <Stack.Screen
                         name="AddTransaction"
                         component={AddTransactionScreen}

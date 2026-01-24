@@ -25,6 +25,7 @@ export default function LoginScreen({ navigation }) {
     const [resetModalVisible, setResetModalVisible] = useState(false);
     const [resetEmail, setResetEmail] = useState('');
     const [resetLoading, setResetLoading] = useState(false);
+    const [resetSent, setResetSent] = useState(false);
 
     // Theme
     const { theme } = useTheme();
@@ -46,13 +47,9 @@ export default function LoginScreen({ navigation }) {
         try {
             await sendPasswordResetEmail(auth, resetEmail);
             // Close modal first
-            setResetModalVisible(false);
+            // setResetModalVisible(false); // Keep modal open to show success message
             // Then show success
-            Alert.alert(
-                "Check your email",
-                "We have sent a password recover instructions to your email.",
-                [{ text: "OK" }]
-            );
+            setResetSent(true); // Show inline success message
         } catch (error) {
             console.error("Forgot Password Error:", error);
             Alert.alert("Error", error.message);
@@ -198,7 +195,7 @@ export default function LoginScreen({ navigation }) {
                         </TouchableOpacity>
 
                         <TouchableOpacity
-                            style={[styles.button, { backgroundColor: '#6ca749' }]} // Primary Action Green
+                            style={[styles.button, { backgroundColor: colors.primaryAction }]}
                             onPress={handleLogin}
                             disabled={loading}
                         >
@@ -234,40 +231,68 @@ export default function LoginScreen({ navigation }) {
                                     <View style={styles.modalInnerContent}>
                                         <View style={styles.modalHeader}>
                                             <Text style={[styles.modalTitle, { color: colors.primaryText }]}>Forgot Password</Text>
-                                            <TouchableOpacity onPress={() => setResetModalVisible(false)}>
+                                            <TouchableOpacity onPress={() => { setResetModalVisible(false); setResetSent(false); }}>
                                                 <Ionicons name="close" size={24} color={colors.primaryText} />
                                             </TouchableOpacity>
                                         </View>
 
-                                        <Text style={[styles.modalSubtitle, { color: colors.secondaryText }]}>
-                                            Enter your email address and we'll send you a link to reset your password.
-                                        </Text>
+                                        {resetSent ? (
+                                            <View style={{ alignItems: 'center', paddingHorizontal: 10 }}>
+                                                <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: colors.success + '20', justifyContent: 'center', alignItems: 'center', marginBottom: 20 }}>
+                                                    <Ionicons name="mail-open-outline" size={40} color={colors.success} />
+                                                </View>
+                                                <Text style={[styles.successTitle, { color: colors.success, marginBottom: 12 }]}>Email Sent Successfully!</Text>
+                                                <Text style={[styles.modalText, { color: colors.primaryText, textAlign: 'center', lineHeight: 22 }]}>
+                                                    We've sent a password reset link to <Text style={{ fontWeight: 'bold' }}>{resetEmail}</Text>.
+                                                </Text>
 
-                                        <View style={styles.inputContainer}>
-                                            <Text style={[styles.label, { color: colors.secondaryText }]}>Email</Text>
-                                            <TextInput
-                                                style={[styles.input, { backgroundColor: colors.inputBackground, color: colors.primaryText, borderColor: colors.divider }]}
-                                                placeholder="name@example.com"
-                                                placeholderTextColor={colors.secondaryText}
-                                                value={resetEmail}
-                                                onChangeText={setResetEmail}
-                                                autoCapitalize="none"
-                                                keyboardType="email-address"
-                                                autoFocus
-                                            />
-                                        </View>
+                                                <View style={[styles.tipBox, { backgroundColor: colors.surface, borderColor: colors.divider, borderWidth: 1 }]}>
+                                                    <Ionicons name="information-circle-outline" size={20} color={colors.warning} />
+                                                    <Text style={[styles.tipText, { color: colors.secondaryText }]}>
+                                                        Don't see it? Check your <Text style={{ fontWeight: 'bold', color: colors.warning }}>Spam</Text> or Junk folder.
+                                                    </Text>
+                                                </View>
 
-                                        <TouchableOpacity
-                                            style={[styles.button, { backgroundColor: '#6ca749', marginTop: SPACING.l }]}
-                                            onPress={handleSendResetEmail}
-                                            disabled={resetLoading}
-                                        >
-                                            {resetLoading ? (
-                                                <ActivityIndicator color="#fff" />
-                                            ) : (
-                                                <Text style={styles.buttonText}>Recover Password</Text>
-                                            )}
-                                        </TouchableOpacity>
+                                                <TouchableOpacity
+                                                    style={[styles.button, { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.divider, marginTop: 24, width: '100%' }]}
+                                                    onPress={() => { setResetModalVisible(false); setResetSent(false); }}
+                                                >
+                                                    <Text style={[styles.buttonText, { color: colors.primaryText }]}>Back to Login</Text>
+                                                </TouchableOpacity>
+                                            </View>
+                                        ) : (
+                                            <>
+                                                <Text style={[styles.modalSubtitle, { color: colors.secondaryText }]}>
+                                                    Enter your email address and we'll send you a link to reset your password.
+                                                </Text>
+
+                                                <View style={styles.inputContainer}>
+                                                    <Text style={[styles.label, { color: colors.secondaryText }]}>Email</Text>
+                                                    <TextInput
+                                                        style={[styles.input, { backgroundColor: colors.inputBackground, color: colors.primaryText, borderColor: colors.divider }]}
+                                                        placeholder="name@example.com"
+                                                        placeholderTextColor={colors.secondaryText}
+                                                        value={resetEmail}
+                                                        onChangeText={setResetEmail}
+                                                        autoCapitalize="none"
+                                                        keyboardType="email-address"
+                                                        autoFocus
+                                                    />
+                                                </View>
+
+                                                <TouchableOpacity
+                                                    style={[styles.button, { backgroundColor: colors.primaryAction, marginTop: SPACING.l }]}
+                                                    onPress={handleSendResetEmail}
+                                                    disabled={resetLoading}
+                                                >
+                                                    {resetLoading ? (
+                                                        <ActivityIndicator color="#fff" />
+                                                    ) : (
+                                                        <Text style={styles.buttonText}>Recover Password</Text>
+                                                    )}
+                                                </TouchableOpacity>
+                                            </>
+                                        )}
                                     </View>
                                 </TouchableWithoutFeedback>
                             </KeyboardAvoidingView>
@@ -324,6 +349,29 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         fontSize: TYPOGRAPHY.size.body,
         width: '100%',
+    },
+    modalText: {
+        marginBottom: 16,
+        fontSize: TYPOGRAPHY.size.body,
+    },
+    successTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+    },
+    tipBox: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 12,
+        borderRadius: 8,
+        marginTop: 16,
+        borderWidth: 1,
+        gap: 8,
+        width: '100%',
+    },
+    tipText: {
+        fontSize: 13,
+        flex: 1,
+        lineHeight: 18,
     },
     passwordInput: {
         flex: 1,

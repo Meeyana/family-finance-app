@@ -10,14 +10,14 @@ import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
 import { useTheme } from '../components/context/ThemeContext';
 
 export default function MoreMenuScreen({ navigation }) {
-    const { profile, switchProfile, pendingRequestCount } = useAuth();
+    const { profile, switchProfile, pendingRequestCount, logout } = useAuth();
     const { theme } = useTheme();
     const colors = COLORS[theme];
 
     const handleLogout = async () => {
         const title = "Log Out";
         const message = "Are you sure you want to log out?";
-        const execute = async () => await signOut(auth);
+        const execute = async () => await logout();
 
         if (Platform.OS === 'web') {
             if (confirm(message)) execute();

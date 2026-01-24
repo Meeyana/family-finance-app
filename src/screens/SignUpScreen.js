@@ -25,6 +25,7 @@ export default function SignUpScreen({ navigation }) {
     const [passwordStrength, setPasswordStrength] = useState(0); // 0: None, 1: Weak, 2: Medium, 3: Strong
     const [passwordError, setPasswordError] = useState('');
     const [confirmPasswordError, setConfirmPasswordError] = useState('');
+    const [agreedToTerms, setAgreedToTerms] = useState(false);
     const [loading, setLoading] = useState(false);
     const { theme } = useTheme();
     const colors = COLORS[theme];
@@ -81,6 +82,11 @@ export default function SignUpScreen({ navigation }) {
 
         if (!name || !email || !password || !confirmPassword) {
             Alert.alert('Error', 'Please fill in all fields');
+            return;
+        }
+
+        if (!agreedToTerms) {
+            Alert.alert('Required', 'You must agree to the Terms of Service and Privacy Policy to continue.');
             return;
         }
 
@@ -292,8 +298,23 @@ export default function SignUpScreen({ navigation }) {
                             ) : null}
                         </View>
 
+                        {/* Terms of Service Checkbox */}
                         <TouchableOpacity
-                            style={[styles.button, { backgroundColor: '#6ca749' }]} // Primary Action Green
+                            style={styles.termsContainer}
+                            onPress={() => setAgreedToTerms(!agreedToTerms)}
+                        >
+                            <Ionicons
+                                name={agreedToTerms ? "checkbox" : "square-outline"}
+                                size={24}
+                                color={agreedToTerms ? '#6ca749' : colors.secondaryText}
+                            />
+                            <Text style={[styles.termsText, { color: colors.secondaryText }]}>
+                                I agree to the <Text style={{ color: '#6ca749', fontWeight: 'bold' }}>Terms of Service</Text> and <Text style={{ color: '#6ca749', fontWeight: 'bold' }}>Privacy Policy</Text>
+                            </Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={[styles.button, { backgroundColor: agreedToTerms ? '#6ca749' : colors.divider }]} // Disable visual if not agreed
                             onPress={handleSignUp}
                             disabled={loading}
                         >
@@ -434,5 +455,17 @@ const styles = StyleSheet.create({
         marginTop: 4,
         fontSize: 12,
         fontWeight: '500',
+    },
+    termsContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: SPACING.m,
+        marginTop: SPACING.s,
+        gap: 12,
+    },
+    termsText: {
+        fontSize: 13,
+        flex: 1,
+        lineHeight: 20,
     },
 });

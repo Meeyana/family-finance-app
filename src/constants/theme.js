@@ -3,12 +3,13 @@ export const COLORS = {
         background: '#FFFFFF',
         surface: '#F7F7F7',
         primaryText: '#111111',
-        secondaryText: '#c0c0c0',
+        secondaryText: '#6B7280', // Darker gray for better readability on light background
         placeholderText: '#9CA3AF',
         divider: '#E5E5E5',
         primaryAction: '#6ca749',
         secondaryAction: '#111111',
         success: '#2da249',
+        warning: '#F59E0B', // Added warning color
         error: '#DC2626',
         white: '#FFFFFF',
         black: '#000000',
@@ -30,6 +31,7 @@ export const COLORS = {
         primaryAction: '#6ca749',
         secondaryAction: '#FFFFFF',
         success: '#2da249',
+        warning: '#FBBF24', // Added warning color (lighter for dark mode)
         error: '#EF4444',
         white: '#FFFFFF',
         black: '#000000',

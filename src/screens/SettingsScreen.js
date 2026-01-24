@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Share } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -67,7 +68,7 @@ export default function SettingsScreen({ navigation }) {
                 <MenuItem
                     icon="notifications-outline"
                     label="Notifications"
-                    onPress={() => Alert.alert('Coming Soon', 'Notification settings are under development.')}
+                    onPress={() => navigation.navigate('NotificationSettings')}
                 />
 
                 <MenuItem
@@ -168,6 +169,7 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         justifyContent: 'center',
         alignItems: 'center',
+        padding: 0,
     },
     menuText: {
         fontSize: TYPOGRAPHY.size.body,

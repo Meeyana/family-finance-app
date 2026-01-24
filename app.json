@@ -28,6 +28,12 @@
       "@react-native-community/datetimepicker",
       "expo-asset",
       "expo-web-browser"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "7d554d0e-7b15-4036-96b3-8d2568b4895c"
+      }
+    },
+    "owner": "tuanphan1112"
   }
 }

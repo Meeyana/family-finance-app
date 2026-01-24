@@ -12,7 +12,7 @@ import { AVAILABLE_AVATARS, getAvatarSource } from '../utils/avatars';
 
 export default function EditProfileScreen({ route, navigation }) {
     const { profile, isNew } = route.params;
-    const { refreshProfiles } = useAuth();
+    const { refreshProfiles, profile: activeProfile } = useAuth();
 
     // Theme
     const { theme } = useTheme();
@@ -32,7 +32,8 @@ export default function EditProfileScreen({ route, navigation }) {
 
     // Has existing PIN?
     const hasPin = profile?.pin && profile.pin.length > 0;
-    const isOwner = profile?.role === 'Owner';
+    const isTargetOwner = profile?.role === 'Owner';
+    const amIOwner = activeProfile?.role === 'Owner';
 
     const handleSave = async () => {
         if (isNew && !name.trim()) {
@@ -220,7 +221,7 @@ export default function EditProfileScreen({ route, navigation }) {
                         {/* Role Selector */}
                         <View style={styles.inputGroup}>
                             <Text style={[styles.label, { color: colors.secondaryText }]}>ROLE</Text>
-                            {isOwner ? (
+                            {isTargetOwner ? (
                                 <View style={[styles.disabledInput, { backgroundColor: colors.background, borderColor: colors.divider }]}>
                                     <Text style={{ color: colors.secondaryText }}>Owner (Cannot change)</Text>
                                     <MaterialCommunityIcons name="lock" size={16} color={colors.secondaryText} />
@@ -233,7 +234,6 @@ export default function EditProfileScreen({ route, navigation }) {
                                             style={[styles.segmentBtn, role === r && { backgroundColor: colors.primaryAction, shadowOpacity: 0.1 }]}
                                             onPress={() => {
                                                 setRole(r);
-                                                setShowRoleDropdown(false);
                                             }}
                                         >
                                             <Text style={[styles.segmentText, { color: role === r ? 'white' : colors.secondaryText }]}>{r}</Text>
@@ -279,7 +279,7 @@ export default function EditProfileScreen({ route, navigation }) {
                         )}
 
                         {/* Delete Profile Button */}
-                        {!isNew && !isOwner && (
+                        {!isNew && amIOwner && !isTargetOwner && (
                             <TouchableOpacity style={{ alignSelf: 'center', marginTop: 24, padding: 8 }} onPress={handleDelete}>
                                 <Text style={{ color: colors.error, fontSize: 12 }}>Delete Profile</Text>
                             </TouchableOpacity>
