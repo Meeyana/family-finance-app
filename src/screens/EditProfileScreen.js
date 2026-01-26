@@ -33,12 +33,15 @@ export default function EditProfileScreen({ route, navigation }) {
     const [loading, setLoading] = useState(false);
 
     // Has existing PIN?
+    // Has existing PIN?
     const hasPin = profile?.pin && profile.pin.length > 0;
     const isTargetOwner = profile?.role === 'Owner';
     const amIOwner = activeProfile?.role === 'Owner';
+    const isMyProfile = activeProfile?.id === profile?.id;
+    const canEditName = isNew || amIOwner || isMyProfile;
 
     const handleSave = async () => {
-        if (isNew && !name.trim()) {
+        if (canEditName && !name.trim()) {
             Alert.alert("Error", "Name cannot be empty");
             return;
         }
@@ -66,6 +69,9 @@ export default function EditProfileScreen({ route, navigation }) {
                     role: role,
                     avatarId: avatarId
                 };
+                if (canEditName) {
+                    updateData.name = name.trim();
+                }
                 if (pin.length > 0) {
                     updateData.pin = pin.trim();
                 }
@@ -193,7 +199,7 @@ export default function EditProfileScreen({ route, navigation }) {
                         {/* Name Input */}
                         <View style={styles.inputGroup}>
                             <Text style={[styles.label, { color: colors.secondaryText }]}>NAME</Text>
-                            {isNew ? (
+                            {canEditName ? (
                                 <TextInput
                                     style={[styles.input, { backgroundColor: colors.inputBackground, color: colors.primaryText, borderColor: colors.divider }]}
                                     value={name}
@@ -204,7 +210,7 @@ export default function EditProfileScreen({ route, navigation }) {
                             ) : (
                                 <View style={[styles.disabledInput, { backgroundColor: colors.background, borderColor: colors.divider }]}>
                                     <Text style={{ fontSize: TYPOGRAPHY.size.body, color: colors.primaryText, fontWeight: '600' }}>{name}</Text>
-                                    <Text style={{ fontSize: TYPOGRAPHY.size.caption, color: colors.secondaryText }}>(Managed by user)</Text>
+                                    <Text style={{ fontSize: TYPOGRAPHY.size.caption, color: colors.secondaryText }}>(Restricted)</Text>
                                 </View>
                             )}
                         </View>
