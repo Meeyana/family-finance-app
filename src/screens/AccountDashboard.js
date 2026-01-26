@@ -276,8 +276,8 @@ export default function AccountDashboard({ navigation }) {
                                 amount={viewData?.netCashflow}
                                 showSign={false}
                                 hideable={true}
-                                style={{ color: '#6ca749', fontSize: 30, fontWeight: 'bold' }}
-                                symbolStyle={{ color: colors.primaryAction, fontSize: 30, fontWeight: 'bold', textDecorationLine: 'none' }}
+                                style={{ color: (viewData?.netCashflow || 0) < 0 ? colors.error : '#6ca749', fontSize: 30, fontWeight: 'bold' }}
+                                symbolStyle={{ color: (viewData?.netCashflow || 0) < 0 ? colors.error : colors.primaryAction, fontSize: 30, fontWeight: 'bold', textDecorationLine: 'none' }}
                             />
                             <TouchableOpacity onPress={toggleVisibility}>
                                 <Ionicons name={isValuesHidden ? "eye-off-outline" : "eye-outline"} size={18} color={colors.headerIcon} />

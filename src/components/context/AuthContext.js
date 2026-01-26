@@ -74,6 +74,14 @@ export const AuthProvider = ({ children }) => {
         }
     }, [user, profile]);
 
+    const reloadUser = async () => {
+        if (auth.currentUser) {
+            await auth.currentUser.reload();
+            setUser({ ...auth.currentUser }); // Force state update with new properties
+            return auth.currentUser;
+        }
+    };
+
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (u) => {
             // LOG: Auth state change detected
@@ -85,12 +93,9 @@ export const AuthProvider = ({ children }) => {
             const isDemoUser = u && u.email === 'demo@quanlychitieu.com';
 
             if (u && !u.emailVerified && !isDemoUser) {
-                console.log("🔒 AuthContext: User email not verified. Treating as logged out for Navigation.");
-                setUser(null);
-                setUserProfiles([]);
-                setProfile(null);
-                setLoading(false);
-                return;
+                console.log("🔒 AuthContext: User email not verified. Allowing login but will be routed to Verification Screen.");
+                // We NO LONGER set user to null here.
+                // We proceed to set user(u) so AppStack can route to VerifyEmailScreen.
             }
 
             setUser(u);
@@ -187,7 +192,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, userProfiles, profile, selectProfile, switchProfile, loading, refreshProfiles, pendingRequestCount, hasViewedWelcome, completeWelcome, authInitialized, logout }}>
+        <AuthContext.Provider value={{ user, userProfiles, profile, selectProfile, switchProfile, loading, refreshProfiles, pendingRequestCount, hasViewedWelcome, completeWelcome, authInitialized, logout, reloadUser }}>
             {children}
         </AuthContext.Provider>
     );

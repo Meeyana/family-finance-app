@@ -20,6 +20,8 @@ const COMMON_EMOJIS = [
     '🏷️', '🔒', '🔧', '⚙️', '📝', '📅'
 ];
 
+const formatNumber = (num) => num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+
 export default function OnboardingProfileScreen() {
     const { user, refreshProfiles } = useAuth();
     const { theme } = useTheme();
@@ -170,7 +172,13 @@ export default function OnboardingProfileScreen() {
 
     const updateMember = (index, field, value) => {
         const newMembers = [...members];
-        newMembers[index][field] = value;
+        if (field === 'limit') {
+            const cleaned = value.replace(/[^0-9]/g, '');
+            const number = cleaned.replace(/^0+/, '') || ''; // Allow empty
+            newMembers[index][field] = number ? formatNumber(number) : '';
+        } else {
+            newMembers[index][field] = value;
+        }
         setMembers(newMembers);
     };
 
@@ -349,7 +357,11 @@ export default function OnboardingProfileScreen() {
                     style={[styles.input, { backgroundColor: colors.inputBackground, color: colors.primaryText, borderColor: colors.divider }]}
                     placeholder="0"
                     value={ownerBudget}
-                    onChangeText={setOwnerBudget}
+                    onChangeText={(text) => {
+                        const cleaned = text.replace(/[^0-9]/g, '');
+                        const number = cleaned.replace(/^0+/, '') || '';
+                        setOwnerBudget(number ? formatNumber(number) : '');
+                    }}
                     keyboardType="numeric"
                 />
             </View>

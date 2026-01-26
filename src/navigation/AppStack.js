@@ -27,6 +27,7 @@ import GrantMoneyScreen from '../screens/GrantMoneyScreen';
 import RecurringScreen from '../screens/RecurringScreen';
 import GoalScreen from '../screens/GoalScreen';
 import GoalDetailScreen from '../screens/GoalDetailScreen';
+import VerifyEmailScreen from '../screens/VerifyEmailScreen'; // Import new screen
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -280,6 +281,8 @@ export default function AppStack() {
         }}>
             {!user ? (
                 <Stack.Screen name="Login" component={LoginScreen} />
+            ) : (user && !user.emailVerified && user.email !== 'demo@quanlychitieu.com') ? (
+                <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
             ) : (!userProfiles || userProfiles.length === 0) ? (
                 <Stack.Screen name="OnboardingProfile" component={OnboardingProfileScreen} />
             ) : !profile ? (

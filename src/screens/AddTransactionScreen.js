@@ -11,6 +11,8 @@ import { useTheme } from '../components/context/ThemeContext';
 import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
 import { formatMoney, parseMoney } from '../utils/formatting';
 
+import { useFocusEffect } from '@react-navigation/native';
+
 export default function AddTransactionScreen({ route, navigation }) {
     const { profile: authProfile } = useAuth();
     const { theme } = useTheme();
@@ -39,19 +41,21 @@ export default function AddTransactionScreen({ route, navigation }) {
     const [showDatePicker, setShowDatePicker] = useState(false);
 
     // SIDE EFFECT: Fetch categories
-    useEffect(() => {
-        const fetchCats = async () => {
-            try {
-                if (auth.currentUser) {
-                    const cats = await getFamilyCategories(auth.currentUser.uid, profile.id, profile.role);
-                    setCategories(cats);
+    useFocusEffect(
+        React.useCallback(() => {
+            const fetchCats = async () => {
+                try {
+                    if (auth.currentUser) {
+                        const cats = await getFamilyCategories(auth.currentUser.uid, profile.id, profile.role);
+                        setCategories(cats);
+                    }
+                } catch (err) {
+                    console.error(err);
                 }
-            } catch (err) {
-                console.error(err);
-            }
-        };
-        fetchCats();
-    }, [profile.id]);
+            };
+            fetchCats();
+        }, [profile.id])
+    );
 
     // Filter categories based on selected Type
     const filteredCategories = categories.filter(c => (c.type || 'expense') === type);
@@ -234,6 +238,7 @@ export default function AddTransactionScreen({ route, navigation }) {
                         <View style={styles.inputSection}>
                             <Text style={[styles.label, { color: colors.secondaryText }]}>Category</Text>
                             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
+
                                 {filteredCategories.map((cat) => {
                                     const isSelected = category === cat.name;
                                     return (
@@ -255,6 +260,24 @@ export default function AddTransactionScreen({ route, navigation }) {
                                         </TouchableOpacity>
                                     );
                                 })}
+
+                                {/* Add Category Button */}
+                                <TouchableOpacity
+                                    style={[styles.categoryChip, { backgroundColor: colors.surface }]}
+                                    onPress={() => {
+                                        const strRole = profile?.role?.toLowerCase() || '';
+                                        const isAdmin = strRole === 'owner' || strRole === 'partner';
+
+                                        if (!isAdmin) {
+                                            Alert.alert('Permission Denied', 'Please contact the owner to add new category.');
+                                            return;
+                                        }
+                                        navigation.navigate('ManageCategories', { openAddModal: true });
+                                    }}
+                                >
+                                    <Text style={{ fontSize: 16, marginRight: 6 }}>➕</Text>
+                                    <Text style={[styles.categoryText, { color: colors.primaryText }]}>Add</Text>
+                                </TouchableOpacity>
                             </ScrollView>
                         </View>
 

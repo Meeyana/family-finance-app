@@ -139,45 +139,17 @@ export default function SignUpScreen({ navigation }) {
 
             console.log('User created. Waiting for verification...');
 
-            // 5. WAIT FOR VERIFICATION (Polling)
-            // We use a localized Alert to tell them to verify.
-            // We start a loop to check verification status.
-
-            Alert.alert(
-                'Verification Sent',
-                `We have sent an email to ${email}. Please check your inbox and verify your account.\n\nWe are waiting for you here...`
-            );
-
-            // Start Polling
-            const intervalId = setInterval(async () => {
-                try {
-                    await user.reload(); // Refresh token
-                    if (user.emailVerified) {
-                        clearInterval(intervalId);
-                        console.log('✅ Email Verified!');
-                        await auth.signOut(); // Clean up session
-
-                        Alert.alert(
-                            'Verified!',
-                            'Your account is now verified. Please log in.',
-                            [{ text: 'Go to Login', onPress: () => navigation.navigate('Login') }]
-                        );
-                    }
-                } catch (pollErr) {
-                    console.warn("Polling error:", pollErr);
-                }
-            }, 3000); // Check every 3 seconds
+            // 5. AUTO-NAVIGATION
+            // The AuthContext listener will detect the user and see !emailVerified.
+            // AppStack will automatically switch to VerifyEmailScreen.
+            // We just stop loading here.
+            setLoading(false);
 
         } catch (error) {
             console.error('Sign Up Error:', error);
             Alert.alert('Sign Up Failed', error.message);
-            setLoading(false); // Stop loading only on error. On success, we keep loading "visual" or just let the poller run.
+            setLoading(false);
         }
-        // Note: We intentionally DO NOT set loading(false) on success immediately 
-        // because we want to show we are "processing/waiting". 
-        // OR we can set it false and just let the modal/alert sit there.
-        // Let's set false so they can interact if needed (e.g. Back).
-        setLoading(false);
     };
 
     return (

@@ -10,6 +10,8 @@ import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
 import Avatar from '../components/Avatar';
 import { AVAILABLE_AVATARS, getAvatarSource } from '../utils/avatars';
 
+const formatNumber = (num) => num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+
 export default function EditProfileScreen({ route, navigation }) {
     const { profile, isNew } = route.params;
     const { refreshProfiles, profile: activeProfile } = useAuth();
@@ -23,7 +25,7 @@ export default function EditProfileScreen({ route, navigation }) {
     }, [navigation]);
 
     const [name, setName] = useState(profile?.name || '');
-    const [limit, setLimit] = useState(String(profile?.limit || 0));
+    const [limit, setLimit] = useState(formatNumber(profile?.limit || 0));
     const [role, setRole] = useState(profile?.role || 'Basic');
     const [pin, setPin] = useState(''); // Init empty for Blind Reset
     const [avatarId, setAvatarId] = useState(profile?.avatarId || null);
@@ -41,7 +43,8 @@ export default function EditProfileScreen({ route, navigation }) {
             return;
         }
 
-        const numLimit = parseFloat(limit);
+        // Parse limit (remove commas)
+        const numLimit = parseFloat(limit.replace(/,/g, ''));
         if (isNaN(numLimit) || numLimit < 0) {
             Alert.alert("Error", "Invalid Limit");
             return;
@@ -208,11 +211,18 @@ export default function EditProfileScreen({ route, navigation }) {
 
                         {/* Limit Input */}
                         <View style={styles.inputGroup}>
-                            <Text style={[styles.label, { color: colors.secondaryText }]}>MONTHLY LIMIT (VND)</Text>
+                            <Text style={[styles.label, { color: colors.secondaryText }]}>MONTHLY LIMIT</Text>
                             <TextInput
                                 style={[styles.input, { backgroundColor: colors.inputBackground, color: colors.primaryText, borderColor: colors.divider }]}
                                 value={limit}
-                                onChangeText={setLimit}
+                                onChangeText={(text) => {
+                                    // Strip non-numeric
+                                    const cleaned = text.replace(/[^0-9]/g, '');
+                                    // Remove leading zeros
+                                    const number = cleaned.replace(/^0+/, '') || '0';
+                                    // Format
+                                    setLimit(number.replace(/\B(?=(\d{3})+(?!\d))/g, ","));
+                                }}
                                 keyboardType="numeric"
                                 placeholderTextColor={colors.secondaryText}
                             />

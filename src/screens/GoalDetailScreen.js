@@ -79,7 +79,12 @@ export default function GoalDetailScreen({ navigation, route }) {
             }
 
             // Filter client side for this goal
-            const goalTxs = allTxs.filter(t => t.goalId === goal.id);
+            // Filter client side for this goal
+            const goalTxs = allTxs.filter(t => t.goalId === goal.id).sort((a, b) => {
+                const dateDiff = new Date(b.date) - new Date(a.date);
+                if (dateDiff !== 0) return dateDiff;
+                return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+            });
             setTransactions(goalTxs);
         } catch (error) {
             console.error(error);

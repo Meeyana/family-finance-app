@@ -20,7 +20,7 @@ const COMMON_EMOJIS = [
     '🏷️', '🔒', '🔧', '⚙️', '📝', '📅'
 ];
 
-export default function ManageCategoriesScreen({ navigation }) {
+export default function ManageCategoriesScreen({ navigation, route }) {
     const { profile, userProfiles } = useAuth();
     const { theme } = useTheme();
     const colors = COLORS[theme];
@@ -42,7 +42,12 @@ export default function ManageCategoriesScreen({ navigation }) {
     const [formType, setFormType] = useState('expense');
 
     const [editingCategory, setEditingCategory] = useState(null);
-    const [modalVisible, setModalVisible] = useState(false);
+
+    // Quick Add Mode: Init from params to avoid flash
+    const initialOpen = route.params?.openAddModal || false;
+    const [isQuickAdd, setIsQuickAdd] = useState(initialOpen);
+    const [modalVisible, setModalVisible] = useState(initialOpen);
+
     const [emojiPickerVisible, setEmojiPickerVisible] = useState(false);
 
     // Dynamic Color
@@ -56,6 +61,13 @@ export default function ManageCategoriesScreen({ navigation }) {
     useEffect(() => {
         if (profile) loadCategories();
     }, [profile]);
+
+    useEffect(() => {
+        if (route.params?.openAddModal) {
+            // Already handled by initial state, just clear param to prevent re-trigger
+            navigation.setParams({ openAddModal: undefined });
+        }
+    }, [route.params?.openAddModal]);
 
     const loadCategories = async () => {
         try {
@@ -133,6 +145,7 @@ export default function ManageCategoriesScreen({ navigation }) {
             DeviceEventEmitter.emit('refresh_profile_dashboard');
             setModalVisible(false);
             loadCategories();
+            if (isQuickAdd) navigation.goBack();
         } catch (error) {
             console.error(error);
             Alert.alert('Error', 'Failed to save category');
@@ -248,12 +261,14 @@ export default function ManageCategoriesScreen({ navigation }) {
                 </View>
             </View>
 
-            <FlatList
-                data={filteredCategories}
-                renderItem={renderItem}
-                keyExtractor={i => i.id}
-                contentContainerStyle={styles.list}
-            />
+            {!isQuickAdd && (
+                <FlatList
+                    data={filteredCategories}
+                    renderItem={renderItem}
+                    keyExtractor={i => i.id}
+                    contentContainerStyle={styles.list}
+                />
+            )}
 
             {/* ADD / EDIT MODAL */}
             <Modal
@@ -264,7 +279,13 @@ export default function ManageCategoriesScreen({ navigation }) {
             >
                 <SafeAreaView style={[styles.modalContainer, { backgroundColor: colors.background }]}>
                     <View style={[styles.modalHeader, { borderBottomColor: colors.divider, backgroundColor: colors.background }]}>
-                        <TouchableOpacity onPress={() => setModalVisible(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                        <TouchableOpacity
+                            onPress={() => {
+                                setModalVisible(false);
+                                if (isQuickAdd) navigation.goBack();
+                            }}
+                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        >
                             <Ionicons name="close" size={28} color={colors.primaryText} />
                         </TouchableOpacity>
                         <Text style={[styles.modalTitle, { color: colors.primaryText }]}>{editingCategory ? 'Edit Category' : 'New Category'}</Text>

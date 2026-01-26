@@ -306,7 +306,11 @@ export const getTransactions = async (uid, profileId = null, startDate = null, e
         });
     }
 
-    return txs.sort((a, b) => new Date(b.date) - new Date(a.date));
+    return txs.sort((a, b) => {
+        const dateDiff = new Date(b.date) - new Date(a.date);
+        if (dateDiff !== 0) return dateDiff;
+        return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+    });
 };
 
 /**
@@ -438,7 +442,7 @@ export const initializeCategories = async (uid) => {
 
 // ...
 
-export const addCategory = async (uid, name, icon = '🏷️', type = 'expense', ownerId = null, isShared = false) => {
+export const addCategory = async (uid, name, icon = '🏷️', type = 'expense', ownerId = null, sharedWith = []) => {
 
     const familyRef = getFamilyRef(uid);
     const categoriesCol = collection(familyRef, 'categories');
@@ -449,7 +453,7 @@ export const addCategory = async (uid, name, icon = '🏷️', type = 'expense',
         icon,
         type,
         ownerId,
-        isShared,
+        sharedWith,
         createdAt: new Date().toISOString()
     });
 

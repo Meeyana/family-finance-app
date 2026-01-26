@@ -229,8 +229,8 @@ export default function AnalyzeScreen({ navigation }) {
                                 amount={viewData?.netCashflow}
                                 showSign={false}
                                 hideable={true}
-                                style={{ fontSize: 26, fontWeight: '700', color: colors.primaryAction, marginVertical: 4 }}
-                                symbolStyle={{ fontSize: 26, fontWeight: '700', color: colors.primaryAction }}
+                                style={{ fontSize: 26, fontWeight: '700', color: (viewData?.netCashflow || 0) < 0 ? colors.error : colors.primaryAction, marginVertical: 4 }}
+                                symbolStyle={{ fontSize: 26, fontWeight: '700', color: (viewData?.netCashflow || 0) < 0 ? colors.error : colors.primaryAction }}
                             />
                             {/* Comparison Text */}
                             {viewData?.netDiff !== undefined && (
