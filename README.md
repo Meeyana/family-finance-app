@@ -20,6 +20,7 @@ Built with **Expo** (SDK 52), **React Native**, and **Firebase Firestore**.
     - **Search**: Find transactions instantly by searching notes (3+ characters).
     - **Category Filter**: Multi-select dropdown to filter specific categories.
     - **Date Picker**: Filter transactions by specific months.
+- **Quick Add Category**: User-friendly modal to create new categories directly while adding a transaction.
 - **Contextual Emojis**: Categories display simplified, consistent emojis across the app.
 
 ### 📊 Powerful Analytics
@@ -37,7 +38,10 @@ Built with **Expo** (SDK 52), **React Native**, and **Firebase Firestore**.
     - Add, Edit, Delete custom categories.
     - Toggle between **Expense** and **Income** types.
     - Assign unique icons to categories.
-- **Profile Management**: Update names and monthly spending limits.
+- **Profile Management**:
+    - Update names and monthly spending limits.
+    - **Permissions**: Owners can edit all profile names; Users can edit their own name.
+    - **Smart Formatting**: Inputs for budgets and limits automatically format with comma separators for better readability.
 
 ### 👨‍👩‍👧‍👦 Family Features
 - **Money Requests**: Children can request funds with a reason and category.
