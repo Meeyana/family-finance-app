@@ -39,6 +39,8 @@ export default function EditProfileScreen({ route, navigation }) {
     const amIOwner = activeProfile?.role === 'Owner';
     const isMyProfile = activeProfile?.id === profile?.id;
     const canEditName = isNew || amIOwner || isMyProfile;
+    // Role editing: Only Owner can change roles
+    const canEditRole = amIOwner;
 
     const handleSave = async () => {
         if (canEditName && !name.trim()) {
@@ -241,6 +243,11 @@ export default function EditProfileScreen({ route, navigation }) {
                                 <View style={[styles.disabledInput, { backgroundColor: colors.background, borderColor: colors.divider }]}>
                                     <Text style={{ color: colors.secondaryText }}>Owner (Cannot change)</Text>
                                     <MaterialCommunityIcons name="lock" size={16} color={colors.secondaryText} />
+                                </View>
+                            ) : !canEditRole ? (
+                                <View style={[styles.disabledInput, { backgroundColor: colors.background, borderColor: colors.divider }]}>
+                                    <Text style={{ color: colors.primaryText, fontWeight: '600' }}>{role}</Text>
+                                    <Text style={{ color: colors.secondaryText, fontSize: 12 }}>(Restricted)</Text>
                                 </View>
                             ) : (
                                 <View style={[styles.segmentContainer, { backgroundColor: colors.inputBackground }]}>

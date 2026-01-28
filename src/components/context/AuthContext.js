@@ -18,6 +18,7 @@ export const AuthProvider = ({ children }) => {
     const [userProfiles, setUserProfiles] = useState(null);
     const [profile, setProfile] = useState(null);
     const [pendingRequestCount, setPendingRequestCount] = useState(0);
+    const [pendingGoalWithdrawCount, setPendingGoalWithdrawCount] = useState(0);
     const [hasViewedWelcome, setHasViewedWelcome] = useState(false);
     const [authInitialized, setAuthInitialized] = useState(false); // New flag to track full init sequence
 
@@ -50,6 +51,7 @@ export const AuthProvider = ({ children }) => {
     useEffect(() => {
         if (!user || !profile) {
             setPendingRequestCount(0);
+            setPendingGoalWithdrawCount(0);
             return;
         }
 
@@ -57,13 +59,45 @@ export const AuthProvider = ({ children }) => {
         // Users care about THEIR pending requests (optional, but let's just count for Admin for now)
         const isAdmin = profile.role === 'Owner' || profile.role === 'Partner';
 
+        // Reset counts immediately when profile changes
+        setPendingGoalWithdrawCount(0);
+
         if (isAdmin) {
             const familyRef = doc(db, 'artifacts', 'quan-ly-chi-tieu-family', 'users', user.uid);
             const requestsCol = collection(familyRef, 'requests');
             const q = query(requestsCol, where('status', '==', 'PENDING'));
 
+            // Capture current profile ID to avoid stale closure
+            const currentProfileId = profile.id;
+            console.log(`👤 Setting up listener for profile: ${profile.name} (${currentProfileId})`);
+
             const unsubscribe = onSnapshot(q, (snapshot) => {
-                setPendingRequestCount(snapshot.size);
+                // Separate money requests from goal withdrawal requests
+                let moneyCount = 0;
+                let goalWithdrawCount = 0;
+
+                console.log(`📋 Found ${snapshot.docs.length} PENDING requests total`);
+
+                snapshot.docs.forEach(d => {
+                    const data = d.data();
+                    console.log(`   Request: type=${data.type}, status=${data.status}, amount=${data.amount}`);
+
+                    if (data.type === 'goal_withdraw') {
+                        // Only count if current profile is the goal owner AND goalOwnerId exists
+                        const ownerMatches = data.goalOwnerId && data.goalOwnerId === currentProfileId;
+                        console.log(`   🎯 Goal withdraw: goalOwnerId=${data.goalOwnerId}, currentProfileId=${currentProfileId}, match=${ownerMatches}`);
+                        if (ownerMatches) {
+                            goalWithdrawCount++;
+                        }
+                    } else {
+                        // All other requests are money grant requests
+                        moneyCount++;
+                    }
+                });
+
+                console.log(`📊 Badge counts for ${profile.name}: moneyCount=${moneyCount}, goalWithdrawCount=${goalWithdrawCount}`);
+                setPendingRequestCount(moneyCount);
+                setPendingGoalWithdrawCount(goalWithdrawCount);
             }, (error) => {
                 console.log("Error listening to requests:", error);
             });
@@ -71,6 +105,7 @@ export const AuthProvider = ({ children }) => {
             return () => unsubscribe();
         } else {
             setPendingRequestCount(0);
+            setPendingGoalWithdrawCount(0);
         }
     }, [user, profile]);
 
@@ -192,7 +227,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, userProfiles, profile, selectProfile, switchProfile, loading, refreshProfiles, pendingRequestCount, hasViewedWelcome, completeWelcome, authInitialized, logout, reloadUser }}>
+        <AuthContext.Provider value={{ user, userProfiles, profile, selectProfile, switchProfile, loading, refreshProfiles, pendingRequestCount, pendingGoalWithdrawCount, hasViewedWelcome, completeWelcome, authInitialized, logout, reloadUser }}>
             {children}
         </AuthContext.Provider>
     );

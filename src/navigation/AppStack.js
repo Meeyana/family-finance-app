@@ -27,6 +27,7 @@ import GrantMoneyScreen from '../screens/GrantMoneyScreen';
 import RecurringScreen from '../screens/RecurringScreen';
 import GoalScreen from '../screens/GoalScreen';
 import GoalDetailScreen from '../screens/GoalDetailScreen';
+import GoalWithdrawRequestsScreen from '../screens/GoalWithdrawRequestsScreen';
 import VerifyEmailScreen from '../screens/VerifyEmailScreen'; // Import new screen
 
 const Tab = createBottomTabNavigator();
@@ -313,6 +314,7 @@ export default function AppStack() {
                     <Stack.Screen name="Recurring" component={RecurringScreen} options={{ headerShown: false }} />
                     <Stack.Screen name="Goals" component={GoalScreen} options={{ headerShown: true, title: 'Savings Goals' }} />
                     <Stack.Screen name="GoalDetail" component={GoalDetailScreen} options={{ headerShown: true, title: 'Goal Details' }} />
+                    <Stack.Screen name="GoalWithdrawRequests" component={GoalWithdrawRequestsScreen} options={{ headerShown: false }} />
                 </>
             )}
         </Stack.Navigator>

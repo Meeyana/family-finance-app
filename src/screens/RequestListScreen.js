@@ -158,6 +158,7 @@ export default function RequestListScreen({ navigation }) {
         try {
             setLoading(true);
             await rejectRequest(user.uid, req.id, 'Admin Rejected');
+            DeviceEventEmitter.emit('refresh_profile_dashboard');
             loadRequests();
         } catch (e) {
             console.error(e);
@@ -178,7 +179,11 @@ export default function RequestListScreen({ navigation }) {
 
 
 
+    // Filter out goal_withdraw requests - they have their own screen
     const filteredRequests = requests.filter(req => {
+        // Exclude goal withdrawal requests
+        if (req.type === 'goal_withdraw') return false;
+        // Then apply status filter
         if (statusFilter === 'ALL') return true;
         return req.status === statusFilter;
     });
@@ -230,10 +235,14 @@ export default function RequestListScreen({ navigation }) {
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
             <View style={[styles.header, { borderBottomColor: colors.divider }]}>
+                {/* Center Title */}
+                <View style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', zIndex: -1 }}>
+                    <Text style={[styles.title, { color: colors.primaryText }]}>Money Requests</Text>
+                </View>
+
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <Ionicons name="arrow-back" size={24} color={colors.primaryText} />
                 </TouchableOpacity>
-                <Text style={[styles.title, { color: colors.primaryText }]}>Money Requests</Text>
 
                 {/* Only Users can Create */}
                 {!isAdmin ? (

@@ -44,10 +44,14 @@ export default function SettingsScreen({ navigation }) {
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
             {/* Header */}
             <View style={[styles.header, { borderBottomColor: colors.divider }]}>
+                {/* Center Title */}
+                <View style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', zIndex: -1 }}>
+                    <Text style={[styles.headerTitle, { color: colors.primaryText }]}>Settings</Text>
+                </View>
+
                 <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                     <Ionicons name="arrow-back" size={24} color={colors.primaryText} />
                 </TouchableOpacity>
-                <Text style={[styles.headerTitle, { color: colors.primaryText }]}>Settings</Text>
                 <View style={{ width: 24 }} />
             </View>
 

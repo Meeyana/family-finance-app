@@ -3,12 +3,13 @@ import { View, Text, StyleSheet, TouchableOpacity, FlatList, RefreshControl, Ale
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../components/context/AuthContext';
-import { getGoals, addGoal, getFamilyProfiles } from '../services/firestoreRepository';
+import { getGoals, addGoal, getFamilyProfiles, getAllGoalWithdrawRequests } from '../services/firestoreRepository';
 import MultiSelectDropdown from '../components/MultiSelectDropdown';
 import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
 import { formatMoney, parseMoney } from '../utils/formatting';
 import CurrencyText from '../components/CurrencyText';
 import { useTheme } from '../components/context/ThemeContext';
+import Avatar from '../components/Avatar';
 import { useColorScheme } from 'react-native';
 
 const COMMON_EMOJIS = [
@@ -28,6 +29,7 @@ export default function GoalScreen({ navigation }) {
 
     const [goals, setGoals] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [pendingRequestCount, setPendingRequestCount] = useState(0);
 
     // Modal State
     const [modalVisible, setModalVisible] = useState(false);
@@ -47,11 +49,13 @@ export default function GoalScreen({ navigation }) {
     useEffect(() => {
         if (user && profile) {
             loadGoals();
+            loadPendingRequests();
             getFamilyProfiles(user.uid).then(setProfiles).catch(console.error);
 
             const refreshListener = DeviceEventEmitter.addListener('refresh_profile_dashboard', () => {
                 console.log('🔄 GoalScreen: Refreshing goals...');
                 loadGoals();
+                loadPendingRequests();
             });
 
             return () => {
@@ -59,6 +63,17 @@ export default function GoalScreen({ navigation }) {
             };
         }
     }, [profile, user]);
+
+    const loadPendingRequests = async () => {
+        try {
+            // Reusing the same service to get all requests and filtering for PENDING
+            const requests = await getAllGoalWithdrawRequests(user.uid, profile?.id);
+            const count = requests.filter(r => r.status === 'PENDING').length;
+            setPendingRequestCount(count);
+        } catch (error) {
+            console.error('Failed to load pending requests count:', error);
+        }
+    };
 
     const loadGoals = async () => {
         try {
@@ -118,7 +133,14 @@ export default function GoalScreen({ navigation }) {
 
         return (
             <TouchableOpacity
-                style={[styles.card, { backgroundColor: colors.cardBackground }]}
+                style={[
+                    styles.card,
+                    {
+                        backgroundColor: colors.cardBackground,
+                        borderColor: theme === 'light' ? colors.divider : 'transparent',
+                        borderWidth: theme === 'light' ? 1 : 0
+                    }
+                ]}
                 onPress={() => navigation.navigate('GoalDetail', { goal: item })}
             >
                 <View style={styles.cardHeader}>
@@ -154,6 +176,43 @@ export default function GoalScreen({ navigation }) {
                         ]}
                     />
                 </View>
+
+                {/* Separator Line */}
+                <View style={{ height: 1, backgroundColor: colors.divider, marginVertical: 16 }} />
+
+                {/* Contributors & Details Footer */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <View>
+                        <Text style={{ fontSize: 10, color: colors.secondaryText, fontWeight: 'bold', letterSpacing: 0.5, marginBottom: 6 }}>CONTRIBUTORS</Text>
+                        <View style={{ flexDirection: 'row' }}>
+                            {[item.ownerId, ...(item.sharedWith || [])]
+                                .filter((v, i, a) => a.indexOf(v) === i) // Unique IDs
+                                .map(id => profiles.find(p => p.id === id))
+                                .filter(Boolean) // Filter out not found profiles
+                                .map((p, index) => (
+                                    <Avatar
+                                        key={p.id}
+                                        name={p.name}
+                                        avatarId={p.avatarId}
+                                        size={24}
+                                        backgroundColor={index === 0 ? colors.primaryAction : colors.secondaryText}
+                                        textColor="white"
+                                        fontSize={10}
+                                        style={{
+                                            borderWidth: 2,
+                                            borderColor: colors.cardBackground,
+                                            marginLeft: index > 0 ? -10 : 0,
+                                            zIndex: 10 - index
+                                        }}
+                                    />
+                                ))}
+                        </View>
+                    </View>
+
+                    <View style={{ backgroundColor: colors.primaryAction, borderRadius: 8, paddingHorizontal: 16, paddingVertical: 8 }}>
+                        <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 12 }}>Details</Text>
+                    </View>
+                </View>
             </TouchableOpacity>
         );
     };
@@ -161,14 +220,47 @@ export default function GoalScreen({ navigation }) {
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
             {/* Header */}
+            {/* Header */}
             <View style={[styles.header, { borderBottomColor: colors.divider }]}>
+                {/* Centered Title (Absolute) */}
+                <View style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', zIndex: -1 }}>
+                    <Text style={[styles.headerTitle, { color: colors.primaryText }]}>Savings Goals</Text>
+                </View>
+
+                {/* Left Action */}
                 <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                     <Ionicons name="arrow-back" size={24} color={colors.primaryText} />
                 </TouchableOpacity>
-                <Text style={[styles.headerTitle, { color: colors.primaryText }]}>Savings Goals</Text>
-                <TouchableOpacity onPress={() => setModalVisible(true)}>
-                    <Ionicons name="add" size={28} color={colors.primaryAction} />
-                </TouchableOpacity>
+
+                {/* Right Actions */}
+                <View style={{ flexDirection: 'row', gap: 12 }}>
+                    <TouchableOpacity onPress={() => navigation.navigate('GoalWithdrawRequests')}>
+                        <View>
+                            <Ionicons name="document-text-outline" size={24} color={colors.primaryAction} />
+                            {pendingRequestCount > 0 && (
+                                <View style={{
+                                    position: 'absolute',
+                                    top: -6,
+                                    right: -6,
+                                    backgroundColor: COLORS.light.error,
+                                    borderRadius: 8,
+                                    minWidth: 16,
+                                    height: 16,
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    paddingHorizontal: 2
+                                }}>
+                                    <Text style={{ color: 'white', fontSize: 10, fontWeight: 'bold' }}>
+                                        {pendingRequestCount}
+                                    </Text>
+                                </View>
+                            )}
+                        </View>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => setModalVisible(true)}>
+                        <Ionicons name="add" size={28} color={colors.primaryAction} />
+                    </TouchableOpacity>
+                </View>
             </View>
 
             <FlatList
@@ -195,11 +287,15 @@ export default function GoalScreen({ navigation }) {
             >
                 <SafeAreaView style={[styles.modalContainer, { backgroundColor: colors.background }]}>
                     <View style={[styles.modalHeader, { borderBottomColor: colors.divider, backgroundColor: colors.background }]}>
+                        {/* Center Title */}
+                        <View style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', zIndex: -1 }}>
+                            <Text style={[styles.modalTitle, { color: colors.primaryText }]}>New Goal</Text>
+                        </View>
+
                         <TouchableOpacity onPress={() => setModalVisible(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                             <Ionicons name="close" size={28} color={colors.primaryAction} />
                         </TouchableOpacity>
-                        <Text style={[styles.modalTitle, { color: colors.primaryText }]}>New Goal</Text>
-                        <View style={{ width: 50 }} />
+                        <View style={{ width: 28 }} />
                     </View>
 
                     <KeyboardAvoidingView

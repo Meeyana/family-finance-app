@@ -12,7 +12,22 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "LSApplicationQueriesSchemes": [
+          "vcb",
+          "vcbdigibank",
+          "myvib",
+          "vib",
+          "mbmobile",
+          "mbbank",
+          "techcombank",
+          "bidv",
+          "bidvsmartbanking",
+          "tpbank",
+          "itms-apps"
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {

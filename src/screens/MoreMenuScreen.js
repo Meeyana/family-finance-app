@@ -10,7 +10,7 @@ import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
 import { useTheme } from '../components/context/ThemeContext';
 
 export default function MoreMenuScreen({ navigation }) {
-    const { profile, switchProfile, pendingRequestCount, logout } = useAuth();
+    const { profile, switchProfile, pendingRequestCount, pendingGoalWithdrawCount, logout } = useAuth();
     const { theme } = useTheme();
     const colors = COLORS[theme];
 
@@ -143,6 +143,8 @@ export default function MoreMenuScreen({ navigation }) {
                     <MenuOption
                         icon="wallet-outline"
                         label="Savings Goals"
+                        subtext={pendingGoalWithdrawCount > 0 ? "Pending approvals" : null}
+                        badge={pendingGoalWithdrawCount}
                         onPress={() => navigation.navigate('Goals')}
                     />
                     <MenuOption

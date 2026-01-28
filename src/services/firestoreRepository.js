@@ -621,12 +621,13 @@ export const processTransfer = async (uid, fromProfileId, toProfileId, amount, c
  * Create a new Money Request
  */
 export const addRequest = async (uid, requestData) => {
-    console.log(`🙏 Repo: Adding request for ${requestData.amount} by ${requestData.createdByProfileId}`);
+    console.log(`🙏 Repo: Adding money grant request for ${requestData.amount} by ${requestData.createdByProfileId}`);
     const familyRef = getFamilyRef(uid);
     const requestsCol = collection(familyRef, 'requests');
 
     const docRef = await addDoc(requestsCol, {
         ...requestData,
+        type: 'money_grant', // Explicit type for money requests
         status: requestData.status || 'PENDING',
         createdAt: new Date().toISOString()
     });
@@ -992,5 +993,189 @@ export const withdrawFromGoal = async (uid, goalId, amount, note, profileId, goa
     });
 
     await batch.commit();
+    return true;
+};
+
+// ------------------------------------------------------------------
+// Goal Withdrawal Requests (Contributor Approval Flow)
+// ------------------------------------------------------------------
+
+/**
+ * Create a Goal Withdrawal Request (for contributors)
+ * Contributors cannot withdraw directly - they must request approval from goal owner
+ */
+export const addGoalWithdrawRequest = async (uid, requestData) => {
+    console.log(`🙏 Goals: Creating withdraw request for ${requestData.amount} from goal ${requestData.goalId}`);
+    const familyRef = getFamilyRef(uid);
+    const requestsCol = collection(familyRef, 'requests');
+
+    const docRef = await addDoc(requestsCol, {
+        type: 'goal_withdraw',
+        goalId: requestData.goalId,
+        goalName: requestData.goalName,
+        amount: Number(requestData.amount),
+        reason: requestData.reason || '',
+        createdByProfileId: requestData.profileId,
+        createdByName: requestData.profileName || 'Unknown',
+        goalOwnerId: requestData.goalOwnerId,
+        status: 'PENDING',
+        createdAt: new Date().toISOString()
+    });
+    return docRef.id;
+};
+
+/**
+ * Get pending withdrawal requests for a specific goal (for goal owner)
+ * Uses client-side filtering to avoid composite index requirement
+ */
+export const getGoalWithdrawRequests = async (uid, goalId) => {
+    const familyRef = getFamilyRef(uid);
+    const requestsCol = collection(familyRef, 'requests');
+    const profilesCol = collection(familyRef, 'profiles');
+
+    // Simple query without index requirement - filter and sort client-side
+    const q = query(
+        requestsCol,
+        where('type', '==', 'goal_withdraw')
+    );
+
+    const [reqSnapshot, profSnapshot] = await Promise.all([
+        getDocs(q),
+        getDocs(profilesCol)
+    ]);
+
+    const profilesMap = {};
+    profSnapshot.docs.forEach(d => {
+        profilesMap[d.id] = { name: d.data().name, avatarId: d.data().avatarId };
+    });
+
+    // Client-side filtering for goalId and PENDING status
+    return reqSnapshot.docs
+        .map(d => {
+            const data = d.data();
+            const requester = profilesMap[data.createdByProfileId];
+            return {
+                id: d.id,
+                ...data,
+                createdByName: requester ? requester.name : (data.createdByName || 'Unknown'),
+                createdByAvatarId: requester ? requester.avatarId : null
+            };
+        })
+        .filter(req => req.goalId === goalId && req.status === 'PENDING')
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+};
+
+/**
+ * Get ALL goal withdrawal requests for goals owned by the current profile
+ * Used for the dedicated Goal Withdraw Requests screen
+ */
+export const getAllGoalWithdrawRequests = async (uid, ownerProfileId = null) => {
+    const familyRef = getFamilyRef(uid);
+    const requestsCol = collection(familyRef, 'requests');
+    const profilesCol = collection(familyRef, 'profiles');
+    const goalsCol = collection(familyRef, 'goals');
+
+    // Fetch all goal_withdraw requests
+    const q = query(
+        requestsCol,
+        where('type', '==', 'goal_withdraw')
+    );
+
+    const [reqSnapshot, profSnapshot, goalsSnapshot] = await Promise.all([
+        getDocs(q),
+        getDocs(profilesCol),
+        getDocs(goalsCol)
+    ]);
+
+    const profilesMap = {};
+    profSnapshot.docs.forEach(d => {
+        profilesMap[d.id] = { name: d.data().name, avatarId: d.data().avatarId };
+    });
+
+    const goalsMap = {};
+    goalsSnapshot.docs.forEach(d => {
+        goalsMap[d.id] = { name: d.data().name, icon: d.data().icon, ownerId: d.data().ownerId };
+    });
+
+    let requests = reqSnapshot.docs.map(d => {
+        const data = d.data();
+        const requester = profilesMap[data.createdByProfileId];
+        const goal = goalsMap[data.goalId];
+        return {
+            id: d.id,
+            ...data,
+            createdByName: requester ? requester.name : (data.createdByName || 'Unknown'),
+            createdByAvatarId: requester ? requester.avatarId : null,
+            goalIcon: goal ? goal.icon : '🎯',
+            goalOwnerName: goal && profilesMap[goal.ownerId] ? profilesMap[goal.ownerId].name : 'Unknown'
+        };
+    });
+
+    // Filter by owner if specified (only show requests for goals I own)
+    if (ownerProfileId) {
+        requests = requests.filter(req => {
+            const goal = goalsMap[req.goalId];
+            return goal && goal.ownerId === ownerProfileId;
+        });
+    }
+
+    return requests.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+};
+
+/**
+ * Approve a Goal Withdrawal Request
+ * 1. Updates request status
+ * 2. Processes the actual withdrawal via withdrawFromGoal
+ */
+export const approveGoalWithdrawRequest = async (uid, requestId, approverProfileId) => {
+    console.log(`✅ Goals: Approving withdraw request ${requestId}`);
+    const familyRef = getFamilyRef(uid);
+    const requestRef = doc(familyRef, 'requests', requestId);
+
+    // Get request data
+    const requestSnap = await getDoc(requestRef);
+    if (!requestSnap.exists()) {
+        throw new Error('Request not found');
+    }
+
+    const requestData = requestSnap.data();
+    if (requestData.status !== 'PENDING') {
+        throw new Error('Request is no longer pending');
+    }
+
+    // Update request status first
+    await updateDoc(requestRef, {
+        status: 'APPROVED',
+        approvedBy: approverProfileId,
+        approvedAt: new Date().toISOString()
+    });
+
+    // Process the actual withdrawal
+    await withdrawFromGoal(
+        uid,
+        requestData.goalId,
+        requestData.amount,
+        requestData.reason,
+        requestData.createdByProfileId,
+        requestData.goalName
+    );
+
+    return true;
+};
+
+/**
+ * Reject a Goal Withdrawal Request
+ */
+export const rejectGoalWithdrawRequest = async (uid, requestId, reason, rejecterProfileId) => {
+    console.log(`❌ Goals: Rejecting withdraw request ${requestId}`);
+    const familyRef = getFamilyRef(uid);
+    const requestRef = doc(familyRef, 'requests', requestId);
+
+    await updateDoc(requestRef, {
+        status: 'REJECTED',
+        rejectedBy: rejecterProfileId,
+        rejectionReason: reason || null,
+        rejectedAt: new Date().toISOString()
+    });
     return true;
 };

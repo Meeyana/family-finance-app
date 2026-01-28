@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, TextInput,
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../components/context/AuthContext';
-import { getTransactions, contributeToGoal, withdrawFromGoal, getFamilyProfiles, updateGoal, deleteGoal, getGoal, updateTransaction } from '../services/firestoreRepository';
+import { getTransactions, contributeToGoal, withdrawFromGoal, getFamilyProfiles, updateGoal, deleteGoal, getGoal, updateTransaction, addGoalWithdrawRequest, getGoalWithdrawRequests, approveGoalWithdrawRequest, rejectGoalWithdrawRequest } from '../services/firestoreRepository';
 import MultiSelectDropdown from '../components/MultiSelectDropdown';
 import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
 import { formatMoney, parseMoney } from '../utils/formatting';
@@ -53,6 +53,12 @@ export default function GoalDetailScreen({ navigation, route }) {
     const [editingTx, setEditingTx] = useState(null);
     const [editTxAmount, setEditTxAmount] = useState('');
 
+    // Withdrawal Requests (for goal owner)
+    const [withdrawRequests, setWithdrawRequests] = useState([]);
+
+    // Permission check
+    const isOwner = currentGoal.ownerId === profile?.id;
+
     useLayoutEffect(() => {
         navigation.setOptions({ headerShown: false });
     }, [navigation]);
@@ -76,9 +82,18 @@ export default function GoalDetailScreen({ navigation, route }) {
             // Update Goal State with fresh data
             if (refreshedGoal) {
                 setCurrentGoal(refreshedGoal);
+
+                // Load pending withdrawal requests if user is goal owner
+                if (refreshedGoal.ownerId === profile?.id) {
+                    try {
+                        const requests = await getGoalWithdrawRequests(user.uid, goal.id);
+                        setWithdrawRequests(requests);
+                    } catch (err) {
+                        console.error('Failed to load withdrawal requests:', err);
+                    }
+                }
             }
 
-            // Filter client side for this goal
             // Filter client side for this goal
             const goalTxs = allTxs.filter(t => t.goalId === goal.id).sort((a, b) => {
                 const dateDiff = new Date(b.date) - new Date(a.date);
@@ -115,19 +130,45 @@ export default function GoalDetailScreen({ navigation, route }) {
                 await contributeToGoal(user.uid, goal.id, val, note, profile.id, currentGoal.name);
                 // Optimistic update
                 setCurrentGoal(prev => ({ ...prev, currentAmount: prev.currentAmount + val }));
+                DeviceEventEmitter.emit('refresh_profile_dashboard');
+                setModalVisible(false);
+                loadHistory();
             } else {
+                // Withdraw logic
                 if (val > currentGoal.currentAmount) {
                     Alert.alert('Error', 'Insufficient funds in goal');
                     setActionLoading(false);
                     return;
                 }
-                await withdrawFromGoal(user.uid, goal.id, val, note, profile.id, currentGoal.name);
-                // Optimistic update
-                setCurrentGoal(prev => ({ ...prev, currentAmount: prev.currentAmount - val }));
+
+                if (isOwner) {
+                    // Owner can withdraw directly
+                    await withdrawFromGoal(user.uid, goal.id, val, note, profile.id, currentGoal.name);
+                    // Optimistic update
+                    setCurrentGoal(prev => ({ ...prev, currentAmount: prev.currentAmount - val }));
+                    DeviceEventEmitter.emit('refresh_profile_dashboard');
+                    setModalVisible(false);
+                    loadHistory();
+                } else {
+                    // Contributor must request approval
+                    if (!note.trim()) {
+                        Alert.alert('Reason Required', 'Please provide a reason for your withdrawal request');
+                        setActionLoading(false);
+                        return;
+                    }
+                    await addGoalWithdrawRequest(user.uid, {
+                        goalId: goal.id,
+                        goalName: currentGoal.name,
+                        amount: val,
+                        reason: note,
+                        profileId: profile.id,
+                        profileName: profile.name,
+                        goalOwnerId: currentGoal.ownerId
+                    });
+                    setModalVisible(false);
+                    Alert.alert('Request Sent', 'Your withdrawal request has been sent to the goal owner for approval.');
+                }
             }
-            DeviceEventEmitter.emit('refresh_profile_dashboard');
-            setModalVisible(false);
-            loadHistory(); // Reload history to see new item
         } catch (error) {
             console.error(error);
             Alert.alert('Error', 'Transaction failed');
@@ -243,6 +284,62 @@ export default function GoalDetailScreen({ navigation, route }) {
         }
     };
 
+    // --- Withdrawal Request Approval ---
+    const handleApproveRequest = async (request) => {
+        Alert.alert(
+            'Approve Withdrawal',
+            `Approve ${request.createdByName}'s request to withdraw ${formatMoney(request.amount)}?`,
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Approve',
+                    onPress: async () => {
+                        try {
+                            setActionLoading(true);
+                            await approveGoalWithdrawRequest(user.uid, request.id, profile.id);
+                            DeviceEventEmitter.emit('refresh_profile_dashboard');
+                            loadHistory();
+                            Alert.alert('Approved', 'Withdrawal has been processed.');
+                        } catch (error) {
+                            console.error(error);
+                            Alert.alert('Error', 'Failed to approve request');
+                        } finally {
+                            setActionLoading(false);
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
+    const handleRejectRequest = (request) => {
+        Alert.prompt(
+            'Reject Withdrawal',
+            'Provide a reason for rejection (optional):',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Reject',
+                    style: 'destructive',
+                    onPress: async (reason) => {
+                        try {
+                            setActionLoading(true);
+                            await rejectGoalWithdrawRequest(user.uid, request.id, reason, profile.id);
+                            loadHistory();
+                            Alert.alert('Rejected', 'Request has been rejected.');
+                        } catch (error) {
+                            console.error(error);
+                            Alert.alert('Error', 'Failed to reject request');
+                        } finally {
+                            setActionLoading(false);
+                        }
+                    }
+                }
+            ],
+            'plain-text'
+        );
+    };
+
     const renderHeader = () => {
         const percent = currentGoal.targetAmount > 0
             ? Math.min(100, (currentGoal.currentAmount / currentGoal.targetAmount) * 100)
@@ -307,6 +404,84 @@ export default function GoalDetailScreen({ navigation, route }) {
                                 </View>
                             );
                         })}
+                    </View>
+                )}
+
+                {/* Pending Withdrawal Requests (Owner Only) */}
+                {isOwner && withdrawRequests.length > 0 && (
+                    <View style={{ marginTop: SPACING.l, paddingTop: SPACING.l, borderTopWidth: 1, borderTopColor: colors.divider }}>
+                        <Text style={[styles.sectionTitle, { color: colors.warning, marginBottom: SPACING.s }]}>
+                            PENDING REQUESTS ({withdrawRequests.length})
+                        </Text>
+                        {withdrawRequests.map((req) => (
+                            <View
+                                key={req.id}
+                                style={{
+                                    borderBottomWidth: 1,
+                                    borderColor: colors.divider,
+                                    paddingVertical: SPACING.m,
+                                    marginBottom: SPACING.s
+                                }}
+                            >
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                                    <Text style={{ color: colors.primaryText, fontWeight: '600', fontSize: TYPOGRAPHY.size.body }}>
+                                        {req.createdByName}
+                                    </Text>
+                                    <CurrencyText
+                                        amount={req.amount}
+                                        style={{ color: colors.primaryText, fontWeight: 'bold', fontSize: TYPOGRAPHY.size.body }}
+                                    />
+                                </View>
+
+                                {/* Status Badge and Date */}
+                                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                                    <Text style={{ color: colors.secondaryText, fontSize: TYPOGRAPHY.size.caption, marginRight: 8 }}>
+                                        {new Date(req.createdAt).toLocaleDateString()}
+                                    </Text>
+                                    <View style={{ backgroundColor: colors.warning + '20', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                                        <Text style={{ color: colors.warning, fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase' }}>PENDING</Text>
+                                    </View>
+                                </View>
+
+                                {req.reason ? (
+                                    <Text style={{ color: colors.secondaryText, fontSize: 13, marginBottom: 12, fontStyle: 'italic' }}>
+                                        {req.reason}
+                                    </Text>
+                                ) : null}
+
+                                <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: SPACING.m }}>
+                                    <TouchableOpacity
+                                        style={{
+                                            paddingHorizontal: 16,
+                                            paddingVertical: 8,
+                                            borderRadius: 20,
+                                            borderWidth: 1,
+                                            borderColor: '#EAB308',
+                                            alignItems: 'center',
+                                            minWidth: 80
+                                        }}
+                                        onPress={() => handleRejectRequest(req)}
+                                    >
+                                        <Text style={{ color: '#EAB308', fontWeight: '600', fontSize: TYPOGRAPHY.size.caption }}>Reject</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={{
+                                            paddingHorizontal: 16,
+                                            paddingVertical: 8,
+                                            borderRadius: 20,
+                                            backgroundColor: colors.success,
+                                            borderWidth: 1,
+                                            borderColor: colors.success,
+                                            alignItems: 'center',
+                                            minWidth: 80
+                                        }}
+                                        onPress={() => handleApproveRequest(req)}
+                                    >
+                                        <Text style={{ color: 'white', fontWeight: '600', fontSize: TYPOGRAPHY.size.caption }}>Approve</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        ))}
                     </View>
                 )}
 
@@ -414,10 +589,16 @@ export default function GoalDetailScreen({ navigation, route }) {
                 >
                     <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
                         <Text style={[styles.modalTitle, { color: colors.primaryText }]}>
-                            {actionType === 'deposit' ? 'Add to Goal' : 'Withdraw from Goal'}
+                            {actionType === 'deposit'
+                                ? 'Add to Goal'
+                                : (isOwner ? 'Withdraw from Goal' : 'Request Withdrawal')}
                         </Text>
                         <Text style={[styles.modalSub, { color: colors.secondaryText }]}>
-                            {actionType === 'deposit' ? 'Transfer from wallet to this goal' : 'Return money to wallet'}
+                            {actionType === 'deposit'
+                                ? 'Transfer from wallet to this goal'
+                                : (isOwner
+                                    ? 'Return money to wallet'
+                                    : 'Request owner approval to withdraw')}
                         </Text>
 
                         <TextInput
@@ -431,7 +612,7 @@ export default function GoalDetailScreen({ navigation, route }) {
                         />
                         <TextInput
                             style={[styles.input, { color: colors.primaryText, backgroundColor: colors.inputBackground, marginTop: 12 }]}
-                            placeholder="Note (Optional)"
+                            placeholder={actionType === 'withdraw' && !isOwner ? "Reason for withdrawal (Required)" : "Note (Optional)"}
                             placeholderTextColor={colors.secondaryText}
                             value={note}
                             onChangeText={setNote}
