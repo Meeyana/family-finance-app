@@ -11,6 +11,29 @@ export default function SwipeDateFilter({ date, onMonthChange }) {
     // Formatting: "January 2026"
     const formattedDate = date.toLocaleString('default', { month: 'long', year: 'numeric' });
 
+    // Check if next month is in the future
+    const isFuture = (d) => {
+        const now = new Date();
+        const nextMonth = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+        return nextMonth > now;
+    };
+
+    // Check if prev month is before 6 months ago
+    const isPastLimit = (d) => {
+        const now = new Date();
+        // Limit is 6 months ago from 1st of current month
+        const limit = new Date(now.getFullYear(), now.getMonth() - 6, 1);
+
+        // Calculate prev month date
+        const prevMonth = new Date(d.getFullYear(), d.getMonth() - 1, 1);
+
+        // Disable if prev month is BEFORE the limit month
+        return prevMonth < limit;
+    };
+
+    const isNextMonthFuture = isFuture(date);
+    const isPrevMonthRestricted = isPastLimit(date);
+
     // Swipe Logic using PanResponder
     const panResponder = useRef(
         PanResponder.create({
@@ -19,10 +42,14 @@ export default function SwipeDateFilter({ date, onMonthChange }) {
                 const SWIPE_THRESHOLD = 50;
                 if (gestureState.dx > SWIPE_THRESHOLD) {
                     // Swipe Right -> Previous Month
-                    onMonthChange(new Date(date.getFullYear(), date.getMonth() - 1, 1));
+                    if (!isPrevMonthRestricted) {
+                        onMonthChange(new Date(date.getFullYear(), date.getMonth() - 1, 1));
+                    }
                 } else if (gestureState.dx < -SWIPE_THRESHOLD) {
                     // Swipe Left -> Next Month
-                    onMonthChange(new Date(date.getFullYear(), date.getMonth() + 1, 1));
+                    if (!isNextMonthFuture) {
+                        onMonthChange(new Date(date.getFullYear(), date.getMonth() + 1, 1));
+                    }
                 }
             },
         })
@@ -39,7 +66,12 @@ export default function SwipeDateFilter({ date, onMonthChange }) {
             style={[styles.container, { backgroundColor: colors.surface, borderColor: colors.divider }]}
             {...panResponder.panHandlers}
         >
-            <TouchableOpacity onPress={() => changeMonth(-1)} style={styles.button} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <TouchableOpacity
+                onPress={() => changeMonth(-1)}
+                style={[styles.button, { opacity: isPrevMonthRestricted ? 0 : 1 }]}
+                disabled={isPrevMonthRestricted}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
                 <Ionicons name="chevron-back" size={20} color={colors.secondaryText} />
             </TouchableOpacity>
 
@@ -50,7 +82,12 @@ export default function SwipeDateFilter({ date, onMonthChange }) {
 
             </View>
 
-            <TouchableOpacity onPress={() => changeMonth(1)} style={styles.button} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <TouchableOpacity
+                onPress={() => changeMonth(1)}
+                style={[styles.button, { opacity: isNextMonthFuture ? 0 : 1 }]}
+                disabled={isNextMonthFuture}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
                 <Ionicons name="chevron-forward" size={20} color={colors.secondaryText} />
             </TouchableOpacity>
         </View>

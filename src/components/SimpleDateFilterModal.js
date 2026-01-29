@@ -47,11 +47,19 @@ export default function SimpleDateFilterModal({ visible, onClose, onApply, initi
 
                     {/* Year Selector */}
                     <View style={[styles.yearSelector, { backgroundColor: colors.surface, borderColor: colors.divider }]}>
-                        <TouchableOpacity onPress={() => setSelectedYear(y => y - 1)}>
+                        <TouchableOpacity
+                            onPress={() => setSelectedYear(y => y - 1)}
+                            disabled={selectedYear <= 2024}
+                            style={{ opacity: selectedYear <= 2024 ? 0 : 1 }}
+                        >
                             <Ionicons name="chevron-back" size={20} color={colors.primaryText} />
                         </TouchableOpacity>
                         <Text style={[styles.yearText, { color: colors.primaryText }]}>{selectedYear}</Text>
-                        <TouchableOpacity onPress={() => setSelectedYear(y => y + 1)}>
+                        <TouchableOpacity
+                            onPress={() => setSelectedYear(y => y + 1)}
+                            disabled={selectedYear >= 2032}
+                            style={{ opacity: selectedYear >= 2032 ? 0 : 1 }}
+                        >
                             <Ionicons name="chevron-forward" size={20} color={colors.primaryText} />
                         </TouchableOpacity>
                     </View>
@@ -60,14 +68,33 @@ export default function SimpleDateFilterModal({ visible, onClose, onApply, initi
                     <View style={styles.gridContainer}>
                         {months.map((m, index) => {
                             const isSelected = selectedMonth === index;
+
+                            const now = new Date();
+                            const currentYear = now.getFullYear();
+                            const currentMonth = now.getMonth();
+
+                            // Limit: 6 months ago
+                            const limitDate = new Date(currentYear, currentMonth - 6, 1);
+                            const cellDate = new Date(selectedYear, index, 1);
+
+                            const isDisabled = cellDate < limitDate || cellDate > now;
+
                             return (
                                 <TouchableOpacity
                                     key={index}
                                     style={[
                                         styles.gridItem,
-                                        { backgroundColor: isSelected ? colors.primaryAction : colors.surface, borderWidth: 1, borderColor: colors.divider }
+                                        {
+                                            backgroundColor: isSelected ? colors.primaryAction : colors.surface,
+                                            borderWidth: 1,
+                                            borderColor: colors.divider,
+                                            opacity: isDisabled ? 0.3 : 1
+                                        }
                                     ]}
-                                    onPress={() => setSelectedMonth(index)}
+                                    onPress={() => {
+                                        if (!isDisabled) setSelectedMonth(index);
+                                    }}
+                                    disabled={isDisabled}
                                 >
                                     <Text style={[
                                         styles.gridText,

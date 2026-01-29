@@ -78,14 +78,32 @@ export default function CustomDateFilterModal({ visible, onClose, onApply, initi
             <View style={styles.gridContainer}>
                 {months.map((m, index) => {
                     const isSelected = tempStartDate.getMonth() === index && tempStartDate.getFullYear() === selectedYear;
+                    const now = new Date();
+                    const currentYear = now.getFullYear();
+                    const currentMonth = now.getMonth();
+
+                    // Limit: 6 months ago
+                    const limitDate = new Date(currentYear, currentMonth - 6, 1);
+                    const cellDate = new Date(selectedYear, index, 1);
+
+                    const isDisabled = cellDate < limitDate || cellDate > now;
+
                     return (
                         <TouchableOpacity
                             key={index}
                             style={[
                                 styles.gridItem,
-                                { backgroundColor: isSelected ? colors.primaryAction : colors.surface, borderWidth: 1, borderColor: colors.divider }
+                                {
+                                    backgroundColor: isSelected ? colors.primaryAction : colors.surface,
+                                    borderWidth: 1,
+                                    borderColor: colors.divider,
+                                    opacity: isDisabled ? 0.3 : 1
+                                }
                             ]}
-                            onPress={() => handleMonthPress(index)}
+                            onPress={() => {
+                                if (!isDisabled) handleMonthPress(index);
+                            }}
+                            disabled={isDisabled}
                         >
                             <Text style={[
                                 styles.gridText,
@@ -100,22 +118,40 @@ export default function CustomDateFilterModal({ visible, onClose, onApply, initi
 
     const renderYearGrid = () => {
         // Show range of years centered on current or selected
-        const currentYear = new Date().getFullYear();
-        const startYear = currentYear - 2; // e.g. 2023
-        const years = Array.from({ length: 9 }, (_, i) => startYear + i); // 9 years
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const startYear = currentYear - 2; // Show nearby years
+        const years = Array.from({ length: 9 }, (_, i) => startYear + i); // 9 years around context
+
+        // Limit
+        const limitDate = new Date(currentYear, now.getMonth() - 6, 1);
+        const limitYear = limitDate.getFullYear();
 
         return (
             <View style={styles.gridContainer}>
                 {years.map((y) => {
                     const isSelected = y === selectedYear;
+                    // Disable if year is strictly in future OR year is strictly before limit year
+                    // Note: If limit is July 2025, Year 2025 is partially valid, so it should be ENABLED.
+                    // Only 2024 and before should be disabled.
+                    const isDisabled = y > currentYear || y < limitYear;
+
                     return (
                         <TouchableOpacity
                             key={y}
                             style={[
                                 styles.gridItem,
-                                { backgroundColor: isSelected ? colors.primaryAction : colors.surface, borderWidth: 1, borderColor: colors.divider }
+                                {
+                                    backgroundColor: isSelected ? colors.primaryAction : colors.surface,
+                                    borderWidth: 1,
+                                    borderColor: colors.divider,
+                                    opacity: isDisabled ? 0.3 : 1
+                                }
                             ]}
-                            onPress={() => setSelectedYear(y)}
+                            onPress={() => {
+                                if (!isDisabled) setSelectedYear(y);
+                            }}
+                            disabled={isDisabled}
                         >
                             <Text style={[
                                 styles.gridText,
@@ -160,11 +196,19 @@ export default function CustomDateFilterModal({ visible, onClose, onApply, initi
                     {/* Year Selector (Only for Month Mode) */}
                     {mode === 'month' && (
                         <View style={[styles.yearSelector, { backgroundColor: colors.surface, borderColor: colors.divider }]}>
-                            <TouchableOpacity onPress={() => setSelectedYear(y => y - 1)}>
+                            <TouchableOpacity
+                                onPress={() => setSelectedYear(y => y - 1)}
+                                disabled={selectedYear <= 2024}
+                                style={{ opacity: selectedYear <= 2024 ? 0 : 1 }}
+                            >
                                 <Ionicons name="chevron-back" size={20} color={colors.primaryText} />
                             </TouchableOpacity>
                             <Text style={[styles.yearText, { color: colors.primaryText }]}>{selectedYear}</Text>
-                            <TouchableOpacity onPress={() => setSelectedYear(y => y + 1)}>
+                            <TouchableOpacity
+                                onPress={() => setSelectedYear(y => y + 1)}
+                                disabled={selectedYear >= 2032}
+                                style={{ opacity: selectedYear >= 2032 ? 0 : 1 }}
+                            >
                                 <Ionicons name="chevron-forward" size={20} color={colors.primaryText} />
                             </TouchableOpacity>
                         </View>
