@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, SectionList, TouchableOpacity, RefreshControl, DeviceEventEmitter, TextInput } from 'react-native';
+import { View, Text, StyleSheet, SectionList, TouchableOpacity, RefreshControl, DeviceEventEmitter, TextInput, Modal, FlatList } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
@@ -7,7 +7,7 @@ import { useAuth } from '../components/context/AuthContext';
 import { getTransactions, getFamilyCategories } from '../services/firestoreRepository';
 import MultiSelectDropdown from '../components/MultiSelectDropdown';
 import { useTheme } from '../components/context/ThemeContext';
-import SwipeDateFilter from '../components/SwipeDateFilter';
+import ExpandableCalendar from '../components/ExpandableCalendar';
 import SimpleDateFilterModal from '../components/SimpleDateFilterModal';
 import TransactionRow from '../components/TransactionRow';
 import Avatar from '../components/Avatar';
@@ -30,6 +30,9 @@ export default function TransactionListScreen({ navigation }) {
     const [selectedCategoryIds, setSelectedCategoryIds] = useState([]);
     const [searchText, setSearchText] = useState('');
     const [showFilters, setShowFilters] = useState(false);
+
+    // Day Filter State
+    const [filterDate, setFilterDate] = useState(null);
 
     useEffect(() => {
         if (profile) {
@@ -83,9 +86,19 @@ export default function TransactionListScreen({ navigation }) {
         return transactions.filter(t => {
             const matchesCategory = selectedCategoryIds.length === 0 || selectedCategoryIds.includes(t.category);
             const matchesSearch = searchText.length < 3 || (t.note && t.note.toLowerCase().includes(searchText.toLowerCase()));
-            return matchesCategory && matchesSearch;
+
+            let matchesDate = true;
+            if (filterDate) {
+                const year = filterDate.getFullYear();
+                const month = String(filterDate.getMonth() + 1).padStart(2, '0');
+                const day = String(filterDate.getDate()).padStart(2, '0');
+                const filterStr = `${year}-${month}-${day}`;
+                matchesDate = (t.date === filterStr);
+            }
+
+            return matchesCategory && matchesSearch && matchesDate;
         });
-    }, [transactions, selectedCategoryIds, searchText]);
+    }, [transactions, selectedCategoryIds, searchText, filterDate]);
 
     // Grouping Logic for SectionList
     const sections = useMemo(() => {
@@ -152,123 +165,192 @@ export default function TransactionListScreen({ navigation }) {
     };
 
     const renderHeader = () => (
-        <View style={{ backgroundColor: colors.headerBackground, borderBottomLeftRadius: 24, borderBottomRightRadius: 24, paddingBottom: 16 }}>
-            {/* Header Row */}
-            <View style={[styles.header, { borderBottomWidth: 0, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
-                {/* Left: Avatar + Title */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                    <Avatar
-                        name={profile?.name}
-                        avatarId={profile?.avatarId}
-                        size={44}
-                        backgroundColor={colors.cardBackground}
-                        textColor={colors.headerText}
-                        style={styles.avatar}
-                    />
-                    <Text style={{ fontSize: 18, fontWeight: '900', color: colors.headerText }}>Transactions</Text>
-                </View>
+        <View>
+            <View style={{ backgroundColor: colors.headerBackground, borderBottomLeftRadius: 24, borderBottomRightRadius: 24, paddingBottom: 16 }}>
+                {/* Header Row */}
+                <View style={[styles.header, { borderBottomWidth: 0, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
+                    {/* Left: Avatar + Title */}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                        <Avatar
+                            name={profile?.name}
+                            avatarId={profile?.avatarId}
+                            size={44}
+                            backgroundColor={colors.cardBackground}
+                            textColor={colors.headerText}
+                            style={styles.avatar}
+                        />
+                        <Text style={{ fontSize: 18, fontWeight: '900', color: colors.headerText }}>Transactions</Text>
+                    </View>
 
-                {/* Right: Actions */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    {/* Date Filter Icon */}
-                    <TouchableOpacity
-                        onPress={() => setShowDateFilter(true)}
-                        style={{
-                            width: 36, height: 36,
-                            borderRadius: 12,
-                            backgroundColor: colors.iconBackground,
-                            justifyContent: 'center', alignItems: 'center',
-                        }}
-                    >
-                        <MaterialCommunityIcons name="calendar" size={18} color={colors.headerIcon} />
-                    </TouchableOpacity>
+                    {/* Right: Actions */}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        {/* Date Filter Icon */}
+                        <TouchableOpacity
+                            onPress={() => setShowDateFilter(true)}
+                            style={{
+                                width: 36, height: 36,
+                                borderRadius: 12,
+                                backgroundColor: colors.iconBackground,
+                                justifyContent: 'center', alignItems: 'center',
+                            }}
+                        >
+                            <MaterialCommunityIcons name="calendar" size={18} color={colors.headerIcon} />
+                        </TouchableOpacity>
 
-                    {/* Filter Icon */}
-                    <TouchableOpacity
-                        onPress={() => setShowFilters(!showFilters)}
-                        style={{
-                            width: 36, height: 36,
-                            borderRadius: 12,
-                            backgroundColor: colors.iconBackground,
-                            justifyContent: 'center', alignItems: 'center',
-                        }}
-                    >
-                        <MaterialCommunityIcons name="tune" size={18} color={showFilters ? colors.primaryAction : colors.headerIcon} />
-                    </TouchableOpacity>
-                </View>
-            </View>
-
-            {/* Simple Date Modal */}
-            <SimpleDateFilterModal
-                visible={showDateFilter}
-                onClose={() => setShowDateFilter(false)}
-                onApply={handleDateApply}
-                initialDate={selectedDate}
-            />
-
-            {/* Collapsible Filter Panel - Sibling */}
-            {showFilters && (
-                <View style={{
-                    marginHorizontal: SPACING.screenPadding,
-                    marginBottom: SPACING.m,
-                    padding: SPACING.m,
-                    backgroundColor: colors.surface,
-                    borderRadius: 16,
-                }}>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.m }}>
-                        <Text style={{ fontSize: TYPOGRAPHY.size.h4, fontWeight: 'bold', color: colors.primaryText }}>Filters</Text>
-                        <TouchableOpacity onPress={() => setShowFilters(false)}>
-                            <MaterialCommunityIcons name="close" size={20} color="#9CA3AF" />
+                        {/* Filter Icon */}
+                        <TouchableOpacity
+                            onPress={() => setShowFilters(!showFilters)}
+                            style={{
+                                width: 36, height: 36,
+                                borderRadius: 12,
+                                backgroundColor: colors.iconBackground,
+                                justifyContent: 'center', alignItems: 'center',
+                            }}
+                        >
+                            <MaterialCommunityIcons name="tune" size={18} color={showFilters ? colors.primaryAction : colors.headerIcon} />
                         </TouchableOpacity>
                     </View>
-
-                    <View style={{ gap: SPACING.m }}>
-                        <MultiSelectDropdown
-                            label="Category"
-                            options={categories.map(c => ({ id: c.name, name: c.name }))}
-                            selectedValues={selectedCategoryIds}
-                            onSelectionChange={setSelectedCategoryIds}
-                            compact={false}
-                        />
-                    </View>
                 </View>
-            )}
 
-            {/* Search Box */}
-            <View style={[styles.searchContainer, {
-                backgroundColor: colors.inputBackground, // Changed from cardBackground for better contrast
-                borderColor: 'transparent',
-                marginBottom: SPACING.s,
-                marginHorizontal: SPACING.screenPadding,
-            }]}>
-                <Ionicons name="search" size={18} color={colors.headerIcon} />
-                <TextInput
-                    style={[styles.searchInput, { color: colors.primaryText }]}
-                    placeholder="Search transactions..."
-                    placeholderTextColor={colors.placeholderText}
-                    value={searchText}
-                    onChangeText={setSearchText}
+                {/* Simple Date Modal */}
+                <SimpleDateFilterModal
+                    visible={showDateFilter}
+                    onClose={() => setShowDateFilter(false)}
+                    onApply={handleDateApply}
+                    initialDate={selectedDate}
                 />
-                {searchText.length > 0 && (
-                    <TouchableOpacity onPress={() => setSearchText('')}>
-                        <Ionicons name="close-circle" size={16} color={colors.headerIcon} />
-                    </TouchableOpacity>
-                )}
+
+                {/* Category Filter Modal */}
+                <Modal visible={showFilters} animationType="slide" transparent={true} onRequestClose={() => setShowFilters(false)}>
+                    <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+                        <View style={{ backgroundColor: colors.background, borderTopLeftRadius: 20, borderTopRightRadius: 20, height: '70%', padding: 20 }}>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, borderBottomWidth: 1, borderBottomColor: colors.divider, paddingBottom: 15 }}>
+                                <Text style={{ fontSize: 18, fontWeight: 'bold', color: colors.primaryText }}>Filter by Category</Text>
+                                <TouchableOpacity onPress={() => setShowFilters(false)}>
+                                    <MaterialCommunityIcons name="close" size={24} color={colors.primaryText} />
+                                </TouchableOpacity>
+                            </View>
+
+                            <View style={{ flex: 1 }}>
+                                <TouchableOpacity
+                                    style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.divider, flexDirection: 'row', justifyContent: 'space-between' }}
+                                    onPress={() => setSelectedCategoryIds([])}
+                                >
+                                    <Text style={{ fontSize: 16, color: selectedCategoryIds.length === 0 ? colors.primaryAction : colors.primaryText, fontWeight: selectedCategoryIds.length === 0 ? 'bold' : 'normal' }}>All Categories</Text>
+                                    {selectedCategoryIds.length === 0 && <MaterialCommunityIcons name="check" size={20} color={colors.primaryAction} />}
+                                </TouchableOpacity>
+
+                                <FlatList
+                                    data={categories}
+                                    keyExtractor={item => item.name}
+                                    renderItem={({ item }) => {
+                                        const isSelected = selectedCategoryIds.includes(item.name);
+                                        return (
+                                            <TouchableOpacity
+                                                style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.divider, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
+                                                onPress={() => {
+                                                    if (isSelected) {
+                                                        setSelectedCategoryIds(prev => prev.filter(id => id !== item.name));
+                                                    } else {
+                                                        setSelectedCategoryIds(prev => [...prev, item.name]);
+                                                    }
+                                                }}
+                                            >
+                                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                                                    <Text style={{ fontSize: 20 }}>{item.icon}</Text>
+                                                    <Text style={{ fontSize: 16, color: isSelected ? colors.primaryText : colors.primaryText, fontWeight: isSelected ? 'bold' : 'normal' }}>{item.name}</Text>
+                                                </View>
+                                                {isSelected && <MaterialCommunityIcons name="check" size={20} color={colors.primaryAction} />}
+                                            </TouchableOpacity>
+                                        );
+                                    }}
+                                />
+                            </View>
+
+                            <View style={{ flexDirection: 'row', marginTop: 20, paddingTop: 20, borderTopWidth: 1, borderTopColor: colors.divider, gap: 12 }}>
+                                <TouchableOpacity
+                                    style={{ flex: 1, padding: 14, alignItems: 'center', borderRadius: 12, backgroundColor: colors.surface }}
+                                    onPress={() => setSelectedCategoryIds([])}
+                                >
+                                    <Text style={{ fontWeight: '600', color: colors.secondaryText }}>Clear</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={{ flex: 2, padding: 14, alignItems: 'center', borderRadius: 12, backgroundColor: colors.primaryAction }}
+                                    onPress={() => setShowFilters(false)}
+                                >
+                                    <Text style={{ fontWeight: 'bold', color: 'white' }}>Apply</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </View>
+                </Modal>
+
+                {/* Expandable Calendar - Wrapped in zIndex to overlap siblings */}
+                <View style={{ zIndex: 100, elevation: 10 }}>
+                    <ExpandableCalendar
+                        baseDate={selectedDate}
+                        selectedDate={filterDate}
+                        onSelectDate={(date) => {
+                            if (filterDate && date.getTime() === filterDate.getTime()) {
+                                // Deselect if same date clicked
+                                setFilterDate(null);
+                            } else {
+                                setFilterDate(date);
+                            }
+                        }}
+                        transactions={transactions}
+                    />
+                </View>
+
+                {/* Search Box */}
+                <View style={[styles.searchContainer, {
+                    backgroundColor: colors.inputBackground, // Changed from cardBackground for better contrast
+                    borderColor: 'transparent',
+                    marginBottom: SPACING.s,
+                    marginHorizontal: SPACING.screenPadding,
+                }]}>
+                    <Ionicons name="search" size={18} color={colors.headerIcon} />
+                    <TextInput
+                        style={[styles.searchInput, { color: colors.primaryText }]}
+                        placeholder="Search transactions..."
+                        placeholderTextColor={colors.placeholderText}
+                        value={searchText}
+                        onChangeText={setSearchText}
+                    />
+                    {searchText.length > 0 && (
+                        <TouchableOpacity onPress={() => setSearchText('')}>
+                            <Ionicons name="close-circle" size={16} color={colors.headerIcon} />
+                        </TouchableOpacity>
+                    )}
+                </View>
+
+                {/* Add Transaction Button */}
+                <TouchableOpacity
+                    style={[styles.addButton, {
+                        backgroundColor: '#6ca749',
+                        marginTop: 8,
+                        marginBottom: 0,
+                        marginHorizontal: SPACING.screenPadding
+                    }]}
+                    onPress={() => navigation.navigate('AddTransaction')}
+                >
+                    <Ionicons name="add" size={20} color="#ffffff" style={{ marginRight: 8 }} />
+                    <Text style={[styles.addButtonText, { color: '#ffffff' }]}>Add New Transaction</Text>
+                </TouchableOpacity>
             </View>
 
-            {/* Add Transaction Button */}
-            <TouchableOpacity
-                style={[styles.addButton, {
-                    backgroundColor: '#6ca749',
-                    marginTop: 8,
-                    marginBottom: 0,
-                    marginHorizontal: SPACING.screenPadding
-                }]}
-                onPress={() => navigation.navigate('AddTransaction')}
-            >
-                <Ionicons name="add" size={20} color="#ffffff" style={{ marginRight: 8 }} />
-                <Text style={[styles.addButtonText, { color: '#ffffff' }]}>Add New Transaction</Text>
-            </TouchableOpacity>
+            {/* Current Month Label - Outside colored header */}
+            <Text style={{
+                marginHorizontal: SPACING.screenPadding,
+                marginTop: 12,
+                marginBottom: 16,
+                fontSize: 18,
+                fontWeight: 'bold',
+                color: colors.primaryText,
+                textTransform: 'capitalize'
+            }}>
+                {selectedDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+            </Text>
         </View>
     );
 
@@ -359,10 +441,7 @@ const styles = StyleSheet.create({
         fontSize: TYPOGRAPHY.size.body,
         fontWeight: TYPOGRAPHY.weight.bold,
     },
-    addButtonText: {
-        fontSize: TYPOGRAPHY.size.body,
-        fontWeight: TYPOGRAPHY.weight.bold,
-    },
+    // Removed duplicate addButtonText definition
     avatar: {
         // No border for consistency
     }

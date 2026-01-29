@@ -68,13 +68,24 @@ export default function AddTransactionScreen({ route, navigation }) {
         }
     }, [type, categories]);
 
+    const formatDateLocal = (date) => {
+        const d = new Date(date);
+        const offset = d.getTimezoneOffset() * 60000;
+        const localDate = new Date(d.getTime() - offset);
+        return localDate.toISOString().split('T')[0];
+    };
+
     const onDateChange = (event, selectedDate) => {
         const currentDate = selectedDate || tempDate;
         if (Platform.OS === 'android') {
             setShowDatePicker(false);
-            setDate(currentDate.toISOString().split('T')[0]);
+            if (selectedDate) {
+                setDate(formatDateLocal(selectedDate));
+            }
         } else {
-            setTempDate(currentDate);
+            if (selectedDate) {
+                setTempDate(selectedDate);
+            }
         }
     };
 
@@ -85,12 +96,17 @@ export default function AddTransactionScreen({ route, navigation }) {
     };
 
     const confirmIOSDate = () => {
-        setDate(tempDate.toISOString().split('T')[0]);
+        setDate(formatDateLocal(tempDate));
         setShowDatePicker(false);
     };
 
     const setToday = () => {
-        setTempDate(new Date());
+        const now = new Date();
+        if (Platform.OS === 'android') {
+            setDate(formatDateLocal(now));
+        } else {
+            setTempDate(now);
+        }
     };
 
     const handleSave = async () => {
@@ -342,13 +358,13 @@ export default function AddTransactionScreen({ route, navigation }) {
                                 >
                                     <View style={[styles.datePickerModalContent, { backgroundColor: colors.cardBackground }]}>
                                         <View style={styles.datePickerHeader}>
-                                            <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                                            <TouchableOpacity onPress={() => setShowDatePicker(false)} style={{ padding: 10 }}>
                                                 <Text style={[styles.headerBtnText, { color: colors.secondaryText }]}>Cancel</Text>
                                             </TouchableOpacity>
-                                            <TouchableOpacity onPress={setToday}>
+                                            <TouchableOpacity onPress={setToday} style={{ padding: 10 }}>
                                                 <Text style={[styles.headerBtnText, { color: colors.primaryText, fontWeight: '600' }]}>Today</Text>
                                             </TouchableOpacity>
-                                            <TouchableOpacity onPress={confirmIOSDate}>
+                                            <TouchableOpacity onPress={confirmIOSDate} style={{ padding: 10 }}>
                                                 <Text style={[styles.headerBtnText, { color: colors.primaryAction, fontWeight: 'bold' }]}>OK</Text>
                                             </TouchableOpacity>
                                         </View>
