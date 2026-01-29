@@ -7,6 +7,8 @@ import { useAuth } from '../components/context/AuthContext';
 import { getRequests, rejectRequest, processTransfer } from '../services/firestoreRepository';
 import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
 import Avatar from '../components/Avatar';
+import CurrencyText from '../components/CurrencyText';
+import { formatMoney } from '../utils/formatting';
 
 export default function RequestListScreen({ navigation }) {
     const { user, profile } = useAuth();
@@ -85,13 +87,13 @@ export default function RequestListScreen({ navigation }) {
 
         // Confirm Approval
         if (Platform.OS === 'web') {
-            if (window.confirm(`Approve sending ${req.amount.toLocaleString()} VND to ${req.createdByName}?`)) {
+            if (window.confirm(`Approve sending ${formatMoney(req.amount)} VND to ${req.createdByName}?`)) {
                 executeApprove(req);
             }
         } else {
             Alert.alert(
                 'Approve Request?',
-                `Send ${req.amount.toLocaleString()} VND to ${req.createdByName}?`,
+                `Send ${formatMoney(req.amount)} VND to ${req.createdByName}?`,
                 [
                     { text: 'Cancel', style: 'cancel' },
                     {
@@ -203,7 +205,7 @@ export default function RequestListScreen({ navigation }) {
                                 item.reason || 'Money Request'
                             )}
                         </Text>
-                        <Text style={[styles.amount, { color: colors.primaryText }]}>{item.amount.toLocaleString()}</Text>
+                        <CurrencyText amount={item.amount} style={[styles.amount, { color: colors.primaryText }]} />
                     </View>
 
                     <View style={styles.metaRow}>
@@ -219,17 +221,19 @@ export default function RequestListScreen({ navigation }) {
             </View>
 
             {/* Admin Actions for PENDING requests */}
-            {isAdmin && item.status === 'PENDING' && (
-                <View style={styles.actionRow}>
-                    <TouchableOpacity style={[styles.actionBtn, { borderColor: '#EAB308' }]} onPress={() => handleReject(item)}>
-                        <Text style={[styles.actionText, { color: '#EAB308' }]}>Reject</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.primaryAction, borderColor: colors.primaryAction }]} onPress={() => handleApprove(item)}>
-                        <Text style={[styles.actionText, { color: '#fff' }]}>Approve</Text>
-                    </TouchableOpacity>
-                </View>
-            )}
-        </View>
+            {
+                isAdmin && item.status === 'PENDING' && (
+                    <View style={styles.actionRow}>
+                        <TouchableOpacity style={[styles.actionBtn, { borderColor: '#EAB308' }]} onPress={() => handleReject(item)}>
+                            <Text style={[styles.actionText, { color: '#EAB308' }]}>Reject</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.primaryAction, borderColor: colors.primaryAction }]} onPress={() => handleApprove(item)}>
+                            <Text style={[styles.actionText, { color: '#fff' }]}>Approve</Text>
+                        </TouchableOpacity>
+                    </View>
+                )
+            }
+        </View >
     );
 
     return (
@@ -244,19 +248,56 @@ export default function RequestListScreen({ navigation }) {
                     <Ionicons name="arrow-back" size={24} color={colors.primaryText} />
                 </TouchableOpacity>
 
-                {/* Only Users can Create */}
+                {/* Icons Removed - Moved to Body */}
+                <View style={{ width: 24 }} />
+            </View>
+
+            {/* MAIN ACTION BUTTON */}
+            <View style={{ paddingHorizontal: SPACING.screenPadding, marginTop: 8, marginBottom: SPACING.m }}>
                 {!isAdmin ? (
-                    <TouchableOpacity onPress={() => navigation.navigate('MoneyRequest')}>
-                        <Ionicons name="add-circle-outline" size={28} color={colors.primaryAction} />
+                    <TouchableOpacity
+                        onPress={() => navigation.navigate('MoneyRequest')}
+                        style={{
+                            backgroundColor: colors.primaryAction,
+                            borderRadius: 12, // Compact radius
+                            paddingVertical: 12, // Compact padding
+                            flexDirection: 'row',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            gap: 8,
+                            shadowColor: colors.primaryAction,
+                            shadowOffset: { width: 0, height: 4 },
+                            shadowOpacity: 0.3,
+                            shadowRadius: 8,
+                            elevation: 6
+                        }}
+                    >
+                        <Ionicons name="add-circle" size={20} color="#FFFFFF" />
+                        <Text style={{ fontSize: TYPOGRAPHY.size.body, fontWeight: TYPOGRAPHY.weight.bold, color: '#FFFFFF' }}>New Money Request</Text>
                     </TouchableOpacity>
                 ) : (
-                    <TouchableOpacity onPress={() => navigation.navigate('GrantMoney')}>
-                        <Ionicons name="gift-outline" size={24} color={colors.primaryAction} />
+                    <TouchableOpacity
+                        onPress={() => navigation.navigate('GrantMoney')}
+                        style={{
+                            backgroundColor: colors.primaryAction,
+                            borderRadius: 12, // Compact radius
+                            paddingVertical: 12, // Compact padding
+                            flexDirection: 'row',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            gap: 8,
+                            shadowColor: colors.primaryAction,
+                            shadowOffset: { width: 0, height: 4 },
+                            shadowOpacity: 0.3,
+                            shadowRadius: 8,
+                            elevation: 6
+                        }}
+                    >
+                        <Ionicons name="gift" size={20} color="#FFFFFF" />
+                        <Text style={{ fontSize: TYPOGRAPHY.size.body, fontWeight: TYPOGRAPHY.weight.bold, color: '#FFFFFF' }}>Grant Money</Text>
                     </TouchableOpacity>
                 )}
             </View>
-
-
 
             {/* Filter Tabs */}
             <View style={styles.filterContainer}>

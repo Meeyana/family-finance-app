@@ -3,8 +3,9 @@ import { View, Text, StyleSheet } from 'react-native';
 import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
 import { useTheme } from '../components/context/ThemeContext';
 import CurrencyText from './CurrencyText';
+import Avatar from './Avatar';
 
-export default function BudgetProgressBar({ spent, limit, label, showAmount = true, compact = false, boxed = false }) {
+export default function BudgetProgressBar({ spent, limit, label, avatarId, showAmount = true, compact = false, boxed = false }) {
     const { theme } = useTheme();
     const colors = COLORS[theme];
 
@@ -25,32 +26,53 @@ export default function BudgetProgressBar({ spent, limit, label, showAmount = tr
 
     return (
         <View style={containerStyle}>
-            <View style={styles.labelRow}>
-                {label && <Text style={[styles.label, { color: colors.primaryText }]}>{label}</Text>}
-                {showAmount && (
-                    <Text style={[styles.amount, { color: colors.secondaryText }]}>
-                        <CurrencyText amount={spent} /> <Text style={{ fontSize: 10 }}>/</Text> <CurrencyText amount={limit} />
-                    </Text>
+            {/* Wrapper for Avatar + Content */}
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+
+                {/* Avatar (Optional) */}
+                {(avatarId !== undefined || label) && (
+                    <View style={{ paddingTop: 2 }}>
+                        <Avatar
+                            name={label}
+                            avatarId={avatarId}
+                            size={40}
+                            backgroundColor={colors.cardBackground}
+                            textColor={colors.primaryText}
+                            style={{ borderWidth: 1, borderColor: colors.divider }}
+                        />
+                    </View>
                 )}
-            </View>
 
-            <View style={[styles.track, { backgroundColor: trackColor, height: compact ? 3 : 4 }]}>
-                <View
-                    style={[
-                        styles.fill,
-                        { width: `${percentage}%`, backgroundColor: barColor }
-                    ]}
-                />
-            </View>
+                {/* Progress Content */}
+                <View style={{ flex: 1 }}>
+                    <View style={styles.labelRow}>
+                        {label && <Text style={[styles.label, { color: colors.primaryText }]}>{label}</Text>}
+                        {showAmount && (
+                            <Text style={[styles.amount, { color: colors.secondaryText }]}>
+                                <CurrencyText amount={spent} /> <Text style={{ fontSize: 10 }}>/</Text> <CurrencyText amount={limit} />
+                            </Text>
+                        )}
+                    </View>
 
-            {/* Percentage readout */}
-            {!compact && (
-                <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 4 }}>
-                    <Text style={[styles.percentageText, { color: barColor }]}>
-                        {Math.round(usage * 100)}% Used
-                    </Text>
+                    <View style={[styles.track, { backgroundColor: trackColor, height: compact ? 3 : 6 }]}>
+                        <View
+                            style={[
+                                styles.fill,
+                                { width: `${percentage}%`, backgroundColor: barColor }
+                            ]}
+                        />
+                    </View>
+
+                    {/* Percentage readout */}
+                    {!compact && (
+                        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 4 }}>
+                            <Text style={[styles.percentageText, { color: barColor }]}>
+                                {Math.round(usage * 100)}% Used
+                            </Text>
+                        </View>
+                    )}
                 </View>
-            )}
+            </View>
         </View>
     );
 }

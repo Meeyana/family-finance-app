@@ -217,14 +217,37 @@ export default function RecurringScreen({ navigation }) {
             <View style={[styles.header, { borderBottomColor: colors.divider }]}>
                 {/* Center Title */}
                 <View style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', zIndex: -1 }}>
-                    <Text style={[styles.headerTitle, { color: colors.primaryText }]}>Subscriptions</Text>
+                    <Text style={[styles.headerTitle, { color: colors.primaryText }]}>Recurring</Text>
                 </View>
 
                 <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                     <Ionicons name="arrow-back" size={24} color={colors.primaryText} />
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => { resetForm(); setModalVisible(true); }}>
-                    <Ionicons name="add" size={28} color={colors.primaryAction} />
+                {/* Header Icon Removed */}
+                <View style={{ width: 24 }} />
+            </View>
+
+            {/* MAIN ACTION BUTTON */}
+            <View style={{ paddingHorizontal: SPACING.screenPadding, marginTop: 8, marginBottom: SPACING.m }}>
+                <TouchableOpacity
+                    onPress={() => { resetForm(); setModalVisible(true); }}
+                    style={{
+                        backgroundColor: colors.primaryAction,
+                        borderRadius: 12,
+                        paddingVertical: 12,
+                        flexDirection: 'row',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        gap: 8,
+                        shadowColor: colors.primaryAction,
+                        shadowOffset: { width: 0, height: 4 },
+                        shadowOpacity: 0.3,
+                        shadowRadius: 8,
+                        elevation: 6
+                    }}
+                >
+                    <Ionicons name="add-circle" size={20} color="#FFFFFF" />
+                    <Text style={{ fontSize: TYPOGRAPHY.size.body, fontWeight: TYPOGRAPHY.weight.bold, color: '#FFFFFF' }}>Add Recurring Transaction</Text>
                 </TouchableOpacity>
             </View>
 
@@ -233,7 +256,7 @@ export default function RecurringScreen({ navigation }) {
                 renderItem={renderItem}
                 keyExtractor={i => i.id}
                 contentContainerStyle={styles.list}
-                ListEmptyComponent={!loading && <Text style={[styles.empty, { color: colors.secondaryText }]}>No subscriptions found.</Text>}
+                ListEmptyComponent={!loading && <Text style={[styles.empty, { color: colors.secondaryText }]}>No recurring transactions found.</Text>}
             />
 
             {/* Modal - Full Screen Style or Bottom Sheet Style */}
@@ -391,7 +414,7 @@ export default function RecurringScreen({ navigation }) {
                             onPress={handleSave}
                         >
                             <Text style={styles.saveButtonText}>
-                                {editingItem ? 'Update Subscription' : 'Save Subscription'}
+                                {editingItem ? 'Update Recurring Transaction' : 'Save Recurring Transaction'}
                             </Text>
                         </TouchableOpacity>
                     </View>

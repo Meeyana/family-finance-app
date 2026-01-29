@@ -46,8 +46,31 @@ export default function ManageProfilesScreen({ navigation }) {
                     <Ionicons name="arrow-back" size={24} color={colors.primaryText} />
                 </TouchableOpacity>
                 <Text style={[styles.title, { color: colors.primaryText }]}>Manage Profiles</Text>
-                <TouchableOpacity onPress={() => navigation.navigate('EditProfile', { isNew: true, profile: {} })} >
-                    <Ionicons name="add" size={28} color={colors.primaryAction} />
+                {/* Header Add Icon Removed */}
+                <View style={{ width: 28 }} />
+            </View>
+
+            {/* MAIN ACTION BUTTON */}
+            <View style={{ paddingHorizontal: SPACING.screenPadding, marginTop: 8, marginBottom: SPACING.m }}>
+                <TouchableOpacity
+                    onPress={() => navigation.navigate('EditProfile', { isNew: true, profile: {} })}
+                    style={{
+                        backgroundColor: colors.primaryAction,
+                        borderRadius: 12,
+                        paddingVertical: 12,
+                        flexDirection: 'row',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        gap: 8,
+                        shadowColor: colors.primaryAction,
+                        shadowOffset: { width: 0, height: 4 },
+                        shadowOpacity: 0.3,
+                        shadowRadius: 8,
+                        elevation: 6
+                    }}
+                >
+                    <Ionicons name="add-circle" size={20} color="#FFFFFF" />
+                    <Text style={{ fontSize: TYPOGRAPHY.size.body, fontWeight: TYPOGRAPHY.weight.bold, color: '#FFFFFF' }}>Add New Profile</Text>
                 </TouchableOpacity>
             </View>
 

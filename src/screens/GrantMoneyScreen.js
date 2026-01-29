@@ -74,7 +74,7 @@ export default function GrantMoneyScreen({ navigation }) {
             // Trigger Dashboard Update
             DeviceEventEmitter.emit('refresh_profile_dashboard');
 
-            Alert.alert('Success', `Sent ${numAmount.toLocaleString()} ₫ to ${selectedReceiver.name}!`, [
+            Alert.alert('Success', `Sent ${formatMoney(numAmount)} ₫ to ${selectedReceiver.name}!`, [
                 { text: 'OK', onPress: () => navigation.goBack() }
             ]);
         } catch (error) {

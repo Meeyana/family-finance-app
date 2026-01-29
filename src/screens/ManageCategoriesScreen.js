@@ -242,8 +242,31 @@ export default function ManageCategoriesScreen({ navigation, route }) {
                 <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                     <Ionicons name="arrow-back" size={24} color={colors.primaryText} />
                 </TouchableOpacity>
-                <TouchableOpacity onPress={handleAdd}>
-                    <Ionicons name="add" size={28} color={colors.primaryAction} />
+                {/* Header Add Icon Removed */}
+                <View style={{ width: 24 }} />
+            </View>
+
+            {/* MAIN ACTION BUTTON */}
+            <View style={{ paddingHorizontal: SPACING.screenPadding, marginTop: 8 }}>
+                <TouchableOpacity
+                    onPress={handleAdd}
+                    style={{
+                        backgroundColor: colors.primaryAction,
+                        borderRadius: 12,
+                        paddingVertical: 12,
+                        flexDirection: 'row',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        gap: 8,
+                        shadowColor: colors.primaryAction,
+                        shadowOffset: { width: 0, height: 4 },
+                        shadowOpacity: 0.3,
+                        shadowRadius: 8,
+                        elevation: 6
+                    }}
+                >
+                    <Ionicons name="add-circle" size={20} color="#FFFFFF" />
+                    <Text style={{ fontSize: TYPOGRAPHY.size.body, fontWeight: TYPOGRAPHY.weight.bold, color: '#FFFFFF' }}>Create New Category</Text>
                 </TouchableOpacity>
             </View>
 

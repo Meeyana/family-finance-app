@@ -10,6 +10,7 @@ import { auth } from '../services/firebase';
 import { useAuth } from '../components/context/AuthContext';
 import SwipeDateFilter from '../components/SwipeDateFilter';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../components/context/ThemeContext';
 import { COLORS, TYPOGRAPHY, SPACING } from '../constants/theme';
 import CurrencyText from '../components/CurrencyText';
@@ -349,14 +350,55 @@ export default function AccountDashboard({ navigation }) {
                                 </View>
                             </View>
 
-                            {/* BOTTOM HALF: LINK */}
-                            <TouchableOpacity style={[styles.financeCenterButton, { backgroundColor: colors.primaryAction + '20' }]} onPress={() => navigation.navigate('Analysis')}>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                                    <MaterialCommunityIcons name="finance" size={20} color={colors.primaryAction} />
-                                    <Text style={[styles.financeCenterText, { color: colors.primaryAction }]}>Your family financial center</Text>
+                            {/* LIMIT PROGRESS BAR (Visible if limit > 0) */}
+                            {viewData?.totalLimit > 0 && (
+                                <View style={{ paddingHorizontal: 16, paddingBottom: 16 }}>
+                                    <View style={{ height: 6, backgroundColor: colors.divider, borderRadius: 3, overflow: 'hidden', marginBottom: 6 }}>
+                                        <View
+                                            style={{
+                                                height: '100%',
+                                                width: `${Math.min(100, (viewData.totalSpent / viewData.totalLimit) * 100)}%`,
+                                                backgroundColor: (viewData.totalSpent / viewData.totalLimit) >= 1 ? colors.error : ((viewData.totalSpent / viewData.totalLimit) >= 0.7 ? colors.warning : colors.primaryAction),
+                                                borderRadius: 3
+                                            }}
+                                        />
+                                    </View>
+
+                                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                                            <Text style={{ fontSize: 11, color: colors.secondaryText, fontWeight: '500' }}>Limit:</Text>
+                                            <CurrencyText
+                                                amount={viewData.totalLimit}
+                                                showSign={false}
+                                                hideable={true}
+                                                style={{ fontSize: 11, color: colors.primaryText, fontWeight: '600' }}
+                                            />
+                                        </View>
+                                        <Text style={{ fontSize: 11, color: colors.secondaryText, fontWeight: '500' }}>
+                                            {Math.max(0, ((viewData.totalLimit - viewData.totalSpent) / viewData.totalLimit * 100)).toFixed(0)}% remaining
+                                        </Text>
+                                    </View>
                                 </View>
-                                <Ionicons name="chevron-forward" size={18} color={colors.primaryAction} />
-                            </TouchableOpacity>
+                            )}
+
+                            {/* BOTTOM HALF: LINK */}
+                            {profile?.role !== 'Basic' ? (
+                                <TouchableOpacity style={[styles.financeCenterButton, { backgroundColor: colors.primaryAction + '20' }]} onPress={() => navigation.navigate('Analysis')}>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                        <MaterialCommunityIcons name="finance" size={20} color={colors.primaryAction} />
+                                        <Text style={[styles.financeCenterText, { color: colors.primaryAction }]}>Your family financial center</Text>
+                                    </View>
+                                    <Ionicons name="chevron-forward" size={18} color={colors.primaryAction} />
+                                </TouchableOpacity>
+                            ) : (
+                                <TouchableOpacity style={[styles.financeCenterButton, { backgroundColor: colors.primaryAction + '20' }]} onPress={() => navigation.navigate('MoneyRequest')}>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                        <MaterialCommunityIcons name="hand-coin" size={20} color={colors.primaryAction} />
+                                        <Text style={[styles.financeCenterText, { color: colors.primaryAction }]}>Request money from your family</Text>
+                                    </View>
+                                    <Ionicons name="chevron-forward" size={18} color={colors.primaryAction} />
+                                </TouchableOpacity>
+                            )}
 
                         </View>
                     </View>
@@ -365,10 +407,64 @@ export default function AccountDashboard({ navigation }) {
                 {/* BOTTOM SECTION: WHITE/CONTENT */}
                 <View style={[styles.bottomSection, { backgroundColor: colors.background }]}>
 
+                    {/* QUICK ACTIONS (Large Gradient Cards) */}
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: SPACING.l, marginTop: SPACING.m, gap: 16 }}>
 
+                        {/* 1. ADD TRANSACTION */}
+                        <TouchableOpacity style={{ flex: 1, backgroundColor: 'transparent', shadowColor: colors.primaryAction, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 6 }} onPress={() => navigation.navigate('AddTransaction')}>
+                            <LinearGradient
+                                colors={[colors.primaryAction, '#aed581']}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 1 }}
+                                style={{
+                                    borderRadius: 24,
+                                    padding: 20,
+                                    height: 110,
+                                    justifyContent: 'space-between',
+                                    position: 'relative',
+                                    overflow: 'hidden'
+                                }}
+                            >
+                                <View>
+                                    <Text style={{ fontSize: 16, fontWeight: '800', color: '#FFFFFF' }}>Add</Text>
+                                    <Text style={{ fontSize: 16, fontWeight: '800', color: '#FFFFFF' }}>Transaction</Text>
+                                </View>
+
+                                <View style={{ position: 'absolute', bottom: -10, right: -10, opacity: 0.3 }}>
+                                    <Ionicons name="add-circle" size={80} color="#FFFFFF" />
+                                </View>
+                            </LinearGradient>
+                        </TouchableOpacity>
+
+                        {/* 2. SAVING GOALS */}
+                        <TouchableOpacity style={{ flex: 1, backgroundColor: 'transparent', shadowColor: colors.warning, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 6 }} onPress={() => navigation.navigate('Goals')}>
+                            <LinearGradient
+                                colors={[colors.warning, '#FCD34D']}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 1 }}
+                                style={{
+                                    borderRadius: 24,
+                                    padding: 20,
+                                    height: 110,
+                                    justifyContent: 'space-between',
+                                    position: 'relative',
+                                    overflow: 'hidden'
+                                }}
+                            >
+                                <View>
+                                    <Text style={{ fontSize: 16, fontWeight: '800', color: '#FFFFFF' }}>Saving</Text>
+                                    <Text style={{ fontSize: 16, fontWeight: '800', color: '#FFFFFF' }}>Goal</Text>
+                                </View>
+
+                                <View style={{ position: 'absolute', bottom: -10, right: -10, opacity: 0.3 }}>
+                                    <MaterialCommunityIcons name="piggy-bank" size={70} color="#FFFFFF" />
+                                </View>
+                            </LinearGradient>
+                        </TouchableOpacity>
+                    </View>
 
                     {/* RECENT TRANSACTIONS */}
-                    <View style={[styles.sectionHeaderRow, { marginTop: SPACING.xl, paddingHorizontal: 0, marginBottom: 8 }]}>
+                    <View style={[styles.sectionHeaderRow, { marginTop: SPACING.s, paddingHorizontal: 0, marginBottom: 8 }]}>
                         <Text style={[styles.sectionTitle, { color: colors.primaryText }]}>Recent Transactions</Text>
                         <TouchableOpacity onPress={() => navigation.navigate('Transactions')}>
                             <Text style={[styles.seeAllText, { color: colors.primaryAction }]}>See all</Text>
@@ -449,7 +545,7 @@ const styles = StyleSheet.create({
     topSection: {
         backgroundColor: '#f7ede2', // fallback
         paddingHorizontal: SPACING.screenPadding,
-        paddingBottom: 50, // Reduced from 60
+        paddingBottom: 100, // Increased to prevent card overlap
         borderBottomLeftRadius: 36,
         borderBottomRightRadius: 36,
         paddingTop: 4, // Reduced from 10

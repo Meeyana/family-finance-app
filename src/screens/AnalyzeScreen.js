@@ -350,12 +350,14 @@ export default function AnalyzeScreen({ navigation }) {
                         {data && data.current && data.current.budgets && Object.keys(data.current.budgets.profiles)
                             .filter(pid => selectedProfileIds.length === 0 || selectedProfileIds.includes(pid))
                             .map(pid => {
-                                const pName = userProfiles.find(p => p.id === pid)?.name || `Profile ${pid}`;
+                                const profile = userProfiles.find(p => p.id === pid);
+                                const pName = profile?.name || `Profile ${pid}`;
                                 const pBudget = data.current.budgets.profiles[pid];
                                 return (
                                     <BudgetProgressBar
                                         key={pid}
                                         label={pName}
+                                        avatarId={profile?.avatarId}
                                         spent={pBudget.spent}
                                         limit={pBudget.limit}
                                         boxed={true}

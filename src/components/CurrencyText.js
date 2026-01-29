@@ -29,7 +29,7 @@ export default function CurrencyText({ amount, currency: propCurrency, style, sy
 
     // Format: VND usually no decimals, USD has 2
     const digits = targetCurrency === 'VND' ? 0 : 2;
-    const formattedValue = absValue.toLocaleString('en-US', { minimumFractionDigits: digits, maximumFractionDigits: digits });
+    const formattedValue = absValue.toLocaleString('vi-VN', { minimumFractionDigits: digits, maximumFractionDigits: digits });
 
     const finalSign = numValue < 0 ? '-' : (showSign && numValue > 0 ? '+' : '');
 

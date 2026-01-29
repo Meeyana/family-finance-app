@@ -1,6 +1,6 @@
 /**
- * Formats a numeric value (or string) into a string with thousand separators (dots).
- * e.g. 500000 -> "500.000"
+ * Formats a numeric value (or string) into a string with thousand separators (commas).
+ * e.g. 500000 -> "500,000"
  */
 export const formatMoney = (value) => {
     if (!value) return '';

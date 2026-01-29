@@ -2,6 +2,7 @@ import React from 'react';
 import { useTheme } from '../components/context/ThemeContext';
 import { View, StyleSheet, Dimensions } from 'react-native';
 import { VictoryBar, VictoryChart, VictoryAxis } from 'victory-native';
+import { formatMoney } from '../utils/formatting';
 import { COLORS, TYPOGRAPHY } from '../constants/theme';
 
 export default function IncomeExpenseBarChart({ income, expense }) {
@@ -39,7 +40,7 @@ export default function IncomeExpenseBarChart({ income, expense }) {
                         }}
                         barWidth={60}
                         cornerRadius={{ top: 8 }}
-                        labels={({ datum }) => datum.y > 0 ? `${datum.y.toLocaleString()}đ` : ''}
+                        labels={({ datum }) => datum.y > 0 ? `${formatMoney(datum.y)}đ` : ''}
                     />
                 </VictoryChart>
             </View>
